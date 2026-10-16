@@ -4,6 +4,7 @@ import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "../Compos
 import { EMPTY_COMPOSER_CONTEXT_RECORDS } from "../composerContextPresentation";
 import { terminalThemeFromApp } from "../ThreadTerminalDrawer";
 import { useTheme } from "../../hooks/useTheme";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { DISCONNECTED_COMPOSER_PLACEHOLDER } from "../../composerPlaceholder";
 import { resolveDiffThemeName, type DiffThemeName } from "../../lib/diffRendering";
 import { PREFERRED_HIGHLIGHTER } from "../../lib/syntaxHighlighting";
@@ -39,7 +40,7 @@ export function PromptFontPreview() {
   return (
     <div className="mt-1 mb-2 rounded-lg border border-border bg-background px-3 py-2">
       <ComposerPromptEditor
-        ariaLabel="Prompt font preview"
+        ariaLabel={currentTranslator()("settingsC.promptFontPreview")}
         editorRef={editorRef}
         value={prompt}
         cursor={cursor}
@@ -184,6 +185,7 @@ export function TerminalFontPreview({ family, size }: { family: string; size: nu
   const surfaceRef = useRef<GhosttyTerminalSurface | null>(null);
   const fontRef = useRef({ family, size });
   const { theme, resolvedTheme } = useTheme();
+  const t = useT();
 
   useEffect(() => {
     const current = fontRef.current;
@@ -267,7 +269,7 @@ export function TerminalFontPreview({ family, size }: { family: string; size: nu
     <div
       ref={mountRef}
       className="relative mt-1 mb-2 h-52 overflow-hidden rounded-lg border border-border"
-      aria-label="Terminal font preview"
+      aria-label={t("settingsC.terminalFontPreviewLabel")}
     />
   );
 }

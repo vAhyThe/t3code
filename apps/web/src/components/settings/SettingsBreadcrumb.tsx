@@ -1,19 +1,23 @@
+import { useT } from "../../i18n/I18nProvider";
+
 import {
   WorkspaceBreadcrumb,
   WorkspaceBreadcrumbItem,
   WorkspaceBreadcrumbSeparator,
 } from "../WorkspaceBreadcrumb";
-import { SETTINGS_SECTION_LABELS } from "./settingsSearch";
+import { SETTINGS_SECTION_LABELS, type SettingsPath } from "./settingsSearch";
 
-const SETTINGS_BREADCRUMB_LABELS: Readonly<Record<string, string>> = {
-  ...SETTINGS_SECTION_LABELS,
-  "/settings/diagnostics": "Diagnostics",
-  "/settings/open-source-licenses": "Open source licenses",
-};
+const SETTINGS_BREADCRUMB_KEYS = {
+  "/settings/diagnostics": "settingsC.breadcrumbDiagnostics",
+  "/settings/open-source-licenses": "settingsC.breadcrumbOpenSourceLicenses",
+} as const;
 
-function settingsBreadcrumbLabel(pathname: string): string | null {
+function settingsBreadcrumbLabel(pathname: string, t: ReturnType<typeof useT>): string | null {
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/";
-  return SETTINGS_BREADCRUMB_LABELS[normalizedPathname] ?? null;
+  if (normalizedPathname in SETTINGS_BREADCRUMB_KEYS) {
+    return t(SETTINGS_BREADCRUMB_KEYS[normalizedPathname as keyof typeof SETTINGS_BREADCRUMB_KEYS]);
+  }
+  return SETTINGS_SECTION_LABELS[normalizedPathname as SettingsPath] ?? null;
 }
 
 /**
@@ -21,18 +25,19 @@ function settingsBreadcrumbLabel(pathname: string): string | null {
  * page content, see `SettingsScopeSentence`.
  */
 export function SettingsBreadcrumb({ pathname }: { pathname: string }) {
-  const sectionLabel = settingsBreadcrumbLabel(pathname);
+  const t = useT();
+  const sectionLabel = settingsBreadcrumbLabel(pathname, t);
 
   return (
-    <WorkspaceBreadcrumb ariaLabel="Settings breadcrumb">
+    <WorkspaceBreadcrumb ariaLabel={t("settingsC.breadcrumbAria")}>
       {sectionLabel ? (
         <>
-          <WorkspaceBreadcrumbItem>Settings</WorkspaceBreadcrumbItem>
+          <WorkspaceBreadcrumbItem>{t("settingsC.breadcrumbSettings")}</WorkspaceBreadcrumbItem>
           <WorkspaceBreadcrumbSeparator />
         </>
       ) : null}
       <WorkspaceBreadcrumbItem current className="truncate">
-        {sectionLabel ?? "Settings"}
+        {sectionLabel ?? t("settingsC.breadcrumbSettings")}
       </WorkspaceBreadcrumbItem>
     </WorkspaceBreadcrumb>
   );

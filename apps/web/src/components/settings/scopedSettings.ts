@@ -1,3 +1,5 @@
+import { currentTranslator } from "../../i18n/I18nProvider";
+
 import {
   ClientSettingsSchema,
   type ClientSettingsPatch,
@@ -310,7 +312,7 @@ export function planScopedSettingsPatch(
       : scope.kind === "unavailable"
         ? scope.message
         : unscopableKeys.length > 0
-          ? "This setting is environment-wide and cannot be overridden by a project."
+          ? currentTranslator()("settingsC.envWideSetting")
           : isProjectScope
             ? "Connect the selected checkouts, or update their environments, to save a project override."
             : `Connect ${scope.kind === "environment" ? scope.label : "an environment"} to save this setting.`;
@@ -398,7 +400,7 @@ export function planProjectOverridesClear(
     hasClientWrite: false,
     serverWrites,
     unavailableReason:
-      serverWrites.length > 0 ? null : "Connect the environments to reset these overrides.",
+      serverWrites.length > 0 ? null : currentTranslator()("settingsC.connectToResetOverrides"),
   };
 }
 
@@ -475,7 +477,7 @@ export async function persistScopedSettingsPatch(
       return [
         {
           ...environment,
-          message: "This environment does not support this setting. Update T3 Code on it.",
+          message: currentTranslator()("settingsC.environmentNotSupportsSetting"),
         },
       ];
     }
@@ -489,9 +491,7 @@ export async function persistScopedSettingsPatch(
       {
         ...environment,
         message:
-          error instanceof Error
-            ? error.message
-            : "The save failed. Try reconnecting and saving again.",
+          error instanceof Error ? error.message : currentTranslator()("settingsC.saveFailedRetry"),
       },
     ];
   });
