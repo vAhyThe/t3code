@@ -6,7 +6,7 @@ import {
   getDesktopUpdateReleaseUrl,
 } from "../desktopUpdate.logic";
 import { openDesktopUpdateReleaseNotes } from "../desktopUpdate.toast";
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator } from "../../i18n/I18nProvider";
 import { Separator } from "../ui/separator";
 
 type DesktopUpdateShell = Pick<DesktopBridge, "openExternal">;
@@ -53,7 +53,7 @@ export function SidebarUpdateReleaseNotes({
   readonly state: DesktopUpdateState;
   readonly tooltip: string;
 }) {
-  const t = useT();
+  const t = currentTranslator();
   if (state.channel !== "nightly" || state.releaseNotes.length === 0) {
     return <>{tooltip}</>;
   }

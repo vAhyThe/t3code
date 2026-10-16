@@ -560,6 +560,10 @@ export function CommandPalette({ children }: { children: ReactNode }) {
   );
 }
 
+function projectName(children: ReactNode) {
+  return <span className="font-semibold">{children}</span>;
+}
+
 function CommandPaletteDialog(props: {
   readonly mode: SearchOverlayMode;
   readonly openIntent: CommandPaletteOpenIntent | null;
@@ -1889,9 +1893,7 @@ function OpenCommandPaletteDialog(props: {
           <Trans
             k="shellNav.newThreadInProject"
             params={{ project: activeProjectTitle }}
-            components={{
-              project: (children) => <span className="font-semibold">{children}</span>,
-            }}
+            components={{ project: projectName }}
           />
         ),
         icon: <SquarePenIcon className={ITEM_ICON_CLASS} />,
@@ -3286,7 +3288,7 @@ function OpenCommandPaletteDialog(props: {
 
   const inputPlaceholder =
     newProjectFlow !== null
-      ? "Project name"
+      ? t("shellNav.projectName")
       : (remoteProjectInputPlaceholder(addProjectCloneFlow) ??
         getCommandPaletteInputPlaceholder(paletteMode));
   const isSubmenu = paletteMode === "submenu" || paletteMode === "submenu-browse";
@@ -3882,19 +3884,19 @@ function OpenCommandPaletteDialog(props: {
           ? {
               emptyStateMessage:
                 addProjectCloneFlow.source === "url"
-                  ? "Enter a Git clone URL and press Enter to continue."
-                  : "Enter a repository path and press Enter to look it up.",
+                  ? t("shellNav.enterCloneUrlPrompt")
+                  : t("shellNav.enterRepoPathPrompt"),
             }
           : addProjectCloneFlow?.step === "confirm"
-            ? { emptyStateMessage: "Choose a destination path and press Enter to clone." }
+            ? { emptyStateMessage: t("shellNav.chooseDestinationPrompt") }
             : relativePathNeedsActiveProject
-              ? { emptyStateMessage: "Relative paths require an active project." }
+              ? { emptyStateMessage: t("shellNav.relativePathsRequireProject") }
               : willCreateProjectPath
                 ? {
-                    emptyStateMessage: "Press Enter to create this folder and add it as a project.",
+                    emptyStateMessage: t("shellNav.pressEnterCreateFolder"),
                   }
                 : threadSearch.isPending
-                  ? { emptyStateMessage: "Searching thread messages…" }
+                  ? { emptyStateMessage: t("shellNav.searchingThreadMessages") }
                   : {})}
       />
     </CommandPaletteContent>

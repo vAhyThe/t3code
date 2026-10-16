@@ -76,8 +76,8 @@ export function SidebarThreadHeader({
   // screen reader on nothing.
   const activeResultExists = resultsVisible && activeSearchResultIndex < searchResultCount;
   const newThreadLabel = newThreadShortcutLabel
-    ? `New thread (${newThreadShortcutLabel})`
-    : "New thread";
+    ? t("shellNav.newThreadWithShortcut", { shortcut: newThreadShortcutLabel })
+    : t("shellNav.newThread");
 
   return (
     <div className="flex items-center gap-1">

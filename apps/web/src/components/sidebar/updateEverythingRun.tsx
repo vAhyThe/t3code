@@ -99,7 +99,7 @@ export function retryFailedUpdateRunServers(
           ? providerFailure
           : outcome.status === "failed"
             ? outcome.message
-            : "Could not start the update",
+            : currentTranslator()("shellNav.couldNotStartUpdate"),
         { serverUpdated: outcome.status === "updated" },
       ),
     );
@@ -323,7 +323,12 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
       }
     };
     const timer = setTimeout(
-      () => settle(`Not back after ${HANDOFF_TIMEOUT_MS / 60_000} minutes`),
+      () =>
+        settle(
+          currentTranslator()("shellNav.notBackAfterMinutes", {
+            minutes: HANDOFF_TIMEOUT_MS / 60_000,
+          }),
+        ),
       server.startedAt + HANDOFF_TIMEOUT_MS - Date.now(),
     );
     const unsubscribe = appAtomRegistry.subscribe(
