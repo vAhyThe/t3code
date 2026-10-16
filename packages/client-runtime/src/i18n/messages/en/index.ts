@@ -4,7 +4,11 @@ import { desktop } from "./desktop.ts";
 import { pullRequest } from "./pullRequest.ts";
 import { settingsA } from "./settingsA.ts";
 import { settingsB } from "./settingsB.ts";
-import { shell } from "./shell.ts";
+import { settingsC } from "./settingsC.ts";
+import { settingsD } from "./settingsD.ts";
+import { shellDevice } from "./shellDevice.ts";
+import { shellNav } from "./shellNav.ts";
+import { shellRest } from "./shellRest.ts";
 
 /**
  * The English source catalog. Values are the original upstream text verbatim,
@@ -14,9 +18,13 @@ export const enMessages = {
   common,
   settingsA,
   settingsB,
+  settingsC,
+  settingsD,
   chat,
   pullRequest,
-  shell,
+  shellNav,
+  shellDevice,
+  shellRest,
   desktop,
 } as const;
 
