@@ -8,15 +8,16 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ConnectionStatusDot } from "../ConnectionStatusDot";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { useScopedSettings } from "./useScopedSettings";
 import { SettingsSection } from "./settingsLayout";
 import { SettingsScopeNotice } from "./SettingsScopeNotice";
 
 const SIGNALS = [
-  { key: "otlpTracesUrl", label: "Traces", signal: "traces" },
-  { key: "otlpMetricsUrl", label: "Metrics", signal: "metrics" },
-  { key: "otlpLogsUrl", label: "Logs", signal: "logs" },
+  { key: "otlpTracesUrl", endpointKey: "settingsD.tracesEndpoint", signal: "traces" },
+  { key: "otlpMetricsUrl", endpointKey: "settingsD.metricsEndpoint", signal: "metrics" },
+  { key: "otlpLogsUrl", endpointKey: "settingsD.logsEndpoint", signal: "logs" },
 ] as const;
 
 type SignalKey = (typeof SIGNALS)[number]["key"];
@@ -27,27 +28,39 @@ type EndpointCheck = { readonly url: string; readonly result: OtlpEndpointCheckR
 const isHttpUrl = (url: string) => /^https?:\/\/./i.test(url);
 
 function endpointStatus(url: string, check: EndpointCheck | undefined) {
-  if (url === "") return { label: "Off", dot: "bg-muted-foreground/40" };
-  if (check?.url !== url) return { label: "Not checked", dot: "bg-muted-foreground/40" };
+  const t = currentTranslator();
+  if (url === "") return { label: t("settingsD.off"), dot: "bg-muted-foreground/40" };
+  if (check?.url !== url)
+    return { label: t("settingsD.notChecked"), dot: "bg-muted-foreground/40" };
   const { result } = check;
-  if (result === null) return { label: "Checking…", dot: "bg-warning" };
+  if (result === null) return { label: t("settingsD.checkingEndpoint"), dot: "bg-warning" };
   switch (result._tag) {
     case "Accepted":
-      return { label: `Connected · ${Math.round(result.latencyMs)} ms`, dot: "bg-success" };
+      return {
+        label: t("settingsD.connectedLatency", { ms: Math.round(result.latencyMs) }),
+        dot: "bg-success",
+      };
     case "Rejected":
-      return { label: `Rejected · HTTP ${result.status}`, dot: "bg-destructive" };
+      return {
+        label: t("settingsD.rejectedStatus", { status: result.status }),
+        dot: "bg-destructive",
+      };
     case "Unreachable":
-      return { label: result.timedOut ? "Timed out" : "Unreachable", dot: "bg-destructive" };
+      return {
+        label: result.timedOut ? t("settingsD.timedOut") : t("settingsD.unreachable"),
+        dot: "bg-destructive",
+      };
   }
 }
 
 export function TelemetryExportSettings() {
+  const t = useT();
   const { environment, scope } = useSettingsScope();
   if (scope.kind !== "environment" || !environment) {
     return (
-      <SettingsSection title="OpenTelemetry export" id="telemetry-export">
+      <SettingsSection title={t("settingsD.telemetryExportTitle")} id="telemetry-export">
         <SettingsScopeNotice target="environment">
-          Choose one environment to configure its telemetry exports.
+          {t("settingsD.chooseOneEnvironmentTelemetry")}
         </SettingsScopeNotice>
       </SettingsSection>
     );
@@ -57,6 +70,7 @@ export function TelemetryExportSettings() {
 }
 
 function TelemetryExportForm() {
+  const t = useT();
   const { environment } = useSettingsScope();
   const saved = useScopedSettings((settings) => settings.observability);
   const [draft, setDraft] = useState<Partial<typeof saved>>({});
@@ -118,7 +132,7 @@ function TelemetryExportForm() {
   }, [canCheck]);
 
   return (
-    <SettingsSection title="OpenTelemetry export" id="telemetry-export">
+    <SettingsSection title={t("settingsD.telemetryExportTitle")} id="telemetry-export">
       <form
         className="grid gap-4 px-4 py-4 sm:px-5"
         onSubmit={async (event) => {
@@ -139,24 +153,22 @@ function TelemetryExportForm() {
             });
             if (result._tag === "Success") {
               setDraft({});
-              setMessage("Saved. Restart the server to apply.");
+              setMessage(t("settingsD.savedRestartServer"));
             }
           } finally {
             setSaving(false);
           }
         }}
       >
-        <p className="text-xs text-muted-foreground">
-          Send traces, metrics, and logs to an OTLP HTTP receiver. Restart the server to apply.
-          Environment variables override these settings.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("settingsD.telemetryExportDescription")}</p>
         {!canEdit && (
           <p className="text-xs text-muted-foreground">
-            This connection lacks permission to change settings on{" "}
-            {environment?.label ?? "the selected environment"}.
+            {t("settingsD.telemetryNoPermission", {
+              environment: environment?.label ?? t("settingsD.selectedEnvironment"),
+            })}
           </p>
         )}
-        {SIGNALS.map(({ key, label, signal }) => {
+        {SIGNALS.map(({ key, endpointKey, signal }) => {
           const url = values[key].trim();
           const status = canCheck ? endpointStatus(url, checks[key]) : null;
           return (
@@ -164,7 +176,7 @@ function TelemetryExportForm() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
                   {status && <ConnectionStatusDot dotClassName={status.dot} />}
-                  <Label htmlFor={key}>{label} endpoint</Label>
+                  <Label htmlFor={key}>{t(endpointKey)}</Label>
                 </div>
                 {status && <span className="text-xs text-muted-foreground">{status.label}</span>}
               </div>
@@ -174,8 +186,11 @@ function TelemetryExportForm() {
                   size="sm"
                   type="url"
                   pattern="[Hh][Tt][Tt][Pp][Ss]?://.*"
-                  title="Enter an HTTP or HTTPS endpoint, or leave empty to disable export."
-                  placeholder={`http://localhost:4318/v1/${signal}`}
+                  title={t("settingsD.endpointTitleHint")}
+                  placeholder={
+                    // i18n-ignore: example URL, not UI text
+                    `http://localhost:4318/v1/${signal}`
+                  }
                   value={values[key]}
                   disabled={saving || !canEdit}
                   onChange={(event) => {
@@ -198,13 +213,13 @@ function TelemetryExportForm() {
                     disabled={!isHttpUrl(url) || checks[key]?.result === null}
                     onClick={() => void checkEndpoint(key, signal, url)}
                   >
-                    Test
+                    {t("settingsD.testEndpoint")}
                   </Button>
                 )}
               </div>
               {saved[key] !== (running?.[key] ?? "") && (
                 <p className="break-all text-xs text-muted-foreground">
-                  Running: {running?.[key] || "Disabled"}
+                  {t("settingsD.running")} {running?.[key] || t("settingsD.disabled")}
                 </p>
               )}
             </div>
@@ -230,10 +245,10 @@ function TelemetryExportForm() {
                 }
               }}
             >
-              Discard
+              {t("settingsD.discard")}
             </Button>
             <Button type="submit" size="xs" disabled={!changed || saving || !canEdit}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("settingsD.saving") : t("settingsD.save")}
             </Button>
           </div>
         </div>

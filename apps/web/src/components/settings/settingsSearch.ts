@@ -150,6 +150,7 @@ const SOURCE_CONTROL_HOST_SEARCH_ITEMS = sourceControlClients.definitions.flatMa
     ? [
         {
           id: sourceControlHostSettingsSearchId(definition.kind),
+          // i18n-ignore: dynamic host name, titleKey cannot take the label parameter
           title: `${definition.label} credentials`,
           to: "/settings/source-control" as const,
           searchTerms: [
@@ -171,7 +172,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "storage-worktree-keep-when",
     targetId: "storage-worktrees",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Keep worktrees with local changes",
+    titleKey: "settingsD.searchStorageWorktreeKeepWhen",
     to: "/settings/storage",
     scope: "project-defaults",
     searchTerms: [
@@ -180,14 +183,18 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "storage-delete-now",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Delete now",
+    titleKey: "settingsD.searchStorageDeleteNow",
     to: "/settings/storage",
     scope: "environment-defaults",
     searchTerms: ["storage cleanup run now results report removed kept failed"],
   },
   {
     id: "storage-worktrees",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Worktree cleanup",
+    titleKey: "settingsD.searchStorageWorktrees",
     to: "/settings/storage",
     scope: "project-defaults",
     searchTerms: [
@@ -196,41 +203,53 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "storage-worktrees-location",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Worktree location",
+    titleKey: "settingsD.searchStorageWorktreesLocation",
     to: "/settings/storage",
     scope: "environment-defaults",
     searchTerms: ["worktree location folder directory path drive external disk"],
   },
   {
     id: "storage-artifacts",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Artifacts and logs",
+    titleKey: "settingsD.searchStorageArtifacts",
     to: "/settings/storage",
     scope: "environment-defaults",
     searchTerms: ["disk storage browser screenshots captures rotated logs cleanup retention"],
   },
   {
     id: "project-defaults",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Project defaults and overrides",
+    titleKey: "settingsD.searchProjectDefaults",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["model workspace environments projects inheritance checkout"],
   },
   {
     id: "project-overview",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Project overview",
+    titleKey: "settingsD.searchProjectOverview",
     to: "/settings/projects",
     searchTerms: ["name icon emoji image checkout remove delete"],
   },
   {
     id: "default-model",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default model",
+    titleKey: "settingsD.searchDefaultModel",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["new thread project provider reasoning effort"],
   },
   {
     id: "default-permissions",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Permissions",
+    titleKey: "settingsD.searchDefaultPermissions",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: [
@@ -239,7 +258,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "color-scheme",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Color scheme",
+    titleKey: "settingsD.searchColorScheme",
     to: "/settings/appearance",
     searchTerms: ["appearance light dark system mode"],
     // The scheme tiles sit at the top of the Appearance section.
@@ -247,7 +268,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "theme",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Themes",
+    titleKey: "settingsD.searchTheme",
     to: "/settings/appearance",
     searchTerms: ["appearance colors palette custom import"],
     // Theme cards live directly under the scheme tiles; the section is the
@@ -257,37 +280,49 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     // Prefixed because the slider control already owns the `appearance-contrast` id.
     id: "setting-appearance-contrast",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Contrast",
+    titleKey: "settingsD.searchSettingAppearanceContrast",
     to: "/settings/appearance",
     searchTerms: ["colors borders interface"],
   },
   {
     // Prefixed because the slider control already owns the `glass-opacity` id.
     id: "setting-glass-opacity",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Glass opacity",
+    titleKey: "settingsD.searchSettingGlassOpacity",
     to: "/settings/appearance",
     searchTerms: ["transparent transparency solid menus dialogs composer"],
   },
   {
     id: "diff-color-scheme",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Diff colors",
+    titleKey: "settingsD.searchDiffColorScheme",
     to: "/settings/appearance",
     searchTerms: ["red green blue orange additions deletions changes counts palette colorblind"],
   },
   {
     id: "chat-width",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Chat width",
+    titleKey: "settingsD.searchChatWidth",
     to: "/settings/appearance",
     searchTerms: ["wide full width column layout messages composer monitor"],
   },
   {
     id: "panel-animations",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Panel animations",
+    titleKey: "settingsD.searchPanelAnimations",
     to: "/settings/appearance",
   },
   {
     id: "environment-identification",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Environment identification",
+    titleKey: "settingsD.searchEnvironmentIdentification",
     to: "/settings/appearance",
     searchTerms: ["dev nightly artwork pill label hide none"],
     // The setting is stage-dependent, so its parent section is the stable destination.
@@ -295,79 +330,105 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "interface-font",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Interface font",
+    titleKey: "settingsD.searchInterfaceFont",
     to: "/settings/appearance",
     searchTerms: ["typography family size system sans"],
   },
   {
     id: "prompt-font",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Prompt font",
+    titleKey: "settingsD.searchPromptFont",
     to: "/settings/appearance",
     searchTerms: ["typography family size composer input"],
   },
   {
     id: "code-font",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Code font",
+    titleKey: "settingsD.searchCodeFont",
     to: "/settings/appearance",
     searchTerms: ["typography family size monospace code blocks diffs file previews"],
   },
   {
     id: "terminal-font",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Terminal font",
+    titleKey: "settingsD.searchTerminalFont",
     to: "/settings/appearance",
     searchTerms: ["typography family size monospace output"],
   },
   {
     id: "font-smoothing",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Font smoothing",
+    titleKey: "settingsD.searchFontSmoothing",
     to: "/settings/appearance",
     searchTerms: ["typography text grayscale anti aliasing macos thin"],
     macOnly: true,
   },
   {
     id: "word-wrap",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Word wrap",
+    titleKey: "settingsD.searchWordWrap",
     to: "/settings/appearance",
     searchTerms: ["long lines code blocks tables diffs file previews"],
   },
   {
     id: "composer-context",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Composer context",
+    titleKey: "settingsD.searchComposerContext",
     to: "/settings/appearance",
   },
   {
     id: "project-grouping",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Project grouping",
+    titleKey: "settingsD.searchProjectGrouping",
     to: "/settings/general",
     searchTerms: ["combine matching repositories environments sidebar"],
   },
   {
     id: "project-order",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Project order",
+    titleKey: "settingsD.searchProjectOrder",
     to: "/settings/general",
     searchTerms: ["sort projects sidebar manual created recent"],
   },
   {
     id: "snooze-limited-threads",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Snooze limited threads",
+    titleKey: "settingsD.searchSnoozeLimitedThreads",
     to: "/settings/general",
     searchTerms: ["usage quota rate limit reset wake recover continue"],
   },
   {
     id: "auto-resume-limited-threads",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Auto-resume limited threads",
+    titleKey: "settingsD.searchAutoResumeLimitedThreads",
     to: "/settings/general",
     searchTerms: ["usage quota rate limit reset recover continue"],
   },
   {
     id: "working-shelf",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Working section (beta)",
+    titleKey: "settingsD.searchWorkingShelf",
     to: "/settings/general",
     searchTerms: ["hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
     id: "auto-settle-inactive-threads",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Auto-settle inactive threads",
+    titleKey: "settingsD.searchAutoSettleInactiveThreads",
     to: "/settings/general",
     searchTerms: ["sidebar inactivity days no activity automatically"],
     requiresThreadAutoSettlement: true,
@@ -375,7 +436,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "auto-settle-merged-threads",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Auto-settle merged threads",
+    titleKey: "settingsD.searchAutoSettleMergedThreads",
     to: "/settings/general",
     searchTerms: ["pull request merge closed automatically sidebar"],
     requiresThreadAutoSettlement: true,
@@ -383,7 +446,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "days-before-auto-settle",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Days of inactivity before auto-settle",
+    titleKey: "settingsD.searchDaysBeforeAutoSettle",
     to: "/settings/general",
     targetId: "auto-settle-inactive-threads",
     searchTerms: ["thread timeout activity sidebar"],
@@ -392,18 +457,23 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "thread-notifications",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Thread notifications",
+    titleKey: "settingsD.searchThreadNotifications",
     to: "/settings/general",
     searchTerms: ["notification sound alert completion input approval desktop"],
   },
   {
     id: "in-app-notifications",
+    // i18n-ignore: English search source, shown through titleKey
     title: "In-app notifications",
+    titleKey: "settingsD.searchInAppNotifications",
     to: "/settings/general",
     searchTerms: ["notification toast popup completion input approval failure"],
   },
   {
     id: "interface-language",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Language",
     titleKey: "settingsA.language",
     to: "/settings/general",
@@ -411,81 +481,107 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "time-format",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Time format",
+    titleKey: "settingsD.searchTimeFormat",
     to: "/settings/general",
     searchTerms: ["timestamp clock locale system browser os 12 hour 24 hour"],
   },
   {
     id: "response-streaming",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Response streaming",
+    titleKey: "settingsD.searchResponseStreaming",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["output token paragraph buffered wait turn legacy"],
   },
   {
     id: "hide-whitespace-changes",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Hide whitespace changes",
+    titleKey: "settingsD.searchHideWhitespaceChanges",
     to: "/settings/general",
     searchTerms: ["diff ignore spaces edits default"],
   },
   {
     id: "default-diff-file-state",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default diff file state",
+    titleKey: "settingsD.searchDefaultDiffFileState",
     to: "/settings/general",
     searchTerms: ["collapsed expanded collapse expand files pull request pr code tab"],
   },
   {
     id: "diff-layout",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Diff layout",
+    titleKey: "settingsD.searchDiffLayout",
     to: "/settings/general",
     searchTerms: ["stacked split side by side unified inline view"],
   },
   {
     id: "proactive-panels",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Proactive panels",
+    titleKey: "settingsD.searchProactivePanels",
     to: "/settings/general",
     searchTerms: ["automatically open diff pull request pr right panel agent completion"],
   },
   {
     id: "skills-in-slash-menu",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Show skills in slash menu",
+    titleKey: "settingsD.searchSkillsInSlashMenu",
     to: "/settings/general",
     searchTerms: ["command menu dollar $ slash /"],
   },
   {
     id: "composer-rich-text",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Rich text composer",
+    titleKey: "settingsD.searchComposerRichText",
     to: "/settings/general",
     searchTerms: ["composer rich text tiptap bold italic markdown styled wysiwyg"],
   },
   {
     id: "composer-collapse",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Collapse composer on scroll",
+    titleKey: "settingsD.searchComposerCollapse",
     to: "/settings/general",
     searchTerms: ["composer rest resting scroll wheel conversation timeline shrink minimize"],
   },
   {
     id: "send-shortcut",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Send shortcut",
+    titleKey: "settingsD.searchSendShortcut",
     to: "/settings/general",
     searchTerms: ["enter return command ctrl multiline prompt new line composer"],
   },
   {
     id: "follow-up-behavior",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Follow-up behavior",
+    titleKey: "settingsD.searchFollowUpBehavior",
     to: "/settings/general",
     searchTerms: ["queue steer running turn send default behavior composer"],
   },
   {
     id: "provider-update-checks",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Provider update checks",
+    titleKey: "settingsD.searchProviderUpdateChecks",
     to: "/settings/general",
     searchTerms: ["installed cli versions newer available codex claude cursor grok opencode"],
     scope: "environment-defaults",
   },
   {
     id: "continue-threads-after-server-update",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Continue threads after restarts",
+    titleKey: "settingsD.searchContinueThreadsAfterServerUpdate",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: [
@@ -494,7 +590,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "background-activity",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Background activity",
+    titleKey: "settingsD.searchBackgroundActivity",
     to: "/settings/general",
     scope: "environment-defaults",
     searchTerms: [
@@ -503,93 +601,121 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "new-threads",
+    // i18n-ignore: English search source, shown through titleKey
     title: "New threads",
+    titleKey: "settingsD.searchNewThreads",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["default workspace mode draft local worktree"],
   },
   {
     id: "worktree-submodules",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Submodules",
+    titleKey: "settingsD.searchWorktreeSubmodules",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["git submodule init recursive top-level none worktree t3.json"],
   },
   {
     id: "start-from-origin",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Start from origin",
+    titleKey: "settingsD.searchStartFromOrigin",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["new worktrees latest matching remote branch local"],
   },
   {
     id: "add-project-starts-in",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Add project starts in",
+    titleKey: "settingsD.searchAddProjectStartsIn",
     to: "/settings/general",
     scope: "environment-defaults",
     searchTerms: ["base directory folder browser path home"],
   },
   {
     id: "unpin-confirmation",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Unpin confirmation",
+    titleKey: "settingsD.searchUnpinConfirmation",
     to: "/settings/general",
     searchTerms: ["ask before thread pinned section"],
   },
   {
     id: "archive-confirmation",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Archive confirmation",
+    titleKey: "settingsD.searchArchiveConfirmation",
     to: "/settings/general",
     searchTerms: ["ask before thread second click inline action"],
   },
   {
     id: "delete-confirmation",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Delete confirmation",
+    titleKey: "settingsD.searchDeleteConfirmation",
     to: "/settings/general",
     searchTerms: ["ask before thread chat history"],
   },
   {
     id: "quit-confirmation",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Quit shortcut",
+    titleKey: "settingsD.searchQuitConfirmation",
     to: "/settings/general",
     searchTerms: ["confirmation desktop app exit direct hold double click press twice"],
     desktopOnly: true,
   },
   {
     id: "text-generation-model",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Text generation model",
+    titleKey: "settingsD.searchTextGenerationModel",
     to: "/settings/general",
     scope: "project-defaults",
     searchTerms: ["generated thread titles source control content default provider"],
   },
   {
     id: "app-version",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Version",
+    titleKey: "settingsD.searchAppVersion",
     to: "/settings/general",
     searchTerms: ["about check for updates download install upgrade release"],
   },
   {
     id: "update-track",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Update track",
+    titleKey: "settingsD.searchUpdateTrack",
     to: "/settings/general",
     searchTerms: ["release channel stable latest nightly prerelease"],
     releaseChannelOnly: true,
   },
   {
     id: "cli-command",
+    // i18n-ignore: English search source, shown through titleKey
     title: "t3 command",
+    titleKey: "settingsD.searchCliCommand",
     to: "/settings/general",
     searchTerms: ["cli terminal shell path install command line"],
     desktopOnly: true,
   },
   {
     id: "privacy-policy",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Privacy policy",
+    titleKey: "settingsD.searchPrivacyPolicy",
     to: "/settings/general",
     searchTerms: ["telemetry analytics usage data tracking legal opt out"],
   },
   {
     id: "telemetry-export",
+    // i18n-ignore: English search source, shown through titleKey
     title: "OpenTelemetry export",
+    titleKey: "settingsD.searchTelemetryExport",
     to: "/settings/diagnostics",
     targetId: "telemetry-export",
     scope: "environment",
@@ -597,35 +723,46 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "diagnostics",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Diagnostics",
+    titleKey: "settingsD.searchDiagnostics",
     to: "/settings/general",
     searchTerms: ["logs traces processes resource history failures spans cpu memory"],
   },
   {
     id: "open-source-licenses",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Open source licenses",
+    titleKey: "settingsD.searchOpenSourceLicenses",
     to: "/settings/general",
   },
   {
     id: "legacy-plan-mode",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Plan mode (legacy)",
+    titleKey: "settingsD.searchLegacyPlanMode",
     to: "/settings/general",
     searchTerms: ["build plan composer old"],
   },
   {
     id: "legacy-context-window-indicator",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Context window indicator (legacy)",
+    titleKey: "settingsD.searchLegacyContextWindowIndicator",
     to: "/settings/general",
     searchTerms: ["composer meter usage tokens circle old"],
   },
   {
     id: "legacy-sidebar",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Sidebar (legacy)",
+    titleKey: "settingsD.searchLegacySidebar",
     to: "/settings/general",
     searchTerms: ["project thread tree old flat list"],
   },
   {
     id: "keybindings",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Keybindings",
     titleKey: "settingsB.keybindings",
     to: "/settings/keybindings",
@@ -634,13 +771,17 @@ export const SETTINGS_SEARCH_ITEMS = [
   ...KEYBINDING_SEARCH_ITEMS,
   {
     id: "snap-shot-enabled",
+    // i18n-ignore: English search source, shown through titleKey
     title: "SnapShots",
+    titleKey: "settingsD.searchSnapShotEnabled",
     searchTerms: ["window capture screenshot"],
     to: "/settings/snap-shot",
   },
   {
     id: "snap-shot-accessibility",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Include app text",
+    titleKey: "settingsD.searchSnapShotAccessibility",
     to: "/settings/snap-shot",
     targetId: "snap-shot-enabled",
     searchTerms: [
@@ -649,31 +790,41 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "snap-shot-shortcut",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Capture shortcut",
+    titleKey: "settingsD.searchSnapShotShortcut",
     to: "/settings/snap-shot",
     targetId: "snap-shot-enabled",
   },
   {
     id: "snap-shot-sound",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Capture sound",
+    titleKey: "settingsD.searchSnapShotSound",
     to: "/settings/snap-shot",
     targetId: "snap-shot-enabled",
   },
   {
     id: "snap-shot-flash",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Capture flash",
+    titleKey: "settingsD.searchSnapShotFlash",
     to: "/settings/snap-shot",
     targetId: "snap-shot-enabled",
   },
   {
     id: "snap-shot-animations",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Capture animations",
+    titleKey: "settingsD.searchSnapShotAnimations",
     to: "/settings/snap-shot",
     targetId: "snap-shot-enabled",
   },
   {
     id: "providers",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Providers",
+    titleKey: "settingsD.searchProviders",
     to: "/settings/providers",
     searchTerms: [
       "agents cli codex claude cursor grok opencode antigravity google sign in sign out install subscription instances authentication api key models configuration binary path config directory endpoint arguments environment variables display name accent color custom favorite hidden auto compact",
@@ -681,7 +832,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "usage-providers",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Usage providers",
+    titleKey: "settingsD.searchUsageProviders",
     to: "/settings/providers",
     searchTerms: [
       "usage sources CLIProxyAPI CLI proxy hub quota subscription limits management key add remove",
@@ -690,7 +843,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "cursor-keychain-usage",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Cursor account usage",
+    titleKey: "settingsD.searchCursorKeychainUsage",
     to: "/settings/providers",
     searchTerms: ["cursor macOS keychain usage tokens cost limits permission"],
     providerSettingsOnly: true,
@@ -698,134 +853,176 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "provider-health-check-interval",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Health check interval",
+    titleKey: "settingsD.searchProviderHealthCheckInterval",
     to: "/settings/providers",
     searchTerms: ["refresh availability versions auth state models background probes seconds off"],
     providerSettingsOnly: true,
   },
   {
     id: "agent-browser-access",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Agent browser access",
+    titleKey: "settingsD.searchAgentBrowserAccess",
     to: "/settings/integrations",
     scope: "project-defaults",
     searchTerms: ["allow disable enable open drive preview tools sessions project override"],
   },
   {
     id: "device-hosts",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Device hosts",
+    titleKey: "settingsD.searchDeviceHosts",
     to: "/settings/integrations",
     searchTerms: ["ssh remote simulator emulator ios android mac mini identity key connection"],
   },
   {
     id: "agent-device-access",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Agent device access",
+    titleKey: "settingsD.searchAgentDeviceAccess",
     to: "/settings/integrations",
     targetId: "devices",
     searchTerms: ["allow simulator emulator ios android drive tools sessions"],
   },
   {
     id: "device-hub",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Device hub",
+    titleKey: "settingsD.searchDeviceHub",
     to: "/settings/integrations",
     targetId: "devices",
     searchTerms: ["simulator emulator ios android install start"],
   },
   {
     id: "device-platform-support",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Simulator support",
+    titleKey: "settingsD.searchDevicePlatformSupport",
     to: "/settings/integrations",
     targetId: "devices",
     searchTerms: ["xcode android studio sdk avd runtime"],
   },
   {
     id: "browser-profiles",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Browser profiles",
+    titleKey: "settingsD.searchBrowserProfiles",
     to: "/settings/integrations",
     targetId: "browser",
   },
   {
     id: "browser-default-profile",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default browser profile",
+    titleKey: "settingsD.searchBrowserDefaultProfile",
     to: "/settings/integrations",
     targetId: "browser-profiles",
   },
   {
     id: "browser-default-viewport",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default browser viewport",
+    titleKey: "settingsD.searchBrowserDefaultViewport",
     to: "/settings/integrations",
     searchTerms: ["preview size width height device desktop mobile rotate"],
   },
   {
     id: "browser-default-zoom",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default browser zoom",
+    titleKey: "settingsD.searchBrowserDefaultZoom",
     to: "/settings/integrations",
     searchTerms: ["preview page scale tabs percent"],
   },
   {
     id: "browser-default-appearance",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default browser appearance",
+    titleKey: "settingsD.searchBrowserDefaultAppearance",
     to: "/settings/integrations",
     searchTerms: ["preview color scheme light dark system os"],
   },
   {
     id: "browser-recording-frame-rate",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Browser recording frame rate",
+    titleKey: "settingsD.searchBrowserRecordingFrameRate",
     to: "/settings/integrations",
   },
   {
     id: "browser-recording-key-presses",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Show key presses in recordings",
+    titleKey: "settingsD.searchBrowserRecordingKeyPresses",
     to: "/settings/integrations",
     searchTerms: ["browser preview keyboard shortcuts keystrokes overlay capture"],
   },
   {
     id: "browser-recording-mouse-presses",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Show mouse presses in recordings",
+    titleKey: "settingsD.searchBrowserRecordingMousePresses",
     to: "/settings/integrations",
     searchTerms: ["browser preview clicks buttons drag overlay capture"],
   },
   {
     id: "browser-link-target",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Open links in",
+    titleKey: "settingsD.searchBrowserLinkTarget",
     to: "/settings/integrations",
     searchTerms: ["links default browser in-app browser external open"],
   },
   {
     id: "pull-request-links-open-in-app",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Open pull requests in T3 Code",
+    titleKey: "settingsD.searchPullRequestLinksOpenInApp",
     to: "/settings/integrations",
     searchTerms: ["pr links github browser external click default pull request view panel"],
   },
   {
     id: "browser-auto-show-floating-preview",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Auto-show floating preview",
+    titleKey: "settingsD.searchBrowserAutoShowFloatingPreview",
     to: "/settings/integrations",
     searchTerms: ["agent opens browser device simulator pop into view hide"],
   },
   {
     id: "automatic-pull",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Automatically pull",
+    titleKey: "settingsD.searchAutomaticPull",
     to: "/settings/source-control",
     scope: "project-defaults",
     searchTerms: ["auto pull default branch current checkout fast forward upstream"],
   },
   {
     id: "remove-agent-credits-on-merge",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Remove agent credits when merging",
+    titleKey: "settingsD.searchRemoveAgentCreditsOnMerge",
     to: "/settings/source-control",
     scope: "project-defaults",
     searchTerms: ["pull request github squash co-authored-by attribution claude codex generated"],
   },
   {
     id: "pull-request-merge-method",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Default merge method",
+    titleKey: "settingsD.searchPullRequestMergeMethod",
     to: "/settings/source-control",
     scope: "project-defaults",
     searchTerms: ["pull request merge squash rebase last selected"],
   },
   {
     id: "source-control",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Source control",
+    titleKey: "settingsD.searchSourceControl",
     to: "/settings/source-control",
     scope: "environment-defaults",
     searchTerms: [
@@ -834,7 +1031,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "git-fetch-interval",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Git fetch interval",
+    titleKey: "settingsD.searchGitFetchInterval",
     to: "/settings/source-control",
     searchTerms: [
       "automatic remote branch refresh background credentials security keys seconds off",
@@ -844,7 +1043,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "worktree-branch-naming",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Worktree branch naming",
+    titleKey: "settingsD.searchWorktreeBranchNaming",
     to: "/settings/source-control",
     searchTerms: ["static semantic prefix custom prompt instructions feat fix refactor chore"],
     environmentOnly: true,
@@ -852,7 +1053,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "github-accounts",
+    // i18n-ignore: English search source, shown through titleKey
     title: "GitHub accounts and token",
+    titleKey: "settingsD.searchGithubAccounts",
     to: "/settings/source-control",
     searchTerms: [
       "github gh account login user host enterprise ghes switch multiple accounts disable sign in token personal access token pat api key credential",
@@ -863,7 +1066,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   ...SOURCE_CONTROL_HOST_SEARCH_ITEMS,
   {
     id: "source-control-writing-style",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Source control writing style",
+    titleKey: "settingsD.searchSourceControlWritingStyle",
     to: "/settings/source-control",
     searchTerms: [
       "repository conventions conventional commits custom instructions change descriptions request titles",
@@ -872,14 +1077,18 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "follow-change-request-templates",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Follow change request templates",
+    titleKey: "settingsD.searchFollowChangeRequestTemplates",
     to: "/settings/source-control",
     searchTerms: ["repository pr pull request description structure"],
     environmentOnly: true,
   },
   {
     id: "source-control-writer-model",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Source control writer model",
+    titleKey: "settingsD.searchSourceControlWriterModel",
     to: "/settings/source-control",
     searchTerms: [
       "override generated commit change request pr titles descriptions branch bookmark",
@@ -889,14 +1098,18 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "review-guides",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Review guides (beta)",
+    titleKey: "settingsD.searchReviewGuides",
     to: "/settings/source-control",
     searchTerms: ["pull request pr guided review guide tour beta experimental"],
     environmentOnly: true,
   },
   {
     id: "review-guide-model",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Review guide model",
+    titleKey: "settingsD.searchReviewGuideModel",
     to: "/settings/source-control",
     // Hidden until review guides are on, so a search lands on the switch that shows it.
     targetId: "review-guides",
@@ -906,7 +1119,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "review-guide-instructions",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Review guide instructions",
+    titleKey: "settingsD.searchReviewGuideInstructions",
     to: "/settings/source-control",
     targetId: "review-guides",
     searchTerms: ["pull request pr guided review guide preferences taste prompt custom"],
@@ -915,20 +1130,26 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "project-actions",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Actions",
+    titleKey: "settingsD.searchProjectActions",
     to: "/settings/projects",
     searchTerms: ["commands scripts setup run dev server checkout worktree t3.json import"],
   },
   {
     id: "environment-icon",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Environment icon",
+    titleKey: "settingsD.searchEnvironmentIcon",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["machine glyph sidebar mac mini studio laptop desktop server cloud vm"],
   },
   {
     id: "local-environment",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Local environment",
+    titleKey: "settingsD.searchLocalEnvironment",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["turn off on disable enable local server agents remote only restart"],
@@ -936,7 +1157,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "network-access",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Network access",
+    titleKey: "settingsD.searchNetworkAccess",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["expose backend remote pairing local machine interfaces host restart"],
@@ -944,7 +1167,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "tailscale-https",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Tailscale HTTPS",
+    titleKey: "settingsD.searchTailscaleHttps",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["serve magicdns endpoint remote secure network"],
@@ -953,7 +1178,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "wsl-backend",
+    // i18n-ignore: English search source, shown through titleKey
     title: "WSL backend",
+    titleKey: "settingsD.searchWslBackend",
     to: "/settings/connections",
     searchTerms: [
       "windows subsystem linux distro second server projects stop windows backend restart",
@@ -966,7 +1193,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "t3-connect",
     localEnvironmentOnly: true,
+    // i18n-ignore: English search source, shown through titleKey
     title: "T3 Connect",
+    titleKey: "settingsD.searchT3Connect",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["managed tunnel cloud other devices remote"],
@@ -976,7 +1205,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "hold-webhooks-while-offline",
     localEnvironmentOnly: true,
+    // i18n-ignore: English search source, shown through titleKey
     title: "Hold webhooks while offline",
+    titleKey: "settingsD.searchHoldWebhooksWhileOffline",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["webhook automations offline queue mailbox t3 connect"],
@@ -986,7 +1217,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "publish-agent-activity",
     localEnvironmentOnly: true,
+    // i18n-ignore: English search source, shown through titleKey
     title: "Publish agent activity",
+    titleKey: "settingsD.searchPublishAgentActivity",
     to: "/settings/connections",
     targetId: "connections-environment",
     searchTerms: ["mobile push notifications live activities cloud tunnel"],
@@ -994,7 +1227,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "connections-environment",
+    // i18n-ignore: English search source, shown through titleKey
     title: "This machine",
+    titleKey: "settingsD.searchConnectionsEnvironment",
     to: "/settings/connections",
     searchTerms: [
       "connections server backend local remote access administrative permissions scope pairing links qr code authorized clients sessions revoke endpoint",
@@ -1002,13 +1237,17 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "remote-environments",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Environments",
+    titleKey: "settingsD.searchRemoteEnvironments",
     to: "/settings/connections",
     searchTerms: ["add pair backend host code ssh config agent tunnel saved t3 connect"],
   },
   {
     id: "load-balancing",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Load balancing",
+    titleKey: "settingsD.searchLoadBalancing",
     to: "/settings/connections",
     searchTerms: [
       "automatic machine environment resources cpu memory capacity preference weight shared projects",
@@ -1016,13 +1255,17 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "github-routing",
+    // i18n-ignore: English search source, shown through titleKey
     title: "GitHub sharing",
+    titleKey: "settingsD.searchGithubRouting",
     to: "/settings/connections",
     searchTerms: ["pull request trusted environments shared credentials permissions read actions"],
   },
   {
     id: "archive",
+    // i18n-ignore: English search source, shown through titleKey
     title: "Archived threads",
+    titleKey: "settingsD.searchArchive",
     to: "/settings/archived",
     searchTerms: ["restore reopen deleted history projects"],
   },
@@ -1151,6 +1394,12 @@ export function searchableSetting(id: SettingsSearchItemId): {
 } {
   const { id: anchorId, title } = SEARCH_ITEMS_BY_ID.get(id)!;
   return { id: anchorId, title };
+}
+
+/** Catalog key of a searchable setting's translated title, when it has one. */
+export function searchableSettingTitleKey(id: SettingsSearchItemId): MessageKey | undefined {
+  const item: SettingsSearchItem | undefined = SEARCH_ITEMS_BY_ID.get(id);
+  return item?.titleKey;
 }
 
 export function filterAvailableSettingsSearchItems(

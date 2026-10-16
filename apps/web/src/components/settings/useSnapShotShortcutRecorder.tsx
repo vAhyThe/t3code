@@ -6,6 +6,7 @@ import {
 import { parseKeybindingShortcut } from "@t3tools/shared/keybindings";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { getDesktopSnapShotBridge } from "../../lib/desktopSnapShot";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import {
   formatSnapShotShortcutLabel,
   parseDesktopSnapShotShortcut,
@@ -48,6 +49,8 @@ export function useSnapShotShortcutRecorder({
   onStart?: () => void;
   onError: (message: string) => void;
 }) {
+  // Tests render this hook through a React hook harness without a store subscription.
+  const t = currentTranslator();
   const bridge = getDesktopSnapShotBridge();
   const displayShortcut = shortcutLabel ? parseDesktopSnapShotShortcut(shortcutLabel) : shortcut;
   const [recording, setRecording] = useState(false);
@@ -127,8 +130,10 @@ export function useSnapShotShortcutRecorder({
         disabled={disabled}
         aria-label={
           displayShortcut
-            ? `Record snapshot shortcut, currently ${formatSnapShotShortcutLabel(displayShortcut)}`
-            : "Change snapshot shortcut"
+            ? t("settingsD.recordSnapShotShortcut", {
+                shortcut: formatSnapShotShortcutLabel(displayShortcut),
+              })
+            : t("settingsD.changeSnapShotShortcut")
         }
         aria-pressed={recording}
         data-keybinding-capture=""
@@ -138,11 +143,11 @@ export function useSnapShotShortcutRecorder({
         onBlur={stopRecording}
       >
         {recording ? (
-          "Press shortcut…"
+          t("settingsD.pressShortcut")
         ) : !displayShortcut ? (
-          "Change shortcut"
+          t("settingsD.changeShortcut")
         ) : !allowModifierPairs && isModifierPairShortcut(displayShortcut) ? (
-          "Choose shortcut"
+          t("settingsD.chooseShortcut")
         ) : (
           <SnapShotShortcutKeys shortcut={displayShortcut} />
         )}

@@ -6,6 +6,7 @@ import { useEnvironmentSettings } from "../../hooks/useSettings";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { Button } from "../ui/button";
+import { useT } from "~/i18n/I18nProvider";
 import { ProviderSettingsForm } from "./ProviderSettingsForm";
 
 /**
@@ -24,11 +25,13 @@ export function SourceControlHostSettings({
   };
   readonly onSaved: () => void;
 }) {
+  const t = useT();
   const saved = useEnvironmentSettings(
     environmentId,
     (settings) => settings.sourceControlHosts[definition.kind],
   );
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
+    // i18n-ignore: internal command label, not shown on screen
     label: `save ${definition.label} settings`,
   });
   const [saving, setSaving] = useState(false);
@@ -75,7 +78,7 @@ export function SourceControlHostSettings({
               void save(Object.fromEntries(Object.keys(saved ?? {}).map((key) => [key, ""])))
             }
           >
-            Remove
+            {t("settingsD.remove")}
           </Button>
         </div>
       ) : null}

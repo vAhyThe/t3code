@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
+import { useT } from "~/i18n/I18nProvider";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -35,8 +36,10 @@ export function UsageProviderSettings({
   readonly cursorKeychainUsageEnabled: boolean;
   readonly readOnly: boolean;
 }) {
+  const t = useT();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const updateCursorSettings = useAtomCommand(serverEnvironment.updateSettings, {
+    // i18n-ignore: internal command label, not shown on screen
     label: "update Cursor account usage",
   });
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
@@ -71,7 +74,7 @@ export function UsageProviderSettings({
           !readOnly ? (
             <Button size="xs" variant="outline" onClick={() => setAdding(true)}>
               <PlusIcon className="size-3" aria-hidden />
-              Add hub
+              {t("settingsD.addHub")}
             </Button>
           ) : null
         }
@@ -79,11 +82,11 @@ export function UsageProviderSettings({
         {platform?.os === "darwin" ? (
           <SettingsRow
             id="cursor-keychain-usage"
-            title="Cursor account usage"
-            description="Read your existing Cursor CLI login from macOS Keychain to show account history and monthly limits. macOS may ask you to allow access."
+            title={t("settingsD.cursorAccountUsage")}
+            description={t("settingsD.cursorAccountUsageDescription")}
             control={
               <Switch
-                aria-label="Cursor account usage"
+                aria-label={t("settingsD.cursorAccountUsage")}
                 checked={cursorKeychainUsageEnabled}
                 disabled={readOnly || updatingCursor}
                 onCheckedChange={(enabled) => void setCursorUsageEnabled(enabled)}
@@ -92,7 +95,7 @@ export function UsageProviderSettings({
           />
         ) : null}
         {entries.length === 0 ? (
-          <SettingsRow title="No hubs configured." />
+          <SettingsRow title={t("settingsD.noHubsConfigured")} />
         ) : (
           entries.map(([id, source]) => {
             const label = source.label?.trim() || source.url;
@@ -102,7 +105,8 @@ export function UsageProviderSettings({
                 title={label}
                 description={
                   <span className="break-all">
-                    CLI Proxy{source.enabled ? "" : " · Disabled"}
+                    {t("settingsD.cliProxy")}
+                    {source.enabled ? "" : ` · ${t("settingsD.disabled")}`}
                     {label !== source.url ? ` · ${source.url}` : ""}
                   </span>
                 }
@@ -139,24 +143,23 @@ function RemoveUsageProviderButton({
   readonly label: string;
   readonly onConfirm: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
-        Remove
+        {t("settingsD.remove")}
       </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The hub's management key is deleted from this server. Its accounts leave the Limits
-              view; the hub itself is untouched. Add it again with the URL and key to bring them
-              back.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("settingsD.removeHubTitle", { label })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("settingsD.removeHubDescription")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
             <Button
               variant="destructive"
               onClick={() => {
@@ -164,7 +167,7 @@ function RemoveUsageProviderButton({
                 onConfirm();
               }}
             >
-              Remove hub
+              {t("settingsD.removeHub")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

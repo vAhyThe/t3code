@@ -34,14 +34,16 @@ import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import type { NewProjectScriptInput } from "../projectScriptEditor";
 import { toastManager } from "../ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 function reportScriptFailure(result: AtomCommandResult<unknown, unknown>) {
   if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
     const error = squashAtomCommandFailure(result);
     toastManager.add({
       type: "error",
-      title: "Failed to save project actions",
-      description: error instanceof Error ? error.message : "An error occurred.",
+      title: currentTranslator()("settingsD.failedToSaveProjectActions"),
+      description:
+        error instanceof Error ? error.message : currentTranslator()("settingsD.errorOccurred"),
     });
   }
   return mapAtomCommandResult(result, () => undefined);
@@ -78,8 +80,12 @@ export function useProjectScriptSettings(
     keybinding?: string | null,
   ): Promise<AtomCommandResult<void, unknown>> {
     if (savingRef.current || targets.length === 0) {
-      const message = "No available machine, or another action change is saving.";
-      toastManager.add({ type: "error", title: "Actions not saved", description: message });
+      const message = currentTranslator()("settingsD.noMachineOrSaving");
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("settingsD.actionsNotSaved"),
+        description: message,
+      });
       return AsyncResult.failure(Cause.fail(new Error(message)));
     }
     if (
@@ -92,7 +98,7 @@ export function useProjectScriptSettings(
           Cause.fail(
             new EnvironmentAuthorizationError({
               requiredScope: AuthSettingsWriteScope,
-              message: "This connection cannot change environment settings.",
+              message: currentTranslator()("settingsD.connectionCannotChangeEnvironment"),
             }),
           ),
         ),
