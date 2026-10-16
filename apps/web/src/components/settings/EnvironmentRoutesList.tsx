@@ -29,7 +29,7 @@ import { useState } from "react";
 
 import { requestConfirmDialog } from "~/confirmDialog";
 import { environmentCatalog } from "~/connection/catalog";
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
 import type { EnvironmentPresentation } from "~/state/environments";
 import { usePreparedConnection } from "~/state/session";
@@ -81,7 +81,7 @@ export function EnvironmentRoutesList({
   const confirmRemove = async (route: ConnectionRoute) => {
     const address = connectionRouteAddress(route);
     const confirmed = await requestConfirmDialog(
-      `Remove ${connectionRouteLabel(route)} route?${address === null ? "" : `\n${address}`}`,
+      `${currentTranslator()("settingsB.routesRemoveConfirm", { label: connectionRouteLabel(route) })}${address === null ? "" : `\n${address}`}`,
       { variant: "destructive" },
     );
     if (confirmed !== true) return;

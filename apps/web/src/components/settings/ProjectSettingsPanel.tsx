@@ -1,3 +1,4 @@
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { useComposerMenuState } from "../chat/useComposerMenuState";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
 import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
@@ -69,6 +70,7 @@ export function ProjectSettingsPanel({
   environmentId?: EnvironmentId | null;
   checkoutKey?: string | null;
 }) {
+  const t = useT();
   const groups = useSettingsProjectGroups();
   const navigate = useNavigate({ from: "/settings" });
   const pathname = useLocation({ select: (location) => location.pathname });
@@ -134,15 +136,15 @@ export function ProjectSettingsPanel({
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
         {groups.length === 0
-          ? "Add a project from the sidebar to configure it here."
-          : "This project is no longer available."}
+          ? t("settingsB.projectSettingsNoProjectSidebar")
+          : t("settingsB.projectSettingsNoLongerAvailable")}
       </div>
     );
   }
   if (members.length === 0)
     return (
       <p className="p-8 text-sm text-muted-foreground">
-        This checkout is no longer available in the selected project and environment.
+        {t("settingsB.projectSettingsCheckoutUnavailable")}
       </p>
     );
   const scopedGroup = {
@@ -167,6 +169,7 @@ function ProjectDetail({
   group: SidebarProjectSnapshot;
   hasOtherMembers: boolean;
 }) {
+  const t = useT();
   const navigate = useNavigate({ from: "/settings" });
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const { environments } = useEnvironments();
@@ -210,7 +213,10 @@ function ProjectDetail({
       stackedThreadToast({
         type: "error",
         title,
-        description: error instanceof Error ? error.message : "An error occurred.",
+        description:
+          error instanceof Error
+            ? error.message
+            : currentTranslator()("settingsB.projectSettingsErrorOccurred"),
       }),
     );
   }, []);
@@ -224,7 +230,11 @@ function ProjectDetail({
       const result = AsyncResult.failure<void, Error>(
         Cause.fail(
           new Error(
-            `This connection cannot change projects in ${denied.environmentLabel ?? "this environment"}.`,
+            currentTranslator()("settingsB.projectSettingsCannotChangeIn", {
+              environment:
+                denied.environmentLabel ??
+                currentTranslator()("settingsB.projectSettingsThisEnvironment"),
+            }),
           ),
         ),
       );
@@ -253,7 +263,11 @@ function ProjectDetail({
       });
       if (unavailable) {
         const error = new Error(
-          `Connect ${unavailable.environmentLabel ?? "the selected environment"} and try again.`,
+          currentTranslator()("settingsB.projectSettingsConnectAndRetry", {
+            environment:
+              unavailable.environmentLabel ??
+              currentTranslator()("settingsB.projectSettingsSelectedEnvironment"),
+          }),
         );
         const result: AtomCommandResult<void, unknown> = AsyncResult.failure(Cause.fail(error));
         reportFailure(failureTitle, result);
@@ -290,7 +304,10 @@ function ProjectDetail({
     async (nextTitle: string, wasEdited: boolean) => {
       const title = nextTitle.trim();
       if (!title) {
-        toastManager.add({ type: "warning", title: "Project title cannot be empty" });
+        toastManager.add({
+          type: "warning",
+          title: currentTranslator()("settingsB.projectSettingsTitleEmpty"),
+        });
         return;
       }
       if (
@@ -302,7 +319,10 @@ function ProjectDetail({
       ) {
         return;
       }
-      await updateAllMembers({ title }, "Failed to rename project");
+      await updateAllMembers(
+        { title },
+        currentTranslator()("settingsB.projectSettingsRenameFailed"),
+      );
     },
     [group.memberProjects, updateAllMembers],
   );
@@ -318,7 +338,7 @@ function ProjectDetail({
       savingFaviconRef.current = true;
       setIsSavingFavicon(true);
       try {
-        await updateAllMembers(input, "Failed to update project icon");
+        await updateAllMembers(input, currentTranslator()("settingsB.projectSettingsIconFailed"));
       } finally {
         savingFaviconRef.current = false;
         setIsSavingFavicon(false);
@@ -331,7 +351,8 @@ function ProjectDetail({
 
   const removeMembers = useCallback(
     async (members: ReadonlyArray<SidebarProjectGroupMember>) => {
-      if (checkProjectAccess(members, "Failed to remove project")) return;
+      if (checkProjectAccess(members, currentTranslator()("settingsB.projectSettingsRemoveFailed")))
+        return;
       const api = readLocalApi();
       if (!api) return;
 
@@ -347,35 +368,60 @@ function ProjectDetail({
         api.dialogs.confirm(
           [
             projectThreads.length > 0
-              ? `Remove ${targetKind} "${targetLabel}" and delete its ${projectThreads.length} thread${projectThreads.length === 1 ? "" : "s"}?`
-              : `Remove ${targetKind} "${targetLabel}"?`,
+              ? currentTranslator()("settingsB.projectSettingsConfirmRemoveWithThreads", {
+                  kind:
+                    targetKind === "checkout"
+                      ? currentTranslator()("settingsB.projectSettingsKindCheckout")
+                      : currentTranslator()("settingsB.projectSettingsKindProject"),
+                  label: targetLabel,
+                  count: projectThreads.length,
+                })
+              : currentTranslator()("settingsB.projectSettingsConfirmRemove", {
+                  kind:
+                    targetKind === "checkout"
+                      ? currentTranslator()("settingsB.projectSettingsKindCheckout")
+                      : currentTranslator()("settingsB.projectSettingsKindProject"),
+                  label: targetLabel,
+                }),
             ...(singleMember
               ? [
-                  `Path: ${singleMember.workspaceRoot}`,
+                  currentTranslator()("settingsB.projectSettingsConfirmPath", {
+                    path: singleMember.workspaceRoot,
+                  }),
                   ...(singleMember.environmentLabel
-                    ? [`Environment: ${singleMember.environmentLabel}`]
+                    ? [
+                        currentTranslator()("settingsB.projectSettingsConfirmEnvironment", {
+                          environment: singleMember.environmentLabel,
+                        }),
+                      ]
                     : []),
                 ]
-              : [`This removes ${members.length} grouped project entries.`]),
+              : [
+                  currentTranslator()("settingsB.projectSettingsConfirmGroupedEntries", {
+                    count: members.length,
+                  }),
+                ]),
             ...(projectThreads.length > 0
-              ? [
-                  "This permanently clears conversation history for those threads and any archived threads.",
-                ]
-              : ["This permanently clears any archived conversation history."]),
+              ? [currentTranslator()("settingsB.projectSettingsConfirmClearThreads")]
+              : [currentTranslator()("settingsB.projectSettingsConfirmClearArchived")]),
             isWholeGroup && !hasOtherMembers
-              ? "This removes only the project entries, not the files on disk."
-              : "Other entries in this grouped project are unaffected.",
-            "This action cannot be undone.",
+              ? currentTranslator()("settingsB.projectSettingsConfirmFilesKept")
+              : currentTranslator()("settingsB.projectSettingsConfirmOthersUnaffected"),
+            currentTranslator()("settingsB.projectSettingsConfirmUndo"),
           ].join("\n"),
           { variant: "destructive" },
         ),
       );
       if (confirmed._tag === "Failure" || !confirmed.value) return;
-      if (checkProjectAccess(members, "Failed to remove project")) return;
+      if (checkProjectAccess(members, currentTranslator()("settingsB.projectSettingsRemoveFailed")))
+        return;
 
       const draftStore = useComposerDraftStore.getState();
       for (const member of members) {
-        if (checkProjectAccess([member], "Failed to remove project")) return;
+        if (
+          checkProjectAccess([member], currentTranslator()("settingsB.projectSettingsRemoveFailed"))
+        )
+          return;
         const memberThreads = projectThreads.filter(
           (thread) =>
             thread.environmentId === member.environmentId && thread.projectId === member.id,
@@ -391,7 +437,12 @@ function ProjectDetail({
           () => undefined,
         );
         if (result._tag === "Failure") {
-          reportFailure(`Failed to remove "${member.title}"`, result);
+          reportFailure(
+            currentTranslator()("settingsB.projectSettingsRemoveNamedFailed", {
+              title: member.title,
+            }),
+            result,
+          );
           return;
         }
         const projectRef = scopeProjectRef(member.environmentId, member.id);
@@ -424,11 +475,11 @@ function ProjectDetail({
   );
 
   const checkoutChoices = (
-    <SettingsSection title="Checkouts">
+    <SettingsSection title={t("settingsB.projectSettingsCheckouts")}>
       {group.memberProjects.map((member) => (
         <SettingsRow
           key={member.physicalProjectKey}
-          title={member.environmentLabel ?? "Environment"}
+          title={member.environmentLabel ?? t("settingsB.projectSettingsEnvironment")}
           description={member.workspaceRoot}
           control={
             <Button
@@ -436,9 +487,11 @@ function ProjectDetail({
               variant="outline"
               disabled={!editableIds.has(member.environmentId)}
               onClick={() => void removeMembers([member])}
-              aria-label={`Remove checkout ${member.workspaceRoot}`}
+              aria-label={t("settingsB.projectSettingsRemoveCheckoutAria", {
+                path: member.workspaceRoot,
+              })}
             >
-              Remove
+              {t("settingsB.projectSettingsRemove")}
             </Button>
           }
         />
@@ -451,27 +504,29 @@ function ProjectDetail({
       <SettingsPageContainer className="gap-6">
         <Alert variant="info">
           <InfoIcon aria-hidden />
-          <AlertDescription>
-            Can't find a setting? Keep this project picked above and hop to any other settings page.
-          </AlertDescription>
+          <AlertDescription>{t("settingsB.projectSettingsFindSettingHint")}</AlertDescription>
         </Alert>
-        <SettingsSection id="project-overview" title="Project" hideTitle>
+        <SettingsSection
+          id="project-overview"
+          title={t("settingsB.projectSettingsProject")}
+          hideTitle
+        >
           {!canEditGroup ? (
             <p className="px-3 py-2 text-sm text-muted-foreground sm:px-4">
               {group.memberProjects.length > 1
-                ? "Shared settings require permission to change every checkout in this group."
-                : "This connection cannot change this project."}
+                ? t("settingsB.projectSettingsSharedNeedsPermission")
+                : t("settingsB.projectSettingsCannotChange")}
             </p>
           ) : null}
           <SettingsRow
-            title="Name"
-            description="The shared name for this project group in the sidebar and thread lists."
+            title={t("settingsB.projectSettingsNameTitle")}
+            description={t("settingsB.projectSettingsNameDescription")}
             control={
               <Input
                 key={`${group.projectKey}:${group.displayName}`}
                 size="sm"
                 className="w-full sm:w-64"
-                aria-label="Project name"
+                aria-label={t("settingsB.projectSettingsProjectNameAria")}
                 disabled={!canEditGroup}
                 defaultValue={group.displayName}
                 onChange={() => {
@@ -489,7 +544,7 @@ function ProjectDetail({
             }
           />
           <SettingsRow
-            title="Project icon"
+            title={t("settingsB.projectSettingsIconTitle")}
             description={
               projectIcon?.kind === "lucide"
                 ? `${projectIcon.name} · ${projectIcon.color}`
@@ -497,14 +552,14 @@ function ProjectDetail({
                   ? `${projectIcon.text} · ${projectIcon.color}`
                   : projectIcon?.kind === "emoji"
                     ? projectIcon.emoji
-                    : (faviconPath ?? "Automatic")
+                    : (faviconPath ?? t("settingsB.projectSettingsAutomatic"))
             }
             resetAction={
               group.memberProjects.some(
                 (member) => member.faviconPath != null || member.projectIcon != null,
               ) ? (
                 <SettingResetButton
-                  label="project icon"
+                  label={t("settingsB.projectSettingsIconResetLabel")}
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => void setProjectIcon({ faviconPath: null, projectIcon: null })}
                 />
@@ -517,21 +572,21 @@ function ProjectDetail({
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon"
+                  aria-label={t("settingsB.projectSettingsChooseIconAria")}
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => setIconPickerOpen(true)}
                 >
-                  Choose icon
+                  {t("settingsB.projectSettingsChooseIcon")}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   type="button"
-                  aria-label="Choose a project icon file"
+                  aria-label={t("settingsB.projectSettingsChooseFileAria")}
                   disabled={isSavingFavicon || !canEditGroup}
                   onClick={() => setFaviconPickerOpen(true)}
                 >
-                  Choose file
+                  {t("settingsB.projectSettingsChooseFile")}
                 </Button>
               </div>
             }
@@ -540,21 +595,23 @@ function ProjectDetail({
         <ProjectDefaultsSettings category="project" />
         <ProjectActionsSettings />
         {hasMultipleCheckouts ? checkoutChoices : null}
-        <SettingsSection title="Danger">
+        <SettingsSection title={t("settingsB.projectSettingsDanger")}>
           <SettingsRow
             title={
               hasOtherMembers
-                ? "Remove checkout"
+                ? t("settingsB.projectSettingsRemoveCheckout")
                 : group.memberProjects.length > 1
-                  ? "Remove this project everywhere"
-                  : "Remove project"
+                  ? t("settingsB.projectSettingsRemoveEverywhere")
+                  : t("settingsB.projectSettingsRemoveProject")
             }
             description={
               hasOtherMembers
-                ? "Deletes the selected machine's checkout entries and their threads. Other machines and files on disk are not touched."
+                ? t("settingsB.projectSettingsDescCheckout")
                 : group.memberProjects.length > 1
-                  ? `Deletes all ${group.memberProjects.length} checkout entries and their threads on every machine. Files on disk are not touched.`
-                  : "Deletes the project entry and its threads. Files on disk are not touched."
+                  ? t("settingsB.projectSettingsDescAllEntries", {
+                      count: group.memberProjects.length,
+                    })
+                  : t("settingsB.projectSettingsDescProject")
             }
             control={
               <Button
@@ -565,10 +622,10 @@ function ProjectDetail({
               >
                 <Trash2Icon />
                 {hasOtherMembers
-                  ? "Remove checkout"
+                  ? t("settingsB.projectSettingsRemoveCheckout")
                   : group.memberProjects.length > 1
-                    ? "Remove all entries"
-                    : "Remove project"}
+                    ? t("settingsB.projectSettingsRemoveAllEntries")
+                    : t("settingsB.projectSettingsRemoveProject")}
               </Button>
             }
           />

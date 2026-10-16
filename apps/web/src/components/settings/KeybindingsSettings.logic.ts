@@ -10,6 +10,9 @@ import {
   DEFAULT_RESOLVED_KEYBINDINGS,
   parseKeybindingWhenExpression,
 } from "@t3tools/shared/keybindings";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+
+import { currentTranslator } from "../../i18n/I18nProvider";
 
 import { shortcutKeyFromEvent } from "../../keybindings";
 import { isMacPlatform } from "../../lib/utils";
@@ -108,11 +111,11 @@ export function whenAstToExpression(node: KeybindingWhenNode | undefined): strin
 }
 
 export function whenNodeRemoveLabel(node: KeybindingWhenNode, depth: number): string {
-  if (depth === 0) return "Clear all conditions";
+  if (depth === 0) return currentTranslator()("settingsB.whenClearAll");
   if (node.type === "identifier" || (node.type === "not" && node.node.type === "identifier")) {
-    return "Remove condition";
+    return currentTranslator()("settingsB.whenRemoveCondition");
   }
-  return "Remove group and its conditions";
+  return currentTranslator()("settingsB.whenRemoveGroup");
 }
 
 function wrapWhenExpression(node: KeybindingWhenNode): string {
@@ -130,7 +133,7 @@ export function parseWhenExpressionDraft(
   if (!ast) {
     return {
       ok: false,
-      message: "Use variables with !, &&, ||, and parentheses.",
+      message: currentTranslator()("settingsB.keybindingWhenParseError"),
     };
   }
 
@@ -211,19 +214,31 @@ export interface KeybindingGroup {
 const KEYBINDING_GROUPS = [
   {
     id: "navigation",
-    title: "Navigation",
+    titleKey: "settingsB.keybindingGroupNavigation",
     prefixes: ["sidebar", "rightPanel", "commandPalette", "filePicker", "projectSearch", "editor"],
   },
-  { id: "threads", title: "Threads", prefixes: ["thread", "chat", "pullRequest"] },
-  { id: "composer", title: "Composer", prefixes: ["composer", "modelPicker"] },
-  { id: "terminal", title: "Terminal", prefixes: ["terminal"] },
-  { id: "preview", title: "Preview & diff", prefixes: ["preview", "diff"] },
-  { id: "appearance", title: "Appearance", prefixes: ["theme", "appearance", "themeEditor"] },
-  { id: "scripts", title: "Project scripts", prefixes: ["script"] },
+  {
+    id: "threads",
+    titleKey: "settingsB.keybindingGroupThreads",
+    prefixes: ["thread", "chat", "pullRequest"],
+  },
+  {
+    id: "composer",
+    titleKey: "settingsB.keybindingGroupComposer",
+    prefixes: ["composer", "modelPicker"],
+  },
+  { id: "terminal", titleKey: "settingsB.keybindingGroupTerminal", prefixes: ["terminal"] },
+  { id: "preview", titleKey: "settingsB.keybindingGroupPreview", prefixes: ["preview", "diff"] },
+  {
+    id: "appearance",
+    titleKey: "settingsB.keybindingGroupAppearance",
+    prefixes: ["theme", "appearance", "themeEditor"],
+  },
+  { id: "scripts", titleKey: "settingsB.keybindingGroupScripts", prefixes: ["script"] },
 ] as const;
-const OTHER_KEYBINDING_GROUP = { id: "other", title: "Other" } as const;
+const OTHER_KEYBINDING_GROUP = { id: "other", titleKey: "settingsB.keybindingGroupOther" } as const;
 
-function keybindingGroupFor(command: KeybindingCommand): { id: string; title: string } {
+function keybindingGroupFor(command: KeybindingCommand): { id: string; titleKey: MessageKey } {
   const prefix = String(command).split(".")[0] ?? "";
   return (
     KEYBINDING_GROUPS.find((group) => (group.prefixes as ReadonlyArray<string>).includes(prefix)) ??
@@ -244,7 +259,9 @@ export function groupKeybindingRows(
   }
   return [...KEYBINDING_GROUPS, OTHER_KEYBINDING_GROUP].flatMap((group) => {
     const groupRows = rowsByGroup.get(group.id);
-    return groupRows ? [{ id: group.id, title: group.title, rows: groupRows }] : [];
+    return groupRows
+      ? [{ id: group.id, title: currentTranslator()(group.titleKey), rows: groupRows }]
+      : [];
   });
 }
 
@@ -358,22 +375,88 @@ export function buildKeybindingCommandOptions(
   return [...commands].toSorted((left, right) => compareCommands(left, right, commandLabel));
 }
 
+const COMMAND_LABEL_KEYS = new Map<string, MessageKey>([
+  ["sidebar.toggle", "settingsB.keybindingSidebarToggle"],
+  ["navigation.back", "settingsB.keybindingNavigationBack"],
+  ["navigation.forward", "settingsB.keybindingNavigationForward"],
+  ["terminal.toggle", "settingsB.keybindingTerminalToggle"],
+  ["terminal.split", "settingsB.keybindingTerminalSplit"],
+  ["terminal.splitVertical", "settingsB.keybindingTerminalSplitVertical"],
+  ["terminal.new", "settingsB.keybindingTerminalNew"],
+  ["terminal.close", "settingsB.keybindingTerminalClose"],
+  ["rightPanel.toggle", "settingsB.keybindingRightPanelToggle"],
+  ["rightPanel.new", "settingsB.keybindingRightPanelNew"],
+  ["threadPanel.toggle", "settingsB.keybindingThreadPanelToggle"],
+  ["rightPanel.toggleMaximized", "settingsB.keybindingRightPanelToggleMaximized"],
+  ["rightPanel.close", "settingsB.keybindingRightPanelClose"],
+  ["view.reopenClosed", "settingsB.keybindingViewReopenClosed"],
+  ["pullRequest.copyNumber", "settingsB.keybindingPullRequestCopyNumber"],
+  ["diff.toggle", "settingsB.keybindingDiffToggle"],
+  ["preview.toggle", "settingsB.keybindingPreviewToggle"],
+  ["preview.refresh", "settingsB.keybindingPreviewRefresh"],
+  ["preview.focusUrl", "settingsB.keybindingPreviewFocusUrl"],
+  ["preview.zoomIn", "settingsB.keybindingPreviewZoomIn"],
+  ["preview.zoomOut", "settingsB.keybindingPreviewZoomOut"],
+  ["preview.resetZoom", "settingsB.keybindingPreviewResetZoom"],
+  ["commandPalette.toggle", "settingsB.keybindingCommandPaletteToggle"],
+  ["filePicker.toggle", "settingsB.keybindingFilePickerToggle"],
+  ["projectSearch.toggle", "settingsB.keybindingProjectSearchToggle"],
+  ["usage.open", "settingsB.keybindingUsageOpen"],
+  ["theme.select", "settingsB.keybindingThemeSelect"],
+  ["appearance.cycle", "settingsB.keybindingAppearanceCycle"],
+  ["themeEditor.toggle", "settingsB.keybindingThemeEditorToggle"],
+  ["composer.stash", "settingsB.keybindingComposerStash"],
+  ["composer.sendAlternate", "settingsB.keybindingComposerSendAlternate"],
+  ["composer.sendBackground", "settingsB.keybindingComposerSendBackground"],
+  ["composer.sendAndNewThread", "settingsB.keybindingComposerSendAndNewThread"],
+  ["composer.host", "settingsB.keybindingComposerHost"],
+  ["composer.cycleHost", "settingsB.keybindingComposerCycleHost"],
+  ["composer.effort", "settingsB.keybindingComposerEffort"],
+  ["composer.mode", "settingsB.keybindingComposerMode"],
+  ["composer.workspace", "settingsB.keybindingComposerWorkspace"],
+  ["composer.previousWorktree", "settingsB.keybindingComposerPreviousWorktree"],
+  ["composer.branch", "settingsB.keybindingComposerBranch"],
+  ["chat.new", "settingsB.keybindingChatNew"],
+  ["chat.newLocal", "settingsB.keybindingChatNewLocal"],
+  ["chat.newWithoutProject", "settingsB.keybindingChatNewWithoutProject"],
+  ["chat.find", "settingsB.keybindingChatFind"],
+  ["editor.openFavorite", "settingsB.keybindingEditorOpenFavorite"],
+  ["thread.copyReference", "settingsB.keybindingThreadCopyReference"],
+  ["thread.editQueuedMessage", "settingsB.keybindingThreadEditQueuedMessage"],
+  ["thread.steerQueuedMessage", "settingsB.keybindingThreadSteerQueuedMessage"],
+  ["thread.next", "settingsB.keybindingThreadNext"],
+  ["thread.previous", "settingsB.keybindingThreadPrevious"],
+  ["thread.pin", "settingsB.keybindingThreadPin"],
+  ["thread.settle", "settingsB.keybindingThreadSettle"],
+  ["thread.stop", "settingsB.keybindingThreadStop"],
+  ["thread.undo", "settingsB.keybindingThreadUndo"],
+  ["modelPicker.toggle", "settingsB.keybindingModelPickerToggle"],
+  ["modelPicker.nextProvider", "settingsB.keybindingModelPickerNextProvider"],
+  ["modelPicker.previousProvider", "settingsB.keybindingModelPickerPreviousProvider"],
+]);
+
 export function commandLabel(command: KeybindingCommand): string {
-  if (command === "composer.sendAlternate") return "Composer: Opposite Queue or Steer Action";
-  if (command === "composer.sendBackground") return "Composer: Start in Background";
-  if (command === "composer.sendAndNewThread") return "Composer: Send and Start New Thread";
-  if (command === "thread.steerQueuedMessage") return "Queue: Send First Queued Message as Steer";
-  if (command === "thread.editQueuedMessage") return "Queue: Edit Last Queued Message";
-  if (command === "thread.copyReference") return "Pull Request: Copy Link or Thread ID";
+  const t = currentTranslator();
+  const key = COMMAND_LABEL_KEYS.get(command);
+  if (key) return t(key);
   const usageMetric = METRIC_OPTIONS.find((option) => option.command === command);
-  if (usageMetric) return `Usage: ${usageMetric.label}`;
+  if (usageMetric) return t("settingsB.keybindingUsageMetric", { metric: usageMetric.label });
   const usagePeriod = WINDOW_OPTIONS.find((option) => option.command === command);
-  if (usagePeriod) return `Usage: Period: ${usagePeriod.label}`;
-  if (command === "view.reopenClosed") return "Reopen Closed Tab";
-  if (command === "preview.focusUrl") return "Preview: Focus URL";
+  if (usagePeriod) return t("settingsB.keybindingUsagePeriod", { period: usagePeriod.label });
   const raw = String(command);
+  const jump = /^(thread|modelPicker)\.jump\.(\d)$/.exec(raw);
+  if (jump) {
+    return t(
+      jump[1] === "thread"
+        ? "settingsB.keybindingThreadJump"
+        : "settingsB.keybindingModelPickerJump",
+      { number: jump[2] ?? "" },
+    );
+  }
   if (raw.startsWith("script.") && raw.endsWith(".run")) {
-    return `Run Script: ${titleCaseCommandSegment(raw.slice("script.".length, -".run".length))}`;
+    return t("settingsB.keybindingRunScript", {
+      name: titleCaseCommandSegment(raw.slice("script.".length, -".run".length)),
+    });
   }
   return raw.split(".").map(titleCaseCommandSegment).join(": ");
 }
