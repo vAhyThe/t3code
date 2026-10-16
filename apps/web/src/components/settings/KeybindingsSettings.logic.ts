@@ -440,9 +440,9 @@ export function commandLabel(command: KeybindingCommand): string {
   const key = COMMAND_LABEL_KEYS.get(command);
   if (key) return t(key);
   const usageMetric = METRIC_OPTIONS.find((option) => option.command === command);
-  if (usageMetric) return t("settingsB.keybindingUsageMetric", { metric: usageMetric.label });
+  if (usageMetric) return t("settingsB.keybindingUsageMetric", { metric: t(usageMetric.labelKey) });
   const usagePeriod = WINDOW_OPTIONS.find((option) => option.command === command);
-  if (usagePeriod) return t("settingsB.keybindingUsagePeriod", { period: usagePeriod.label });
+  if (usagePeriod) return t("settingsB.keybindingUsagePeriod", { period: t(usagePeriod.labelKey) });
   const raw = String(command);
   const jump = /^(thread|modelPicker)\.jump\.(\d)$/.exec(raw);
   if (jump) {

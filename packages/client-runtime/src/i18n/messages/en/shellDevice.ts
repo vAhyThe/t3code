@@ -778,4 +778,6 @@ export const shellDevice = {
   usagePriceMixed: "Mixed",
   usagePriceUnavailable: "Unavailable",
   onboardingComputerFallback: "Computer",
+  usagePriceFieldRequired: "{field} is required on {target}.",
+  usagePriceNonNegative: "Use non-negative numbers for prices.",
 } as const satisfies CatalogNamespace;

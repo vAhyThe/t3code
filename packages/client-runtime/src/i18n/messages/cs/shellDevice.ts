@@ -807,4 +807,6 @@ export const shellDevice = {
   usagePriceMixed: "Smíšené",
   usagePriceUnavailable: "Nedostupné",
   onboardingComputerFallback: "Počítač",
+  usagePriceFieldRequired: "Pole {field} je u {target} povinné.",
+  usagePriceNonNegative: "Ceny musí být nezáporná čísla.",
 } satisfies CzechNamespace<"shellDevice">;

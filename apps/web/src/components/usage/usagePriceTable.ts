@@ -4,6 +4,7 @@ import {
   USAGE_PRICE_FIELDS,
   type UsagePriceForm,
 } from "./usagePriceForm";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { UsagePriceChange, UsagePriceTarget } from "./usagePriceTargets";
 
 export type UsagePriceField = (typeof USAGE_PRICE_FIELDS)[number]["key"];
@@ -105,13 +106,17 @@ export function usagePriceTableChanges(
       const missing = USAGE_PRICE_FIELDS.find(
         (field) => !field.optional && form[field.key].trim() === "",
       );
+      const t = currentTranslator();
       errors.set(
         draft.id,
         model === ""
-          ? "Enter a model ID."
+          ? t("shellDevice.usagePriceEnterModelId")
           : missing
-            ? `${missing.label} is required on ${target.label}.`
-            : "Use non-negative numbers for prices.",
+            ? t("shellDevice.usagePriceFieldRequired", {
+                field: t(missing.labelKey),
+                target: target.label,
+              })
+            : t("shellDevice.usagePriceNonNegative"),
       );
       continue;
     }
