@@ -1,3 +1,5 @@
+import type { Translate } from "@t3tools/client-runtime/i18n";
+import { useT } from "~/i18n/I18nProvider";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import type { UsageProviderKind } from "@t3tools/contracts";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -241,6 +243,15 @@ function buildChart(
   return { columns, scale, stepX, paths: paths.toSorted((a, b) => b.total - a.total) };
 }
 
+function chartAriaLabel(resolution: string, metric: string, t: Translate) {
+  if (resolution === "hour") {
+    return metric === "tokens"
+      ? t("shellDevice.usageHourlyTokens")
+      : t("shellDevice.usageHourlyCost");
+  }
+  return metric === "tokens" ? t("shellDevice.usageDailyTokens") : t("shellDevice.usageDailyCost");
+}
+
 export function UsageProviderChart({
   providers,
   loadingProviders = NONE_LOADING,
@@ -253,6 +264,7 @@ export function UsageProviderChart({
   resolution,
   timeZone,
 }: UsageProviderChartProps) {
+  const t = useT();
   const periods = resolution === "hour" ? hours : days;
   const byPeriod = useMemo(
     () =>
@@ -372,7 +384,7 @@ export function UsageProviderChart({
             viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`${resolution === "hour" ? "Hourly" : "Daily"} ${metric === "tokens" ? "processed tokens" : "cost"} by provider`}
+            aria-label={chartAriaLabel(resolution, metric, t)}
           >
             {scale.ticks.map((tick) => {
               const y = toY(tick);
@@ -465,7 +477,7 @@ export function UsageProviderChart({
                 );
               })}
               <div className="mt-1 flex items-center justify-between gap-3 border-t border-border pt-1">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">{t("shellDevice.usageTotal")}</span>
                 <span
                   className={cn(
                     "tabular-nums",

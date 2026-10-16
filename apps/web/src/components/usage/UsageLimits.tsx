@@ -1,3 +1,5 @@
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { useT } from "~/i18n/I18nProvider";
 import {
   AuthProvidersManageScope,
   type EnvironmentId,
@@ -40,11 +42,12 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { UsageLimitsPooled } from "./UsageLimitsPooled";
 import { PROVIDER_PRESENTATION } from "./usageProviders";
 
-const PACE: Record<LimitPace, { readonly label: string; readonly icon: typeof GaugeIcon }> = {
-  ahead: { label: "Ahead of pace: spending faster than the window elapses", icon: TrendingUpIcon },
-  on: { label: "On pace with the window", icon: GaugeIcon },
-  under: { label: "Under pace: headroom left for the rest of the window", icon: TrendingDownIcon },
-};
+const PACE: Record<LimitPace, { readonly labelKey: MessageKey; readonly icon: typeof GaugeIcon }> =
+  {
+    ahead: { labelKey: "shellDevice.usagePaceAhead", icon: TrendingUpIcon },
+    on: { labelKey: "shellDevice.usagePaceOn", icon: GaugeIcon },
+    under: { labelKey: "shellDevice.usagePaceUnder", icon: TrendingDownIcon },
+  };
 
 /** The series colour the cost chart uses for this driver, so the two views read as one. */
 export function barColor(driver: ServerProvider["driver"]): string {
@@ -61,6 +64,7 @@ export function barColor(driver: ServerProvider["driver"]): string {
 
 /** Pace as a glyph with the words on hover. */
 export function PaceIcon({ pace }: { readonly pace: LimitPace }) {
+  const t = useT();
   const Icon = PACE[pace].icon;
   return (
     <Tooltip>
@@ -68,14 +72,14 @@ export function PaceIcon({ pace }: { readonly pace: LimitPace }) {
         render={
           <span
             role="img"
-            aria-label={PACE[pace].label}
+            aria-label={t(PACE[pace].labelKey)}
             className="inline-flex text-muted-foreground"
           />
         }
       >
         <Icon className="size-3.5" aria-hidden />
       </TooltipTrigger>
-      <TooltipPopup side="top">{PACE[pace].label}</TooltipPopup>
+      <TooltipPopup side="top">{t(PACE[pace].labelKey)}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -95,6 +99,7 @@ function WindowBar({
   readonly window: ServerProviderUsageWindow;
   readonly now: number;
 }) {
+  const t = useT();
   const timestampFormat = usePrimarySettings((settings) => settings.timestampFormat);
   const remaining = remainingPercent(window);
   const elapsed = elapsedShare(window, now);
@@ -138,15 +143,18 @@ function WindowBar({
       <TooltipPopup side="top">
         <div className="flex flex-col gap-0.5">
           <span className="text-foreground">
-            {remaining}% left{timeLeft !== null ? ` · ${timeLeft}% of the window left` : ""}
+            {timeLeft !== null
+              ? t("shellDevice.usageLeftWithTime", { remaining, timeLeft })
+              : t("shellDevice.usageLeftPercent", { remaining })}
           </span>
           {timeLeft !== null ? (
-            <span className="text-muted-foreground">The line is where even spending would be.</span>
+            <span className="text-muted-foreground">{t("shellDevice.usagePaceLineHint")}</span>
           ) : null}
           {resetsAt ? (
             <span className="text-muted-foreground">
-              Resets {resetsAt}
-              {resetsIn ? ` · ${resetsIn}` : ""}
+              {resetsIn
+                ? t("shellDevice.usageResetsAtIn", { at: resetsAt, in: resetsIn })
+                : t("shellDevice.usageResetsAt", { at: resetsAt })}
             </span>
           ) : null}
         </div>
@@ -258,20 +266,22 @@ export function ResetCreditDialog({
   readonly onConfirm: () => void;
   readonly disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Use a reset credit?</AlertDialogTitle>
+          <AlertDialogTitle>{t("shellDevice.usageUseResetCreditTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            This redeems one credit on your account and clears the current rate-limit windows. It
-            cannot be undone.
+            {t("shellDevice.usageUseResetCreditDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {t("common.cancel")}
+          </AlertDialogClose>
           <Button disabled={disabled} onClick={onConfirm}>
-            Use credit
+            {t("shellDevice.usageUseCredit")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
@@ -308,6 +318,7 @@ export function ResetCredits({
   readonly credits: ServerProviderResetCredits;
   readonly now: number;
 }) {
+  const t = useT();
   const { canManageProviders, confirming, setConfirming, busy, status, redeem } = useResetCredit(
     environmentId,
     input,
@@ -325,7 +336,7 @@ export function ResetCredits({
             if (readEnvironmentScope(environmentId, AuthProvidersManageScope)) setConfirming(true);
           }}
         >
-          {busy ? "Using…" : "Use reset"}
+          {busy ? t("shellDevice.usageUsing") : t("shellDevice.usageUseReset")}
         </Button>
       ) : null}
       {status ? <span className="text-foreground">{status}</span> : null}

@@ -1,3 +1,5 @@
+import { useT } from "~/i18n/I18nProvider";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import {
   CHATGPT_USAGE_URL,
   collectLimitAccounts,
@@ -51,12 +53,32 @@ function accountHue(email: string): number {
 }
 
 /** The two-letter chip for an email, coloured by a stable hue per address. */
+function poolSegmentAria(
+  t: Translate,
+  input: {
+    readonly name: string;
+    readonly remaining: number;
+    readonly resets: string | null;
+    readonly credits: number | null;
+  },
+) {
+  const { name, remaining, resets, credits } = input;
+  if (resets !== null && credits !== null) {
+    return t("shellDevice.usagePoolAriaResetsCredits", { name, remaining, resets, count: credits });
+  }
+  if (resets !== null) return t("shellDevice.usagePoolAriaResets", { name, remaining, resets });
+  if (credits !== null)
+    return t("shellDevice.usagePoolAriaCredits", { name, remaining, count: credits });
+  return t("shellDevice.usagePoolAria", { name, remaining });
+}
+
 function AccountChip({ email }: { readonly email: string }) {
+  const t = useT();
   const hue = accountHue(email);
   return (
     <span
       role="img"
-      aria-label={`Account ${accountInitials(email)}`}
+      aria-label={t("shellDevice.usageAccountAria", { initials: accountInitials(email) })}
       className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-3xs leading-none font-semibold"
       style={{ backgroundColor: `oklch(0.85 0.08 ${hue})`, color: `oklch(0.35 0.1 ${hue})` }}
     >
@@ -153,6 +175,7 @@ function SegmentPopover({
   readonly redeem: ReturnType<typeof useResetCredit> | null;
   readonly onRedeem: () => void;
 }) {
+  const t = useT();
   const timestampFormat = usePrimarySettings((settings) => settings.timestampFormat);
   const remaining = remainingPercent(window);
   const resetsIn = formatResetsIn(window, now);
@@ -182,21 +205,31 @@ function SegmentPopover({
         ) : null}
       </div>
       <div className="flex flex-col gap-1 border-t border-border/60 pt-2.5">
-        {account.plan ? <Row label="Plan">{account.plan}</Row> : null}
+        {account.plan ? <Row label={t("shellDevice.usagePlan")}>{account.plan}</Row> : null}
         {where ? (
-          <Row label={account.environments.length > 0 ? "Signed in" : "Via"}>{where}</Row>
+          <Row
+            label={
+              account.environments.length > 0
+                ? t("shellDevice.usageSignedIn")
+                : t("shellDevice.usageVia")
+            }
+          >
+            {where}
+          </Row>
         ) : null}
       </div>
       <div className="flex flex-col gap-1 border-t border-border/60 pt-2.5">
-        <Row label="Left">{remaining}%</Row>
+        <Row label={t("shellDevice.usageLeftRow")}>{remaining}%</Row>
         {window.resetsAt ? (
-          <Row label="Resets">
+          <Row label={t("shellDevice.usageResetsRow")}>
             {formatUpcomingTimestamp(window.resetsAt, timestampFormat, now)}
             {resetsIn ? ` · ${resetsIn.replace("resets in ", "in ")}` : ""}
           </Row>
         ) : null}
         {reset && reset.restoresPercent > 0 ? (
-          <Row label="Restores">+{reset.restoresPercent}% of pool</Row>
+          <Row label={t("shellDevice.usageRestores")}>
+            {t("shellDevice.usageRestoresPool", { percent: reset.restoresPercent })}
+          </Row>
         ) : null}
       </div>
       {credits && redeem ? (
@@ -210,7 +243,7 @@ function SegmentPopover({
               className="ms-auto"
               onClick={onRedeem}
             >
-              {redeem.busy ? "Using…" : "Use reset"}
+              {redeem.busy ? t("shellDevice.usageUsing") : t("shellDevice.usageUseReset")}
             </Button>
           </span>
         </div>
@@ -242,6 +275,7 @@ function PoolSegment({
   readonly index: number;
   readonly showAccountName: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const remaining = remainingPercent(window);
   const resetsIn = formatResetsIn(window, now);
@@ -254,7 +288,14 @@ function PoolSegment({
           <button
             type="button"
             style={{ gridColumn: index, gridRow: 1 }}
-            aria-label={`${account.displayName ?? (account.email ? accountInitials(account.email) : account.driver)}: ${remaining}% left${resetsIn ? `, ${resetsIn}` : ""}${credits ? `, ${credits} reset ${credits === 1 ? "credit" : "credits"} banked` : ""}`}
+            aria-label={poolSegmentAria(t, {
+              name:
+                account.displayName ??
+                (account.email ? accountInitials(account.email) : account.driver),
+              remaining,
+              resets: resetsIn ?? null,
+              credits: credits || null,
+            })}
             className="relative h-5 min-w-0 cursor-pointer overflow-hidden rounded-md bg-muted text-start outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[popup-open]:ring-1 data-[popup-open]:ring-inset data-[popup-open]:ring-border @2xl/pool:h-8"
           />
         }
@@ -353,6 +394,7 @@ function LegendRow({
   readonly now: number;
   readonly index: number;
 }) {
+  const t = useT();
   const remaining = remainingPercent(window);
   const resetsIn = formatResetsIn(window, now);
   const credits = account.limits.resetCredits?.availableCount ?? 0;
@@ -368,7 +410,7 @@ function LegendRow({
           className="absolute inset-0 rounded-sm opacity-35"
           style={{ backgroundColor: color }}
         />
-        <span className="sr-only">Segment </span>
+        <span className="sr-only">{t("shellDevice.usageSegment")} </span>
         <span className="relative">{index}</span>
       </span>
       <AccountName account={account} className="min-w-0 truncate font-medium text-foreground" />
@@ -411,6 +453,7 @@ function RedeemableSegmentPopup({
   readonly redeemAt: NonNullable<LimitAccount["redeem"]>;
   readonly closePopover: () => void;
 }) {
+  const t = useT();
   const redeem = useResetCredit(redeemAt.environmentId, redeemAt.input);
   return (
     <>
@@ -580,6 +623,7 @@ export function UsageLimitsPooled({
   readonly now: number;
   readonly cursorPrompt?: ReactNode;
 }) {
+  const t = useT();
   const pools = collectLimitPools(collectLimitAccounts(presentations), now);
   const notices = collectLimitNotices(presentations);
   const externalLinks = collectExternalUsageLinks(presentations);
@@ -591,9 +635,7 @@ export function UsageLimitsPooled({
   return (
     <div className="flex flex-col gap-8">
       {pools.length === 0 && notices.length === 0 && !cursorPrompt && externalLinks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No provider on the selected environments reports subscription limits.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("shellDevice.usagePoolNoProvider")}</p>
       ) : null}
       {pools.map((pool, index) => (
         <Fragment key={pool.driver}>
@@ -614,9 +656,7 @@ export function UsageLimitsPooled({
             <div className="min-w-0 space-y-1">
               <h2 className="text-sm font-medium">{link.label}</h2>
               {link.url === CHATGPT_USAGE_URL ? (
-                <p className="text-xs text-muted-foreground">
-                  View usage in ChatGPT with your connected account.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("shellDevice.usageViewChatGpt")}</p>
               ) : link.message ? (
                 <p className="max-w-xl text-xs text-muted-foreground">{link.message}</p>
               ) : null}
@@ -627,7 +667,7 @@ export function UsageLimitsPooled({
             size="xs"
             onClick={() => void ensureLocalApi().shell.openExternal(link.url)}
           >
-            Manage usage
+            {t("shellDevice.usageManage")}
             <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
           </Button>
         </section>

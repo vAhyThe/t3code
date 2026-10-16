@@ -1,4 +1,5 @@
 import type { UsageTokenTotals } from "@t3tools/contracts";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import {
   isModelCostUnknown,
   type CategoryCost,
@@ -53,34 +54,63 @@ const TYPE_COLORS = {
   other: ink(44),
 };
 
-export function costTypeSegments(cost: CategoryCost): readonly ShareSegment[] {
+export function costTypeSegments(cost: CategoryCost, t: Translate): readonly ShareSegment[] {
   return [
-    { label: "Input", value: cost.input, color: TYPE_COLORS.input },
-    { label: "Cache read", value: cost.cacheRead, color: TYPE_COLORS.cacheRead },
-    { label: "Cache write", value: cost.cacheWrite, color: TYPE_COLORS.cacheWrite },
-    { label: "Output", value: cost.output, color: TYPE_COLORS.output },
+    { label: t("shellDevice.usageTypeInput"), value: cost.input, color: TYPE_COLORS.input },
+    {
+      label: t("shellDevice.usageTypeCacheRead"),
+      value: cost.cacheRead,
+      color: TYPE_COLORS.cacheRead,
+    },
+    {
+      label: t("shellDevice.usageTypeCacheWrite"),
+      value: cost.cacheWrite,
+      color: TYPE_COLORS.cacheWrite,
+    },
+    { label: t("shellDevice.usageTypeOutput"), value: cost.output, color: TYPE_COLORS.output },
     // Reported cost with no rates to split it, or from older servers. Below a
     // cent it is rounding, not usage.
-    { label: "Other", value: cost.unsplit >= 0.005 ? cost.unsplit : 0, color: TYPE_COLORS.other },
+    {
+      label: t("shellDevice.usageTypeOther"),
+      value: cost.unsplit >= 0.005 ? cost.unsplit : 0,
+      color: TYPE_COLORS.other,
+    },
   ];
 }
 
 export function tokenTypeSegments(
   tokens: Omit<UsageTokenTotals, "reasoningTokens">,
+  t: Translate,
 ): readonly ShareSegment[] {
   return [
-    { label: "Input", value: tokens.uncachedInputTokens, color: TYPE_COLORS.input },
-    { label: "Cache read", value: tokens.cachedInputTokens, color: TYPE_COLORS.cacheRead },
-    { label: "Cache write", value: tokens.cacheCreationTokens, color: TYPE_COLORS.cacheWrite },
-    { label: "Output", value: tokens.outputTokens, color: TYPE_COLORS.output },
+    {
+      label: t("shellDevice.usageTypeInput"),
+      value: tokens.uncachedInputTokens,
+      color: TYPE_COLORS.input,
+    },
+    {
+      label: t("shellDevice.usageTypeCacheRead"),
+      value: tokens.cachedInputTokens,
+      color: TYPE_COLORS.cacheRead,
+    },
+    {
+      label: t("shellDevice.usageTypeCacheWrite"),
+      value: tokens.cacheCreationTokens,
+      color: TYPE_COLORS.cacheWrite,
+    },
+    {
+      label: t("shellDevice.usageTypeOutput"),
+      value: tokens.outputTokens,
+      color: TYPE_COLORS.output,
+    },
   ];
 }
 
 /** Speeds are ordered by price, so they brighten from standard to ultrafast. */
-export function speedCostSegments(cost: SpeedCost): readonly ShareSegment[] {
+export function speedCostSegments(cost: SpeedCost, t: Translate): readonly ShareSegment[] {
   return [
-    { label: "Standard", value: cost.standard, color: ink(34) },
-    { label: "Fast", value: cost.fast, color: ink(66) },
-    { label: "Ultrafast", value: cost.ultrafast, color: ink(100) },
+    { label: t("shellDevice.usageSpeedStandard"), value: cost.standard, color: ink(34) },
+    { label: t("shellDevice.usageSpeedFast"), value: cost.fast, color: ink(66) },
+    { label: t("shellDevice.usageSpeedUltrafast"), value: cost.ultrafast, color: ink(100) },
   ];
 }

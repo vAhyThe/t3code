@@ -29,6 +29,7 @@ import { environmentProjects } from "../../state/projects";
 import { primaryServerConfigAtom, primaryServerWelcomeAtom } from "../../state/server";
 import { environmentShell } from "../../state/shell";
 import { environmentThreadShells } from "../../state/threads";
+import { useT } from "../../i18n/I18nProvider";
 import { Button } from "../ui/button";
 
 /**
@@ -205,16 +206,19 @@ function FirstRunRecovery({
   readonly retrying?: boolean;
 }) {
   const settingsReadFailed = reason === "settings";
+  const t = useT();
   return (
     <main className="flex h-dvh min-h-0 items-center justify-center bg-background px-6 text-foreground">
       <div className="flex max-w-sm flex-col items-center text-center">
         <h1 className="text-lg font-semibold">
-          {settingsReadFailed ? "Could not read settings" : "Still connecting"}
+          {settingsReadFailed
+            ? t("shellDevice.onboardingCouldNotReadSettings")
+            : t("shellDevice.onboardingStillConnecting")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {settingsReadFailed
-            ? "Your saved settings could not be loaded."
-            : "T3 Code could not confirm this workspace."}
+            ? t("shellDevice.onboardingSettingsNotLoaded")
+            : t("shellDevice.onboardingWorkspaceNotConfirmed")}
         </p>
         <Button
           className="mt-5"
@@ -230,7 +234,7 @@ function FirstRunRecovery({
           }}
         >
           <RefreshIcon refreshing={retrying} />
-          {settingsReadFailed ? "Retry" : "Reload"}
+          {settingsReadFailed ? t("common.retry") : t("shellDevice.onboardingReload")}
         </Button>
       </div>
     </main>

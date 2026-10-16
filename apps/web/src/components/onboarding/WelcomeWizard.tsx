@@ -99,6 +99,9 @@ import { Dialog } from "../ui/dialog";
 import { toastManager } from "../ui/toast";
 import { cn } from "../../lib/utils";
 import { formatRelativeTime } from "../../timestampFormat";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { Trans } from "../../i18n/Trans";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 
 /**
  * First-run welcome wizard. Rendered over the workspace at `/welcome` on a
@@ -113,8 +116,13 @@ type WizardStep = "connection" | "agents" | "import";
 const NO_ENVIRONMENTS: readonly EnvironmentId[] = [];
 
 const AGENT_ONBOARDING_THREAD_ID = ThreadId.make("onboarding-agent-setup");
-const ONBOARDING_STAGES = ["Connect", "Agents", "Projects"] as const;
-const SCAN_LIMIT_MESSAGE = "Scan limit reached. Some projects or conversations may be missing.";
+function onboardingStages(t: Translate) {
+  return [
+    t("shellDevice.onboardingStageConnect"),
+    t("shellDevice.onboardingStageAgents"),
+    t("shellDevice.onboardingStageProjects"),
+  ];
+}
 
 export function WelcomeWizard({
   localAvailable,
@@ -126,6 +134,7 @@ export function WelcomeWizard({
   readonly resumeEnvironmentId?: EnvironmentId | undefined;
   readonly onDone: (projectRef?: ScopedProjectRef) => void | Promise<void>;
 }) {
+  const t = useT();
   const completeOnboarding = useCompleteOnboarding();
   const [step, setStep] = useState<WizardStep>(resumeEnvironmentId ? "agents" : "connection");
   const { environments } = useEnvironments();
@@ -188,14 +197,16 @@ export function WelcomeWizard({
           if (importWarning) {
             toastManager.add({
               type: "warning",
-              title: "Some history was not imported",
+              title: currentTranslator()("shellDevice.onboardingSomeHistoryNotImported"),
               description: importWarning,
               timeout: 0,
             });
           } else if (importedThreadCount > 0) {
             toastManager.add({
               type: "success",
-              title: `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}`,
+              title: currentTranslator()("shellDevice.onboardingImportedThreads", {
+                count: importedThreadCount,
+              }),
             });
           }
           return true;
@@ -203,8 +214,8 @@ export function WelcomeWizard({
         .catch(() => {
           const errorToast = {
             type: "error",
-            title: "Could not finish setup",
-            description: "Your settings could not be saved. Try again.",
+            title: currentTranslator()("shellDevice.onboardingSetupFailedTitle"),
+            description: currentTranslator()("shellDevice.onboardingSettingsNotSaved"),
           } as const;
           if (completionErrorToastIdRef.current === null) {
             completionErrorToastIdRef.current = toastManager.add(errorToast);
@@ -233,18 +244,22 @@ export function WelcomeWizard({
         initialFocus={() => document.getElementById("onboarding-pairing-url") ?? true}
       >
         <WizardHeader
-          title="Set up T3 Code"
+          title={t("shellDevice.onboardingSetUpTitle")}
           identity={
-            <div className="flex items-baseline gap-1.5" role="img" aria-label="T3 Code">
+            <div
+              className="flex items-baseline gap-1.5"
+              role="img"
+              aria-label={t("shellDevice.onboardingBrandT3Code")}
+            >
               <T3Wordmark className="h-4 w-auto shrink-0" aria-hidden />
               <span className="text-2xl font-medium tracking-tight text-muted-foreground">
-                Code
+                {t("shellDevice.onboardingWordmarkCode")}
               </span>
             </div>
           }
         >
           <WizardSteps
-            steps={ONBOARDING_STAGES}
+            steps={onboardingStages(t)}
             currentStep={stageIndex}
             isStepDisabled={(index) => isImporting || index >= stageIndex}
             onStepChange={(index) => {
@@ -312,6 +327,7 @@ function ConnectionStep({
   readonly onContinue: () => void;
   readonly onPaired: (environmentId: EnvironmentId) => void;
 }) {
+  const t = useT();
   const { environments } = useEnvironments();
   const cloudEnabled = hasCloudPublicConfig();
   const directEnvironments = environments.filter(
@@ -336,14 +352,14 @@ function ConnectionStep({
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Connect your computers
+        {t("shellDevice.onboardingConnectComputers")}
       </h1>
       <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-        Choose one or more computers. We’ll set up agents and projects on each.
+        {t("shellDevice.onboardingChooseComputers")}
       </p>
       {directEnvironments.length > 0 ? (
         <fieldset className="mt-5 space-y-2">
-          <legend className="sr-only">Computers to set up</legend>
+          <legend className="sr-only">{t("shellDevice.onboardingComputersToSetUp")}</legend>
           {directEnvironments.map((environment) => (
             <label
               key={environment.environmentId}
@@ -367,7 +383,7 @@ function ConnectionStep({
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {/* Same rule as Settings: a switched-off computer reads Off, not Not connected. */}
                     {!environment.entry.enabled && environment.connection.phase !== "unsupported"
-                      ? "Off"
+                      ? t("shellDevice.onboardingOff")
                       : presentSavedCloudEnvironmentConnection(environment.connection).buttonLabel}
                   </span>
                 </span>
@@ -403,7 +419,7 @@ function ConnectionStep({
               }
             >
               <LinkIcon className="size-4 text-muted-foreground" />
-              <span className="flex-1 text-left">Add a computer</span>
+              <span className="flex-1 text-left">{t("shellDevice.onboardingAddComputer")}</span>
               <ChevronRightIcon
                 className={cn("size-4 text-muted-foreground", pairingOpen && "rotate-90")}
               />
@@ -426,23 +442,29 @@ function ConnectionStep({
       </div>
       {skippedLabels.length > 0 ? (
         <p className="mt-4 text-xs text-muted-foreground">
-          Not connected, so setup skips {skippedLabels.join(", ")}. You can set{" "}
-          {skippedLabels.length === 1 ? "it" : "them"} up later from Settings.
+          {t("shellDevice.onboardingSkipNotConnected", {
+            count: skippedLabels.length,
+            names: skippedLabels.join(", "),
+          })}
         </p>
       ) : null}
       <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <p className="min-w-0 text-xs leading-relaxed text-muted-foreground">
-          T3 Code collects anonymous usage data to help us improve it. To read more about how your
-          data is used and how to opt out, see our{" "}
-          <a
-            className="underline underline-offset-2 hover:text-foreground"
-            href={PRIVACY_POLICY_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            privacy policy
-          </a>
-          .
+          <Trans
+            k="shellDevice.onboardingPrivacyNotice"
+            components={{
+              link: (children) => (
+                <a
+                  className="underline underline-offset-2 hover:text-foreground"
+                  href={PRIVACY_POLICY_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          />
         </p>
         <Button
           className="shrink-0 self-end"
@@ -451,7 +473,7 @@ function ConnectionStep({
           disabled={!ready || isPairing}
           onClick={onContinue}
         >
-          Continue
+          {t("common.continue")}
           <ArrowRightIcon className="size-3.5" />
         </Button>
       </div>
@@ -470,6 +492,7 @@ function ConnectAccountOption({
   readonly selectedIds: ReadonlySet<EnvironmentId>;
   readonly onToggleEnvironment: (environmentId: EnvironmentId, checked: boolean) => void;
 }) {
+  const t = useT();
   const { environments } = useEnvironments();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { openAuthPrompt } = useT3ConnectAuthPrompt();
@@ -494,14 +517,14 @@ function ConnectAccountOption({
           }
         >
           <CloudIcon className="size-4 text-muted-foreground" />
-          <span className="flex-1 text-left">T3 Connect</span>
+          <span className="flex-1 text-left">{t("shellDevice.onboardingBrandT3Connect")}</span>
           <span className="text-xs text-muted-foreground">
             {!isLoaded
-              ? "Loading sign-in…"
+              ? t("shellDevice.onboardingLoadingSignIn")
               : !isSignedIn
-                ? "Sign in"
+                ? t("shellDevice.onboardingSignIn")
                 : !discoveryReady
-                  ? "Loading computers…"
+                  ? t("shellDevice.onboardingLoadingComputers")
                   : null}
           </span>
           <ChevronRightIcon
@@ -520,17 +543,19 @@ function ConnectAccountOption({
                   selection={{ selectedIds, onChange: onToggleEnvironment, autoSelectedComputers }}
                   refreshWhileEmpty
                   empty={
-                    <p className="py-3 text-sm text-muted-foreground">No computers linked yet.</p>
+                    <p className="py-3 text-sm text-muted-foreground">
+                      {t("shellDevice.onboardingNoComputers")}
+                    </p>
                   }
                 />
               ) : null}
             </div>
             <p className="text-sm text-muted-foreground">
-              Run this on each computer you want to connect.
+              {t("shellDevice.onboardingRunOnEachComputer")}
             </p>
             <CommandBlock command="npx t3 connect" className="mt-3" />
             <p className="mt-3 text-xs text-muted-foreground">
-              Keep T3 Code running. Select the computers you want to set up above.
+              {t("shellDevice.onboardingKeepRunning")}
             </p>
           </div>
         </CollapsiblePanel>
@@ -553,6 +578,7 @@ function PairingForm({
   readonly setIsPairing: (value: boolean) => void;
   readonly onPaired: (environmentId: EnvironmentId) => void;
 }) {
+  const t = useT();
   const connectPairingEnvironment = useAtomCommand(connectPairing, { reportFailure: false });
   const [pairingUrl, setPairingUrl] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -592,7 +618,7 @@ function PairingForm({
       >
         <div>
           <label className="block text-sm text-muted-foreground" htmlFor="onboarding-pairing-url">
-            Pairing link
+            {t("shellDevice.onboardingPairingLink")}
           </label>
           <Input
             id="onboarding-pairing-url"
@@ -607,7 +633,7 @@ function PairingForm({
             spellCheck={false}
             nativeInput
             readOnly={isPairing}
-            placeholder="https://your-server:5230/pair#token=…"
+            placeholder={t("shellDevice.onboardingPairingUrlPlaceholder")}
             value={pairingUrl}
             onChange={(event) => setPairingUrl(event.currentTarget.value)}
             onKeyDown={(event) => {
@@ -632,20 +658,22 @@ function PairingForm({
               className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <ChevronRightIcon className="size-3.5 group-data-panel-open:rotate-90" />
-              Need a pairing link?
+              {t("shellDevice.onboardingNeedPairingLink")}
             </CollapsibleTrigger>
             <Button type="submit" disabled={isPairing || pairingUrl.trim().length === 0}>
-              {isPairing ? "Pairing..." : "Pair"}
+              {isPairing ? t("shellDevice.pairingSubmitting") : t("shellDevice.onboardingPair")}
             </Button>
           </div>
           <CollapsiblePanel>
             <p className="pt-3 text-sm text-muted-foreground">
-              Run this on the computer with your code.
+              {t("shellDevice.onboardingRunWithCode")}
             </p>
             <CommandBlock command="npx t3 pair" className="mt-2" />
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Start T3 Code first, or run <code className="font-mono">npx t3 serve</code>. Add{" "}
-              <code className="font-mono">--tailscale</code> to use your tailnet.
+              <Trans
+                k="shellDevice.onboardingStartFirstHint"
+                components={{ code: (children) => <code className="font-mono">{children}</code> }}
+              />
             </p>
           </CollapsiblePanel>
         </Collapsible>
@@ -677,11 +705,12 @@ function AgentsStep({
   readonly environmentIds: readonly EnvironmentId[];
   readonly onContinue: () => void;
 }) {
+  const t = useT();
   const { environments } = useEnvironments();
   return (
     <StepShell
-      title="Connect your agents"
-      description="Choose an agent to start coding. You can add more later."
+      title={t("shellDevice.onboardingConnectAgents")}
+      description={t("shellDevice.onboardingChooseAgent")}
     >
       <ScrollArea scrollFade className="mt-5 h-auto max-h-[min(32rem,55dvh)]">
         <div className="space-y-5 pr-3">
@@ -699,7 +728,7 @@ function AgentsStep({
       </ScrollArea>
       <div className="mt-6 flex justify-end">
         <Button autoFocus onClick={onContinue}>
-          Continue
+          {t("common.continue")}
           <ArrowRightIcon className="size-3.5" />
         </Button>
       </div>
@@ -714,6 +743,7 @@ function ConnectedAgentsStep({
   readonly environmentId: EnvironmentId;
   readonly machineLabel: string;
 }) {
+  const t = useT();
   const providers = useAtomValue(serverEnvironment.providersValueAtom(environmentId));
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
@@ -762,7 +792,7 @@ function ConnectedAgentsStep({
       <h2 className="mb-2 text-sm font-medium">{machineLabel}</h2>
       {!canOperateTerminal ? (
         <p className="mb-2 text-sm text-muted-foreground">
-          This connection cannot control terminals.
+          {t("shellDevice.onboardingNoTerminalControl")}
         </p>
       ) : null}
       <div className="space-y-1.5">
@@ -845,7 +875,7 @@ function ConnectedAgentsStep({
       ) ? (
         <div className="mt-3">
           <Button size="xs" variant="ghost-muted" onClick={() => setAddingAccount(true)}>
-            Connect another ChatGPT account
+            {t("shellDevice.onboardingConnectAnotherChatGpt")}
           </Button>
         </div>
       ) : null}
@@ -970,6 +1000,7 @@ function AgentCard({
   readonly terminalAvailable: boolean;
   readonly onOpenTerminal: () => void;
 }) {
+  const t = useT();
   const meta = providerClients.get(ProviderDriverKind.make(driver));
   const displayName =
     provider?.displayName || (driver === "claudeAgent" ? "Claude Code" : (meta?.label ?? driver));
@@ -986,7 +1017,7 @@ function AgentCard({
       <div className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-foreground">{displayName}</span>
         <p className="mt-0.5 text-xs leading-relaxed break-words whitespace-pre-wrap text-muted-foreground">
-          {providerState === "ready" ? "Ready to code." : summary.headline}
+          {providerState === "ready" ? t("shellDevice.onboardingReadyToCode") : summary.headline}
           {providerState !== "ready" && summary.detail ? ` · ${summary.detail}` : ""}
         </p>
       </div>
@@ -994,12 +1025,16 @@ function AgentCard({
         {providerState === "ready" ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success-foreground">
             <CheckIcon className="size-3.5" />
-            Ready
+            {t("shellDevice.onboardingReady")}
           </span>
         ) : providerState === "checking" ? (
-          <span className="text-xs text-muted-foreground">Checking...</span>
+          <span className="text-xs text-muted-foreground">
+            {t("shellDevice.onboardingChecking")}
+          </span>
         ) : providerState === "disabled" ? (
-          <span className="text-xs text-muted-foreground">Disabled</span>
+          <span className="text-xs text-muted-foreground">
+            {t("shellDevice.onboardingDisabled")}
+          </span>
         ) : providerState === "attention" ? (
           <span className="text-xs text-muted-foreground">{summary.headline}</span>
         ) : (
@@ -1010,7 +1045,9 @@ function AgentCard({
             disabled={terminalOpen || !terminalAvailable}
           >
             <TerminalIcon className="size-3.5" />
-            {providerState === "signIn" ? "Sign in" : "Install"}
+            {providerState === "signIn"
+              ? t("shellDevice.onboardingSignIn")
+              : t("shellDevice.onboardingInstall")}
           </Button>
         )}
       </div>
@@ -1031,6 +1068,7 @@ function AgentInstallTerminal({
   readonly session: AgentTerminalSession;
   readonly onClose: () => void;
 }) {
+  const t = useT();
   const { command, cwd, driver, environmentId, keybindings, providerInstanceId } = session;
   const canOperateTerminal = useEnvironmentScope(environmentId, AuthTerminalOperateScope);
   // Same terminal typography preference the thread drawer honors.
@@ -1133,18 +1171,25 @@ function AgentInstallTerminal({
       <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-3 py-1.5">
         <span className="text-2xs font-medium text-muted-foreground">
           {!canOperateTerminal ? (
-            "This connection cannot control terminals."
+            t("shellDevice.onboardingNoTerminalControl")
           ) : setupState === "writeFailed" ? (
             <>
-              Run <code className="rounded bg-muted px-1 font-mono">{command}</code> in this
-              terminal.
+              <Trans
+                k="shellDevice.onboardingRunInTerminal"
+                params={{ command }}
+                components={{
+                  code: (children) => (
+                    <code className="rounded bg-muted px-1 font-mono">{children}</code>
+                  ),
+                }}
+              />
             </>
           ) : setupState === "ready" ? (
-            "Review the command, then press Enter to run it."
+            t("shellDevice.onboardingReviewCommand")
           ) : setupState === "openFailed" ? (
-            "Could not open the setup terminal."
+            t("shellDevice.onboardingSetupTerminalFailed")
           ) : (
-            "Preparing command..."
+            t("shellDevice.onboardingPreparingCommand")
           )}
         </span>
         <div className="flex items-center gap-1">
@@ -1159,11 +1204,11 @@ function AgentInstallTerminal({
                 }
               }}
             >
-              Retry
+              {t("common.retry")}
             </Button>
           ) : null}
           <Button size="xs" variant="ghost-muted" onClick={onClose}>
-            Close
+            {t("common.close")}
           </Button>
         </div>
       </div>
@@ -1210,6 +1255,7 @@ function ImportStep({
     importedThreadCount?: number,
   ) => Promise<boolean>;
 }) {
+  const t = useT();
   const { environments } = useEnvironments();
   const writableEnvironments = useEnvironmentsWithScope(scans, AuthOrchestrationOperateScope);
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
@@ -1439,16 +1485,18 @@ function ImportStep({
   if (scans.every((scan) => scan.data === null) && scans.some((scan) => scan.isPending)) {
     return (
       <div className="flex h-full min-h-40 flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Your projects</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {t("shellDevice.onboardingYourProjects")}
+        </h1>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6">
           <Spinner size="lg" tone="muted" />
           <p className="text-center text-sm text-muted-foreground">
-            Looking for projects from Claude Code and Codex…
+            {t("shellDevice.onboardingLookingForProjectsAgents")}
           </p>
         </div>
         <div className="flex justify-end">
           <Button variant="ghost-muted" onClick={() => void onDone()}>
-            Do not import projects
+            {t("shellDevice.onboardingDoNotImport")}
           </Button>
         </div>
       </div>
@@ -1457,8 +1505,8 @@ function ImportStep({
 
   return (
     <StepShell
-      title="Import your projects"
-      description="Import projects and conversations from Claude Code and Codex on your selected computers."
+      title={t("shellDevice.onboardingImportYourProjects")}
+      description={t("shellDevice.onboardingImportDescription")}
     >
       {candidates.length > 0 ? (
         <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -1472,7 +1520,7 @@ function ImportStep({
               disabled={isImporting || selected.length === candidates.length}
               onClick={() => setSelectedPaths(new Set(candidates.map((item) => item.key)))}
             >
-              Select all
+              {t("shellDevice.onboardingSelectAll")}
             </Button>
             <Button
               variant="ghost"
@@ -1480,7 +1528,7 @@ function ImportStep({
               disabled={isImporting || selected.length === 0}
               onClick={() => setSelectedPaths(new Set())}
             >
-              Select none
+              {t("shellDevice.onboardingSelectNone")}
             </Button>
           </div>
         </div>
@@ -1506,26 +1554,28 @@ function ImportStep({
                 {scan.isPending && scan.data === null ? (
                   <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
                     <Spinner size="md" />
-                    Looking for projects…
+                    {t("shellDevice.onboardingLookingForProjects")}
                   </div>
                 ) : scan.error !== null ? (
                   <div
                     role="alert"
                     className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
                   >
-                    <span>Could not check projects. {scan.error}</span>
+                    <span>
+                      {t("shellDevice.onboardingCouldNotCheckProjects", { error: scan.error })}
+                    </span>
                     <Button variant="ghost" size="sm" onClick={scan.refresh}>
-                      Retry
+                      {t("common.retry")}
                     </Button>
                   </div>
                 ) : scanCandidates.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">
-                    No existing Claude Code or Codex projects found.
+                    {t("shellDevice.onboardingNoExistingProjects")}
                   </p>
                 ) : null}
                 {scan.data?.truncated ? (
                   <p className="text-xs text-muted-foreground" role="status">
-                    {SCAN_LIMIT_MESSAGE}
+                    {t("shellDevice.onboardingScanLimit")}
                   </p>
                 ) : null}
                 <ImportCandidateList
@@ -1543,7 +1593,7 @@ function ImportStep({
       ) : null}
       <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
         <Button variant="ghost-muted" disabled={isImporting} onClick={finishAfterImport}>
-          Do not import projects
+          {t("shellDevice.onboardingDoNotImport")}
         </Button>
         <Button
           autoFocus
@@ -1551,8 +1601,8 @@ function ImportStep({
           onClick={() => void runImport(selected)}
         >
           {isImporting
-            ? "Importing…"
-            : `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`}
+            ? t("shellDevice.onboardingImporting")
+            : t("shellDevice.onboardingImportProjects", { count: selected.length })}
         </Button>
       </div>
     </StepShell>
@@ -1579,6 +1629,7 @@ function ImportCandidateList({
   readonly selectedKeys: ReadonlySet<string>;
   readonly onSelectionChange: (next: ReadonlySet<string>) => void;
 }) {
+  const t = useT();
   const { repositories, other } = useMemo(() => groupOnboardingProjects(candidates), [candidates]);
   const setKeys = (keys: ReadonlyArray<string>, checked: boolean) => {
     const next = new Set(selectedKeys);
@@ -1615,9 +1666,11 @@ function ImportCandidateList({
             />
             <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left">
               <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
-              <span className="truncate text-sm text-muted-foreground">Other folders</span>
+              <span className="truncate text-sm text-muted-foreground">
+                {t("shellDevice.onboardingOtherFolders")}
+              </span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-                {other.length} {other.length === 1 ? "folder" : "folders"}
+                {t("shellDevice.onboardingFolderCount", { count: other.length })}
               </span>
             </CollapsibleTrigger>
           </div>
@@ -1781,6 +1834,7 @@ function ImportRowMeta({
   readonly threadCount: number;
   readonly lastActiveAt: string | null;
 }) {
+  const t = useT();
   const relative = lastActiveAt === null ? null : formatRelativeTime(lastActiveAt);
   // "just now" does not fit the fixed column, so collapse it.
   const age = relative === null ? "" : relative.suffix === null ? "now" : relative.value;
@@ -1788,10 +1842,10 @@ function ImportRowMeta({
     <span className="ml-auto grid shrink-0 grid-cols-[1rem_1rem_2.5rem_2.25rem] items-center gap-x-1 text-xs text-muted-foreground tabular-nums">
       <span className="flex size-4 items-center justify-center">
         {sources?.includes("claudeAgent") ? (
-          <span role="img" aria-label="Claude Code">
+          <span role="img" aria-label={t("shellDevice.onboardingBrandClaudeCode")}>
             <ProviderInstanceIcon
               driverKind={ProviderDriverKind.make("claudeAgent")}
-              displayName="Claude Code"
+              displayName={t("shellDevice.onboardingBrandClaudeCode")}
               iconClassName="size-3"
             />
           </span>
@@ -1799,10 +1853,10 @@ function ImportRowMeta({
       </span>
       <span className="flex size-4 items-center justify-center">
         {sources?.includes("codex") ? (
-          <span role="img" aria-label="Codex">
+          <span role="img" aria-label={t("shellDevice.onboardingBrandCodex")}>
             <ProviderInstanceIcon
               driverKind={ProviderDriverKind.make("codex")}
-              displayName="Codex"
+              displayName={t("shellDevice.onboardingBrandCodex")}
               iconClassName="size-3"
             />
           </span>

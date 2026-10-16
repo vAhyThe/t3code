@@ -4,16 +4,20 @@ import { resolveShortcutCommand, type ShortcutEventLike } from "../../keybinding
 
 export type UsageMetric = UsageChartMetric | "limits";
 export const METRIC_OPTIONS = [
-  { value: "cost", label: "Cost", command: "usage.cost" },
-  { value: "tokens", label: "Tokens", command: "usage.tokens" },
-  { value: "limits", label: "Limits", command: "usage.limits" },
-] as const satisfies readonly { value: UsageMetric; label: string; command: KeybindingCommand }[];
+  { value: "cost", labelKey: "shellDevice.usageMetricCost", command: "usage.cost" },
+  { value: "tokens", labelKey: "shellDevice.usageMetricTokens", command: "usage.tokens" },
+  { value: "limits", labelKey: "shellDevice.usageMetricLimits", command: "usage.limits" },
+] as const satisfies readonly {
+  value: UsageMetric;
+  labelKey: string;
+  command: KeybindingCommand;
+}[];
 
 export const WINDOW_OPTIONS = [
-  { days: 1, label: "Past 24h", command: "usage.period.day" },
-  { days: 7, label: "7 days", command: "usage.period.week" },
-  { days: 30, label: "30 days", command: "usage.period.month" },
-  { days: 90, label: "90 days", command: "usage.period.quarter" },
+  { days: 1, labelKey: "shellDevice.usageWindowPast24h", command: "usage.period.day" },
+  { days: 7, labelKey: "shellDevice.usageWindow7Days", command: "usage.period.week" },
+  { days: 30, labelKey: "shellDevice.usageWindow30Days", command: "usage.period.month" },
+  { days: 90, labelKey: "shellDevice.usageWindow90Days", command: "usage.period.quarter" },
 ] as const;
 
 /** Resolves page shortcuts without taking letters from fields or popup controls. */
