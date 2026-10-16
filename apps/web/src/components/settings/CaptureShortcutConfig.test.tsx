@@ -17,6 +17,7 @@ vi.mock("react", async (original) => {
     useEffect: () => undefined,
     useMemo: reactHookHarness.useMemo,
     useState: reactHookHarness.useState,
+    useSyncExternalStore: reactHookHarness.useSyncExternalStore,
   };
 });
 vi.mock("react/compiler-runtime", async () => {

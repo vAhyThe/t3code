@@ -39,6 +39,7 @@ vi.mock("react", async (importOriginal) => {
       if (cleanup) lifecycle.cleanups.push(cleanup);
     },
     useState: reactHookHarness.useState,
+    useSyncExternalStore: reactHookHarness.useSyncExternalStore,
   };
 });
 

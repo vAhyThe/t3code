@@ -46,6 +46,7 @@ vi.mock("react", async (importOriginal) => {
   return {
     ...actual,
     useState: reactHookHarness.useState,
+    useSyncExternalStore: reactHookHarness.useSyncExternalStore,
   };
 });
 
