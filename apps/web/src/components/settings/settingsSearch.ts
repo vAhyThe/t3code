@@ -1396,6 +1396,12 @@ export function searchableSetting(id: SettingsSearchItemId): {
   return { id: anchorId, title };
 }
 
+/** Catalog key of a searchable setting's translated title, when it has one. */
+export function searchableSettingTitleKey(id: SettingsSearchItemId): MessageKey | undefined {
+  const item: SettingsSearchItem | undefined = SEARCH_ITEMS_BY_ID.get(id);
+  return item?.titleKey;
+}
+
 export function filterAvailableSettingsSearchItems(
   availability: SettingsSearchAvailability,
 ): ReadonlyArray<SettingsSearchItem> {

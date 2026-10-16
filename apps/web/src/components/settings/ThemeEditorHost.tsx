@@ -8,6 +8,7 @@ import {
   type ThemeDefinition,
 } from "../../themePalette";
 import { stackedThreadToast, toastManager } from "../ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useThemeEditorStore } from "./themeEditorStore";
 
 // The host mounts above the router on every page, but the editor body only
@@ -46,6 +47,7 @@ export function ThemeEditorHost() {
       savedTheme: ThemeDefinition,
       { created, mergedAppearance }: { created: boolean; mergedAppearance?: ThemeAppearance },
     ) => {
+      const t = currentTranslator();
       // A merge completed an existing theme's light/dark pair; activating the
       // whole theme shows the new palette right away.
       if (mergedAppearance) {
@@ -53,8 +55,8 @@ export function ThemeEditorHost() {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Could not save your theme",
-              description: "Browser storage is unavailable, so the change was not kept.",
+              title: t("settingsD.couldNotSaveYourTheme"),
+              description: t("settingsD.browserStorageUnavailable"),
             }),
           );
           return false;
@@ -62,8 +64,11 @@ export function ThemeEditorHost() {
         toastManager.add(
           stackedThreadToast({
             type: "success",
-            title: `${savedTheme.label} updated`,
-            description: `Its ${mergedAppearance} palette was added.`,
+            title: t("settingsD.themeUpdated", { name: savedTheme.label }),
+            description:
+              mergedAppearance === "light"
+                ? t("settingsD.itsLightPaletteAdded")
+                : t("settingsD.itsDarkPaletteAdded"),
           }),
         );
         return true;
@@ -80,8 +85,8 @@ export function ThemeEditorHost() {
         toastManager.add(
           stackedThreadToast({
             type: "success",
-            title: `${savedTheme.label} saved`,
-            description: wasActive ? "Your changes are now active." : "Your changes are saved.",
+            title: t("settingsD.themeSaved", { name: savedTheme.label }),
+            description: wasActive ? t("settingsD.changesNowActive") : t("settingsD.changesSaved"),
           }),
         );
         return true;
@@ -91,8 +96,8 @@ export function ThemeEditorHost() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not save your theme",
-            description: "Browser storage is unavailable, so the change was not kept.",
+            title: t("settingsD.couldNotSaveYourTheme"),
+            description: t("settingsD.browserStorageUnavailable"),
           }),
         );
         return false;
@@ -100,8 +105,8 @@ export function ThemeEditorHost() {
       toastManager.add(
         stackedThreadToast({
           type: "success",
-          title: `${savedTheme.label} created`,
-          description: "It’s now active.",
+          title: t("settingsD.themeCreated", { name: savedTheme.label }),
+          description: t("settingsD.nowActive"),
         }),
       );
       return true;
