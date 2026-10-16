@@ -25,6 +25,7 @@ import {
   pullRequestChecksStatePresentation,
   summarizePullRequestChecks,
 } from "./pullRequestPresentation";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 /**
  * The checks behind the rollup, for a row that only carries the rollup. Mounted by the popup, so
@@ -40,6 +41,7 @@ function LazyChecksBody({
   reference: PullRequestRef;
   threadRef: ScopedThreadRef | null;
 }) {
+  const t = useT();
   const detailQuery = useEnvironmentQuery(
     pullRequestEnvironment.detail({ environmentId, input: reference }),
   );
@@ -49,7 +51,7 @@ function LazyChecksBody({
   if (detailQuery.data === null) {
     return (
       <p className="text-muted-foreground text-xs">
-        {detailQuery.isPending ? "Loading checks…" : "No checks reported"}
+        {detailQuery.isPending ? t("pullRequest.loadingChecks") : t("pullRequest.noChecksReported")}
       </p>
     );
   }
@@ -63,13 +65,14 @@ function ChecksBody({
   checks: ReadonlyArray<PullRequestCheck>;
   threadRef: ScopedThreadRef | null;
 }) {
+  const t = useT();
   const openLink = useOpenLink(threadRef);
   const [showAll, setShowAll] = useState(false);
   const { attention, running, completed } = groupPullRequestChecks(checks);
   const canCollapse = attention.length + running.length > 0 && completed.length > 0;
   const visibleChecks = [...attention, ...running, ...(showAll || !canCollapse ? completed : [])];
   if (checks.length === 0) {
-    return <p className="text-muted-foreground text-xs">No checks reported</p>;
+    return <p className="text-muted-foreground text-xs">{t("pullRequest.noChecksReported")}</p>;
   }
   return (
     <>
@@ -97,11 +100,14 @@ function ChecksBody({
                     if (!check.url) return;
                     void openLink(check.url).catch((error: unknown) => {
                       console.error(error);
-                      toastManager.add({ type: "error", title: "Unable to open check details" });
+                      toastManager.add({
+                        type: "error",
+                        title: currentTranslator()("pullRequest.unableToOpenCheck"),
+                      });
                     });
                   }}
                 >
-                  Details
+                  {t("pullRequest.checkDetails")}
                 </button>
               )}
             </li>
@@ -115,7 +121,7 @@ function ChecksBody({
           aria-expanded={showAll}
           onClick={() => setShowAll(!showAll)}
         >
-          {showAll ? "Show less" : "Show all"}
+          {showAll ? t("pullRequest.showLess") : t("pullRequest.showAll")}
         </Button>
       ) : null}
     </>
@@ -152,6 +158,7 @@ export function PullRequestChecksPopover({
   className?: string;
   render?: React.ReactElement;
 }) {
+  const t = useT();
   const presentation = pullRequestChecksStatePresentation(checksState);
   // Counts beat the rollup's own wording where they are known, the way GitHub's own header reads.
   const runningCount = checks?.filter((check) => check.status === "pending").length ?? 0;
@@ -168,8 +175,8 @@ export function PullRequestChecksPopover({
         nativeButton={variant === "count"}
         aria-label={
           variant === "count"
-            ? `Open checks: ${summary ?? presentation.label}`
-            : `Checks: ${presentation.label}`
+            ? t("pullRequest.openChecksLabel", { label: summary ?? presentation.label })
+            : t("pullRequest.checksLabel", { label: presentation.label })
         }
         render={
           variant === "count" ? (
@@ -201,9 +208,7 @@ export function PullRequestChecksPopover({
         <p className="mb-2 font-medium text-sm">{presentation.label}</p>
         {summary === null ? null : <p className="mb-2 text-muted-foreground text-xs">{summary}</p>}
         {stale ? (
-          <p className="text-muted-foreground text-xs">
-            Check details are out of date. Refresh the pull request to update them.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("pullRequest.checksOutOfDate")}</p>
         ) : checks !== undefined ? (
           <ChecksBody checks={checks} threadRef={threadRef} />
         ) : environmentId !== undefined && reference !== undefined ? (

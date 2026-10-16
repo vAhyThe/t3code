@@ -37,11 +37,19 @@ import {
 import { inferReviewCommentFenceLanguage, type ReviewCommentContext } from "~/reviewCommentContext";
 import { reviewCommentContextId } from "~/lib/composerContextRecords";
 import { removeInlineContextReference } from "~/lib/composerContextReferences";
+import { currentTranslator } from "../../i18n/I18nProvider";
 
+// Getters so each read translates at render; other zones read these by key.
 export const PULL_REQUEST_MERGE_METHOD_LABELS: Record<PullRequestMergeMethod, string> = {
-  merge: "Merge",
-  squash: "Squash and merge",
-  rebase: "Rebase and merge",
+  get merge() {
+    return currentTranslator()("pullRequest.mergeMethodMerge");
+  },
+  get squash() {
+    return currentTranslator()("pullRequest.mergeMethodSquash");
+  },
+  get rebase() {
+    return currentTranslator()("pullRequest.mergeMethodRebase");
+  },
 };
 
 /** Old environments keep their existing actions; new ones must finish stack discovery first. */
@@ -254,16 +262,17 @@ export function threadPullRequestPanelTarget(thread: {
 
 /** Names where a pull-request task will land, without letting each surface guess independently. */
 export function pullRequestHandoffLabels(inThisThread: boolean) {
+  const t = currentTranslator();
   return inThisThread
     ? {
-        fixFinding: "Fix in this thread",
-        fixCheck: "Fix in this thread",
-        fixFindings: "Fix findings in this thread",
+        fixFinding: t("pullRequest.handoffFixInThread"),
+        fixCheck: t("pullRequest.handoffFixInThread"),
+        fixFindings: t("pullRequest.handoffFixFindingsInThread"),
       }
     : {
-        fixFinding: "Fix in a thread",
-        fixCheck: "Fix",
-        fixFindings: "Fix findings in a thread",
+        fixFinding: t("pullRequest.handoffFixInAThread"),
+        fixCheck: t("pullRequest.handoffFix"),
+        fixFindings: t("pullRequest.handoffFixFindingsInAThread"),
       };
 }
 
@@ -360,7 +369,8 @@ export function classifyPullRequestChecks(
  * what a reader does next.
  */
 export function describePullRequestChecks(checks: ReadonlyArray<PullRequestCheck>): string {
-  if (checks.length === 0) return "No checks reported";
+  const t = currentTranslator();
+  if (checks.length === 0) return t("pullRequest.noChecksReported");
   const failed = checks.filter(
     (check) => check.status === "failure" || check.status === "cancelled",
   ).length;
@@ -368,13 +378,21 @@ export function describePullRequestChecks(checks: ReadonlyArray<PullRequestCheck
   const actionRequired = checks.filter((check) => check.status === "action-required").length;
   const passed = checks.filter((check) => check.status === "success").length;
   const parts: string[] = [];
-  if (pending > 0) parts.push(`${pending} of ${checks.length} running`);
-  if (actionRequired > 0) parts.push(`${actionRequired} of ${checks.length} awaiting action`);
+  if (pending > 0) parts.push(t("pullRequest.runningOfTotal", { pending, total: checks.length }));
+  if (actionRequired > 0) {
+    parts.push(t("pullRequest.awaitingActionOfTotal", { actionRequired, total: checks.length }));
+  }
   if (failed > 0) {
-    parts.push(parts.length > 0 ? `${failed} failed` : `${failed} of ${checks.length} failing`);
+    parts.push(
+      parts.length > 0
+        ? t("pullRequest.failedCount", { failed })
+        : t("pullRequest.failedOfTotal", { failed, total: checks.length }),
+    );
   }
   if (parts.length === 0) {
-    return passed === checks.length ? "All checks passed" : `${passed} of ${checks.length} passing`;
+    return passed === checks.length
+      ? t("pullRequest.allChecksPassed")
+      : t("pullRequest.passingOfTotal", { passed, total: checks.length });
   }
   return parts.join(" · ");
 }
@@ -625,7 +643,7 @@ export function buildPullRequestTimeline(
       id: "created",
       at: detail.createdAt,
       kind: "opened" as const,
-      title: "opened this pull request",
+      title: currentTranslator()("pullRequest.timelineOpened"),
       body: null,
       markdown: false,
       url: null,
@@ -641,7 +659,7 @@ export function buildPullRequestTimeline(
       id: commit.oid,
       at: commit.committedDate,
       kind: "commit" as const,
-      title: `Commit ${commit.oid.slice(0, 7)}`,
+      title: currentTranslator()("pullRequest.timelineCommit", { sha: commit.oid.slice(0, 7) }),
       body: commit.messageHeadline || null,
       markdown: false,
       url: null,
@@ -657,7 +675,11 @@ export function buildPullRequestTimeline(
       id: comment.id,
       at: comment.createdAt,
       kind: comment.kind === "review" ? ("review" as const) : ("comment" as const),
-      title: comment.kind === "review" ? "reviewed" : "commented",
+      title: currentTranslator()(
+        comment.kind === "review"
+          ? "pullRequest.timelineReviewed"
+          : "pullRequest.timelineCommented",
+      ),
       body: visibleBody(comment.body),
       markdown: true,
       url: comment.url,
@@ -675,7 +697,7 @@ export function buildPullRequestTimeline(
             id: "merged",
             at: detail.mergedAt,
             kind: "merged" as const,
-            title: "Pull request merged",
+            title: currentTranslator()("pullRequest.lifecycleMerged"),
             body: null,
             markdown: false,
             url: null,
@@ -695,7 +717,7 @@ export function buildPullRequestTimeline(
             id: "closed",
             at: detail.closedAt,
             kind: "closed" as const,
-            title: "Pull request closed",
+            title: currentTranslator()("pullRequest.lifecycleClosed"),
             body: null,
             markdown: false,
             url: null,

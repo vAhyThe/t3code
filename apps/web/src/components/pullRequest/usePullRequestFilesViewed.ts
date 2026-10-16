@@ -18,6 +18,7 @@ import {
   type FileViewedOverlay,
   type FileViewedStates,
 } from "./pullRequestFilesViewed.logic";
+import { currentTranslator } from "../../i18n/I18nProvider";
 
 /**
  * How long presses gather before the host is told. Long enough that ticking down a file list
@@ -136,7 +137,10 @@ export function usePullRequestFilesViewed(options: {
         // back, and when the connection went away mid-flight, which the reader is already being
         // told about and which the host never refused.
         if (owned.size > 0 && !isAtomCommandInterrupted(result)) {
-          toastManager.add({ type: "error", title: "Could not update viewed files" });
+          toastManager.add({
+            type: "error",
+            title: currentTranslator()("pullRequest.filesViewedUpdateFailed"),
+          });
         }
         return;
       }

@@ -36,6 +36,7 @@ import { pullRequestEnvironment } from "~/state/pullRequests";
 import { toastManager } from "../ui/toast";
 import { handoffPrompt, handoffReviewComments, readableFailure } from "./pullRequestDetail.logic";
 import { pullRequestEntryKey, type EnvironmentPullRequestEntry } from "./pullRequestList.logic";
+import { currentTranslator } from "../../i18n/I18nProvider";
 
 /** Resolve on demand so hidden quick actions do not rebuild the legacy project grouping. */
 export function usePullRequestDefaultMergeMethodResolver(
@@ -78,54 +79,113 @@ export function usePullRequestDefaultMergeMethodResolver(
 }
 
 const ACTION_SUCCESS_LABELS: Record<PullRequestAction, string> = {
-  merge: "Merge requested",
-  ready: "Marked ready for review",
-  draft: "Converted to draft",
-  close: "Pull request closed",
-  reopen: "Pull request reopened",
-  "update-branch": "Branch updated with the base branch",
-  "enable-auto-merge": "Auto-merge enabled",
-  "disable-auto-merge": "Auto-merge disabled",
-  revert: "Revert pull request opened",
-  "delete-branch": "Branch deleted",
-  "approve-workflows": "Workflows approved",
+  get merge() {
+    return currentTranslator()("pullRequest.runSuccessMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runSuccessReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runSuccessDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runSuccessClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runSuccessReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runSuccessUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runSuccessEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runSuccessDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runSuccessRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runSuccessDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runSuccessApproveWorkflows");
+  },
 };
 
 /** Said as the thing that did not happen, rather than as the operation that returned an error. */
 const ACTION_FAILURE_LABELS: Record<PullRequestAction, string> = {
-  merge: "Could not merge this pull request",
-  ready: "Could not mark this ready for review",
-  draft: "Could not convert this to a draft",
-  close: "Could not close this pull request",
-  reopen: "Could not reopen this pull request",
-  "update-branch": "Could not update this branch",
-  "enable-auto-merge": "Could not enable auto-merge",
-  "disable-auto-merge": "Could not disable auto-merge",
-  revert: "Could not open a revert pull request",
-  "delete-branch": "Could not delete this branch",
-  "approve-workflows": "Could not approve workflows",
+  get merge() {
+    return currentTranslator()("pullRequest.runFailureMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runFailureReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runFailureDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runFailureClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runFailureReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runFailureUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runFailureEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runFailureDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runFailureRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runFailureDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runFailureApproveWorkflows");
+  },
 };
 
 /** What to try, for the times the host says only that it refused. */
 const ACTION_FAILURE_HINTS: Record<PullRequestAction, string> = {
-  merge:
-    "The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting.",
-  ready: "The host refused it. Check that you have write access to this repository.",
-  draft: "The host refused it. Check that you have write access to this repository.",
-  close: "The host refused it. Check that you have write access, or that you opened it.",
-  reopen:
-    "The host refused it. Check that you have write access, and that the branch still exists.",
-  "update-branch":
-    "The host refused it. Check that you have write access, and that the base branch has not diverged in a way the host cannot merge.",
-  "enable-auto-merge":
-    "The host refused it. Check that auto-merge is enabled for this repository and that you have write access.",
-  "disable-auto-merge": "The host refused it. Check that you have write access to this repository.",
-  revert:
-    "The host refused it. Check that you have write access and that this pull request was merged on the host.",
-  "delete-branch":
-    "The host refused it. Check that you have write access to the source repository and that the branch has not moved since this page loaded.",
-  "approve-workflows":
-    "The host refused it. Check that you have Actions write access and that these workflow runs are still awaiting approval.",
+  get merge() {
+    return currentTranslator()("pullRequest.runHintMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runHintReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runHintDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runHintClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runHintReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runHintUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runHintEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runHintDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runHintRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runHintDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runHintApproveWorkflows");
+  },
 };
 
 /**
@@ -229,8 +289,8 @@ export function usePullRequestCloseBatch(onClosed: (entry: EnvironmentPullReques
         type: failures.length > 0 ? "error" : "success",
         title:
           failures.length > 0
-            ? `Closed ${closed} of ${batch.length} pull requests`
-            : `Closed ${closed} pull request${closed === 1 ? "" : "s"}`,
+            ? currentTranslator()("pullRequest.closedOfTotal", { closed, total: batch.length })
+            : currentTranslator()("pullRequest.closedCount", { count: closed }),
         ...(failures.length > 0 ? { description: failures.slice(0, 3).join("\n") } : {}),
       });
     },
@@ -333,20 +393,20 @@ export function usePullRequestHandoffs({
     if (opened === null) {
       toastManager.add({
         type: "error",
-        title: "Could not open a thread",
-        description: "Try again from the project, or open a thread first.",
+        title: currentTranslator()("pullRequest.couldNotOpenThread"),
+        description: currentTranslator()("pullRequest.openThreadFirst"),
       });
       return;
     }
     toastManager.add({
       type: "success",
-      title: "Asked in a thread",
+      title: currentTranslator()("pullRequest.askedInThread"),
       // "Ask" leaves the composer empty on purpose, so saying the question is in it would send
       // the reader looking for something that is not there. The chips are what landed.
       description:
         task.prompt.length > 0
-          ? "The question is in the composer — read it over, then send."
-          : "The pull request is in the composer — type your question, then send.",
+          ? currentTranslator()("pullRequest.questionInComposer")
+          : currentTranslator()("pullRequest.pullRequestInComposer"),
     });
   };
 
@@ -368,7 +428,7 @@ export function usePullRequestHandoffs({
     // never expires, and an explicit one would survive the update and pin the result on screen.
     const toastId = toastManager.add({
       type: "loading",
-      title: "Preparing the pull request checkout...",
+      title: currentTranslator()("pullRequest.preparingCheckout"),
     });
     const projectRef = scopeProjectRef(environmentId, detail.projectId);
     // The thread is opened before the checkout rather than after it, because the project's setup
@@ -385,8 +445,8 @@ export function usePullRequestHandoffs({
       // working tree than to prepare a worktree nobody asked for.
       toastManager.update(toastId, {
         type: "error",
-        title: "Could not open a thread for the checkout",
-        description: "Try again from the project, or open a thread first.",
+        title: currentTranslator()("pullRequest.couldNotOpenThreadForCheckout"),
+        description: currentTranslator()("pullRequest.openThreadFirst"),
       });
       return;
     }
@@ -403,7 +463,7 @@ export function usePullRequestHandoffs({
         prepareThread.error instanceof Error ? prepareThread.error.message : null;
       toastManager.update(toastId, {
         type: "error",
-        title: "Could not prepare the pull request checkout",
+        title: currentTranslator()("pullRequest.couldNotPrepareCheckout"),
         ...(detailMessage ? { description: detailMessage } : {}),
       });
       return;
@@ -425,8 +485,10 @@ export function usePullRequestHandoffs({
       // outcome worth stopping for, since it reads as success and is not.
       toastManager.update(toastId, {
         type: "error",
-        title: "Checked out, but the thread stayed where it was",
-        description: `The checkout is ready on \`${prepared.value.branch}\`. Point a thread at it from the branch picker, then ask again.`,
+        title: currentTranslator()("pullRequest.checkedOutThreadStayed"),
+        description: currentTranslator()("pullRequest.checkoutReadyOnBranch", {
+          branch: prepared.value.branch,
+        }),
       });
       return;
     }
@@ -438,9 +500,8 @@ export function usePullRequestHandoffs({
     // success, because everything else about the handoff did happen.
     const staleCheckoutToast = {
       type: "warning",
-      title: "Checked out, but not on the latest commits",
-      description:
-        "The checkout could not be moved onto the pull request's latest commits, so the code there is older than the pull request. Uncommitted work or local commits keep it where it is.",
+      title: currentTranslator()("pullRequest.checkedOutNotLatest"),
+      description: currentTranslator()("pullRequest.checkoutNotMovedLatest"),
     } as const;
     if (task === null) {
       toastManager.update(
@@ -448,11 +509,14 @@ export function usePullRequestHandoffs({
         prepared.value.isOnPullRequestHead
           ? {
               type: "success",
-              title: mode === "local" ? "Checked out here" : "Checked out",
+              title:
+                mode === "local"
+                  ? currentTranslator()("pullRequest.checkedOutHere")
+                  : currentTranslator()("pullRequest.checkedOut"),
               description:
                 mode === "local"
-                  ? "This repository is on the pull request's branch, with a thread open on it."
-                  : "The pull request is in its own worktree, with a thread open on it.",
+                  ? currentTranslator()("pullRequest.branchThreadOpen")
+                  : currentTranslator()("pullRequest.worktreeThreadOpen"),
             }
           : staleCheckoutToast,
       );
@@ -464,8 +528,8 @@ export function usePullRequestHandoffs({
       prepared.value.isOnPullRequestHead
         ? {
             type: "success",
-            title: "Checkout ready",
-            description: "The task is in the composer — read it over, then send.",
+            title: currentTranslator()("pullRequest.checkoutReady"),
+            description: currentTranslator()("pullRequest.taskInComposer"),
           }
         : staleCheckoutToast,
     );

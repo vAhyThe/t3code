@@ -70,6 +70,8 @@ import { PullRequestMarkdownEditor } from "./PullRequestMarkdownEditor";
 import { PullRequestReactionBar } from "./PullRequestReactions";
 import { PullRequestConversationGhost } from "./PullRequestGhosts";
 import { sectionCollapseAnchorScrollTop } from "./pullRequestSummaryScroll.logic";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 
 /** One reviewer, however a host happens to have cased their login this time. */
 function reviewerKey(login: string): string {
@@ -123,6 +125,7 @@ function CommentLocation({
   comment: PullRequestComment;
   thread: PullRequestReviewThread | undefined;
 }) {
+  const t = useT();
   const path = thread?.path ?? comment.path;
   if (!path) return null;
   const label = `${path}${thread?.line ? `:${thread.line}` : ""}`;
@@ -132,14 +135,24 @@ function CommentLocation({
         <TooltipTrigger render={<span className="truncate font-mono" />}>{label}</TooltipTrigger>
         <TooltipPopup>{label}</TooltipPopup>
       </Tooltip>
-      {thread?.isOutdated ? <span className="shrink-0">Outdated</span> : null}
+      {thread?.isOutdated ? <span className="shrink-0">{t("pullRequest.outdated")}</span> : null}
     </div>
   );
 }
 
 /** "CHANGES_REQUESTED" reads as "Changes requested": one capital, the host's underscores gone. */
+const REVIEW_STATE_KEYS: Partial<Record<string, MessageKey>> = {
+  approved: "pullRequest.reviewStateApproved",
+  "changes requested": "pullRequest.reviewStateChangesRequested",
+  commented: "pullRequest.reviewStateCommented",
+  dismissed: "pullRequest.reviewStateDismissed",
+  pending: "pullRequest.reviewStatePending",
+};
+
 function reviewStateLabel(state: string): string {
   const words = state.toLowerCase().replace(/_/g, " ");
+  const key = REVIEW_STATE_KEYS[words];
+  if (key) return currentTranslator()(key);
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
@@ -168,6 +181,7 @@ function CommentBody({
   editing: CommentEditing;
   className?: string | undefined;
 }) {
+  const t = useT();
   if (editing.editingId === comment.id) {
     return (
       <PullRequestMarkdownEditor
@@ -176,7 +190,7 @@ function CommentBody({
         cwd={editing.cwd}
         environmentId={editing.environmentId}
         threadRef={editing.threadRef}
-        label="Edit comment"
+        label={t("pullRequest.editComment")}
         saving={editing.saving}
         onSave={(body) => editing.onSave(comment, body)}
         onCancel={() => editing.onEdit(null)}
@@ -194,7 +208,10 @@ function CommentBody({
         threadRef={editing.threadRef}
       />
       {editing.canEdit(comment) ? (
-        <PullRequestEditButton aria-label="Edit comment" onClick={() => editing.onEdit(comment)} />
+        <PullRequestEditButton
+          aria-label={t("pullRequest.editComment")}
+          onClick={() => editing.onEdit(comment)}
+        />
       ) : null}
     </div>
   );
@@ -385,8 +402,8 @@ export function PullRequestSummaryTab({
   checksStale = false,
   activityError,
   pendingFinding,
-  fixFindingLabel = "Fix in a thread",
-  fixCheckLabel = "Fix",
+  fixFindingLabel,
+  fixCheckLabel,
   onFixFinding,
   onRefresh,
   onRefreshChecks = onRefresh,
@@ -407,6 +424,7 @@ export function PullRequestSummaryTab({
   onRefresh: () => void;
   onRefreshChecks?: () => void;
 }) {
+  const t = useT();
   // Keyed by the pull request, so opening another one starts at the end of its conversation
   // rather than wherever the last one had been read back to.
   const [shown, setShown] = useState({ url: detail.url, count: COMMENT_PAGE });
@@ -453,8 +471,10 @@ export function PullRequestSummaryTab({
         className="w-full"
         onClick={() => setShown({ url: detail.url, count: shownComments + COMMENT_PAGE })}
       >
-        Show {Math.min(hiddenCommentCount, COMMENT_PAGE)} older comment
-        {hiddenCommentCount === 1 ? "" : "s"} ({hiddenCommentCount} hidden)
+        {t("pullRequest.showOlderComments", {
+          shown: Math.min(hiddenCommentCount, COMMENT_PAGE),
+          count: hiddenCommentCount,
+        })}
       </Button>
     ) : null;
   // Read from the whole conversation, not the window shown below it: a verdict older than the
@@ -498,7 +518,10 @@ export function PullRequestSummaryTab({
   const openCheck = (url: string) => {
     void openLink(url).catch((error: unknown) => {
       console.error(error);
-      toastManager.add({ type: "error", title: "Unable to open check details" });
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("pullRequest.unableToOpenCheck"),
+      });
     });
   };
 
@@ -527,7 +550,10 @@ export function PullRequestSummaryTab({
     const result = await update({ environmentId, input: { ...reference, body } });
     setBodySaving(false);
     if (result._tag === "Failure") {
-      toastManager.add({ type: "error", title: "Could not save the description" });
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("pullRequest.couldNotSaveDescription"),
+      });
       return;
     }
     setBodyScope(null);
@@ -554,7 +580,10 @@ export function PullRequestSummaryTab({
       });
       setCommentSaving(false);
       if (result._tag === "Failure") {
-        toastManager.add({ type: "error", title: "Could not save the comment" });
+        toastManager.add({
+          type: "error",
+          title: currentTranslator()("pullRequest.couldNotSaveComment"),
+        });
         return;
       }
       setCommentScope(null);
@@ -573,7 +602,9 @@ export function PullRequestSummaryTab({
           editing={commentEditing}
           detail={detail}
           thread={thread}
-          label={thread?.isResolved ? "Resolved" : "Review dismissed"}
+          label={
+            thread?.isResolved ? t("pullRequest.threadResolved") : t("pullRequest.reviewDismissed")
+          }
           body={body}
           reactionBar={
             <PullRequestReactionBar
@@ -639,7 +670,9 @@ export function PullRequestSummaryTab({
               onClick={() => onFixFinding(finding)}
             >
               <HammerIcon className="size-3" />
-              {pendingFinding === pullRequestFindingKey(finding) ? "Preparing..." : fixFindingLabel}
+              {pendingFinding === pullRequestFindingKey(finding)
+                ? t("pullRequest.preparingFix")
+                : (fixFindingLabel ?? t("pullRequest.handoffFixInAThread"))}
             </Button>
           ) : null}
           {reactionBar}
@@ -662,10 +695,13 @@ export function PullRequestSummaryTab({
     <div ref={scrollerRef} className="h-full overflow-y-auto" data-pull-request-summary-scroll>
       <section className="px-4 pt-2.5 pb-1">
         <div className="space-y-2">
-          <MetaRow icon={<UsersIcon className="size-3.5" />} label="Reviewers">
+          <MetaRow
+            icon={<UsersIcon className="size-3.5" />}
+            label={t("pullRequest.reviewersLabel")}
+          >
             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
               {reviewerEntries.length === 0 ? (
-                <span className="text-muted-foreground">None</span>
+                <span className="text-muted-foreground">{t("pullRequest.none")}</span>
               ) : (
                 <span className="flex items-center -space-x-1">
                   {reviewerEntries.map((entry) => {
@@ -747,10 +783,10 @@ export function PullRequestSummaryTab({
           {/* The row is shown empty only where a label could be put on it from here; on a host
               with none to offer, an empty row is a row about nothing. */}
           {detail.labels.length > 0 || detail.capabilities.labels === true ? (
-            <MetaRow icon={<TagIcon className="size-3.5" />} label="Labels">
+            <MetaRow icon={<TagIcon className="size-3.5" />} label={t("pullRequest.labelsLabel")}>
               <span className="flex min-w-0 flex-wrap items-center gap-1">
                 {detail.labels.length === 0 ? (
-                  <span className="text-muted-foreground">None</span>
+                  <span className="text-muted-foreground">{t("pullRequest.none")}</span>
                 ) : (
                   detail.labels.map((label) => (
                     <PullRequestLabelChip
@@ -774,7 +810,7 @@ export function PullRequestSummaryTab({
         </div>
       </section>
 
-      <Section key={`description:${detail.url}`} title="Description" keepMounted>
+      <Section key={`description:${detail.url}`} title={t("pullRequest.description")} keepMounted>
         <div className="group">
           {bodyScope === detail.url ? (
             <PullRequestMarkdownEditor
@@ -784,8 +820,8 @@ export function PullRequestSummaryTab({
               cwd={detail.workspaceRoot}
               environmentId={environmentId}
               threadRef={threadRef}
-              label="Pull request description"
-              placeholder="Describe this pull request"
+              label={t("pullRequest.pullRequestDescriptionLabel")}
+              placeholder={t("pullRequest.describePullRequest")}
               saving={bodySaving}
               onSave={(body) => void saveBody(body)}
               onCancel={() => setBodyScope(null)}
@@ -801,7 +837,7 @@ export function PullRequestSummaryTab({
               />
               {canEditPullRequestChangeRequest(detail) ? (
                 <PullRequestEditButton
-                  aria-label="Edit description"
+                  aria-label={t("pullRequest.editDescription")}
                   onClick={() => setBodyScope(detail.url)}
                 />
               ) : null}
@@ -810,16 +846,20 @@ export function PullRequestSummaryTab({
         </div>
       </Section>
 
-      <Section key={`checks:${detail.url}`} title="Checks" defaultOpen={false}>
+      <Section
+        key={`checks:${detail.url}`}
+        title={t("pullRequest.checksTitle")}
+        defaultOpen={false}
+      >
         {checksStale ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Check details are out of date.</span>
+            <span>{t("pullRequest.checksOutOfDateShort")}</span>
             <Button size="xs" variant="ghost" onClick={onRefreshChecks}>
-              Refresh
+              {t("common.refresh")}
             </Button>
           </div>
         ) : detail.checks.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No checks reported.</p>
+          <p className="text-xs text-muted-foreground">{t("pullRequest.noChecksReportedDot")}</p>
         ) : (
           detail.checks.map((check, index) => {
             const finding = { kind: "check", check } as const;
@@ -858,8 +898,8 @@ export function PullRequestSummaryTab({
                   >
                     <HammerIcon className="size-3" />
                     {pendingFinding === pullRequestFindingKey(finding)
-                      ? "Preparing..."
-                      : fixCheckLabel}
+                      ? t("pullRequest.preparingFix")
+                      : (fixCheckLabel ?? t("pullRequest.handoffFix"))}
                   </Button>
                 ) : null}
               </div>
@@ -869,26 +909,28 @@ export function PullRequestSummaryTab({
       </Section>
 
       <Section
-        title={`Comments (${detail.commentCount})`}
+        title={t("pullRequest.commentsTitle", { count: detail.commentCount })}
         actions={
           <div className="flex shrink-0 items-center gap-1">
             <Menu>
               <MenuTrigger
                 render={<Button size="xs" variant="ghost-muted" />}
-                aria-label="Filter comments"
+                aria-label={t("pullRequest.filterComments")}
               >
                 <ListFilterIcon aria-hidden className="size-3" />
-                {filteredOutCount > 0 ? `${filteredOutCount} hidden` : "Filter"}
+                {filteredOutCount > 0
+                  ? t("pullRequest.hiddenCount", { count: filteredOutCount })
+                  : t("pullRequest.filterLabel")}
               </MenuTrigger>
               <MenuPopup align="end">
                 <MenuGroup>
-                  <MenuGroupLabel>Show</MenuGroupLabel>
+                  <MenuGroupLabel>{t("pullRequest.showLabel")}</MenuGroupLabel>
                   <MenuCheckboxItem
                     checked={commentFilter.bots}
                     closeOnClick={false}
                     onCheckedChange={(bots) => setCommentFilter((value) => ({ ...value, bots }))}
                   >
-                    Bot comments
+                    {t("pullRequest.botComments")}
                   </MenuCheckboxItem>
                   <MenuCheckboxItem
                     checked={commentFilter.resolved}
@@ -897,7 +939,7 @@ export function PullRequestSummaryTab({
                       setCommentFilter((value) => ({ ...value, resolved }))
                     }
                   >
-                    Resolved or dismissed
+                    {t("pullRequest.resolvedOrDismissed")}
                   </MenuCheckboxItem>
                 </MenuGroup>
               </MenuPopup>
@@ -907,13 +949,15 @@ export function PullRequestSummaryTab({
               variant="ghost-muted"
               aria-label={
                 commentOrder === "newest"
-                  ? "Show oldest comments first"
-                  : "Show newest comments first"
+                  ? t("pullRequest.showOldestFirst")
+                  : t("pullRequest.showNewestFirst")
               }
               onClick={() => setCommentOrder((value) => (value === "newest" ? "oldest" : "newest"))}
             >
               <ArrowDownUpIcon aria-hidden className="size-3" />
-              {commentOrder === "newest" ? "Newest first" : "Oldest first"}
+              {commentOrder === "newest"
+                ? t("pullRequest.newestFirst")
+                : t("pullRequest.oldestFirst")}
             </Button>
           </div>
         }
@@ -926,17 +970,16 @@ export function PullRequestSummaryTab({
           <>
             {detail.commentsTruncated ? (
               <p className="mb-2 rounded-md border border-warning/30 bg-warning-surface px-2 py-1.5 text-xs">
-                This conversation is longer than this page reads in one go. The most recent{" "}
-                {detail.comments.length} are here; open it on the host to read the rest.
+                {t("pullRequest.conversationLonger", { count: detail.comments.length })}
               </p>
             ) : null}
             {detail.comments.length === 0 ? (
-              <p className="py-2 text-xs text-muted-foreground">No comments yet.</p>
+              <p className="py-2 text-xs text-muted-foreground">{t("pullRequest.noCommentsYet")}</p>
             ) : filteredComments.length === 0 ? (
               <p className="py-2 text-xs text-muted-foreground">
                 {filteredOutCount === 1
-                  ? "The only comment is hidden by the filter."
-                  : `All ${filteredOutCount} comments are hidden by the filter.`}
+                  ? t("pullRequest.onlyCommentHidden")
+                  : t("pullRequest.allCommentsHidden", { count: filteredOutCount })}
               </p>
             ) : (
               <div className="space-y-3">
@@ -950,7 +993,7 @@ export function PullRequestSummaryTab({
                     className="w-full"
                     onClick={() => setShown({ url: detail.url, count: COMMENT_PAGE })}
                   >
-                    Show only {COMMENT_PAGE} recent comments
+                    {t("pullRequest.showOnlyRecent", { count: COMMENT_PAGE })}
                   </Button>
                 ) : null}
               </div>

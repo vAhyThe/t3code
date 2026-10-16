@@ -39,6 +39,7 @@ import {
 } from "@t3tools/client-runtime/review-guide-tour";
 import { GuideNoteMarker } from "./GuideNotes";
 import { GuideProse } from "./GuideProse";
+import { useT } from "../../../i18n/I18nProvider";
 
 // Long lines scroll inside the excerpt. The renderer only shows its scrollbar on hover, which
 // reads as code cut off at the edge, so the excerpt keeps it visible.
@@ -109,6 +110,7 @@ export function GuideExcerpt({
   loadDiffFiles: FileDiffContentsLoader;
   onOpenFile: (path: string) => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState<ExcerptDraft | null>(null);
   const { resolvedTheme } = useTheme();
   const slice = useMemo(() => {
@@ -289,13 +291,19 @@ export function GuideExcerpt({
                     rangeLabel={`${excerpt.path}:${getReviewPositionAnchor(draft.position).line}`}
                     text=""
                     placeholder={
-                      commenting.canComment ? "Add a comment…" : "Ask the agent about these lines…"
+                      commenting.canComment
+                        ? t("pullRequest.addCommentDots")
+                        : t("pullRequest.askAgentAboutLines")
                     }
-                    submitLabel={commenting.canComment ? "Add to review" : "Ask agent"}
+                    submitLabel={
+                      commenting.canComment
+                        ? t("pullRequest.addToReview")
+                        : t("pullRequest.askAgent")
+                    }
                     {...(commenting.canComment && onAskAgent !== null
                       ? {
                           secondaryAction: {
-                            label: "Ask agent",
+                            label: t("pullRequest.askAgent"),
                             onAction: (text: string) => askAgent(text),
                           },
                         }
@@ -327,7 +335,7 @@ export function GuideExcerpt({
                 <Button
                   size="icon-xs"
                   variant="ghost-muted"
-                  aria-label={`Open ${excerpt.path} in Code`}
+                  aria-label={t("pullRequest.openPathInCode", { path: excerpt.path })}
                   onClick={() => onOpenFile(excerpt.path)}
                 >
                   <ArrowUpRightIcon aria-hidden />
@@ -338,7 +346,7 @@ export function GuideExcerpt({
         </div>
       ) : loading ? (
         <p className="rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
-          Loading {excerpt.path}...
+          {t("pullRequest.loadingPath", { path: excerpt.path })}
         </p>
       ) : (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
@@ -347,7 +355,7 @@ export function GuideExcerpt({
             {excerpt.end} are not in the loaded diff.
           </span>
           <Button size="xs" variant="outline" onClick={() => onOpenFile(excerpt.path)}>
-            Open in Code
+            {t("pullRequest.openInCode")}
           </Button>
         </div>
       )}

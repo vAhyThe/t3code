@@ -27,6 +27,7 @@ import {
   PullRequestLabelChip,
   PullRequestReviewDecisionGlyph,
 } from "./pullRequestPresentation";
+import { useT } from "../../i18n/I18nProvider";
 
 /**
  * Each slot past the first only appears once the meta line is wide enough to hold it, so a
@@ -39,6 +40,26 @@ const LABEL_SLOTS = [
   { overflow: "@3xl/pr-row-meta:hidden" },
   { overflow: "" },
 ] as const;
+
+function PullRequestMatchBadge() {
+  const t = useT();
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="flex min-w-6 items-center gap-1 overflow-hidden rounded-full border border-border/60 px-1 text-3xs" />
+        }
+      >
+        <span className="sr-only">{t("pullRequest.matchedInDescriptionLower")}</span>
+        <SearchIcon aria-hidden className="size-3 shrink-0" />
+        <span aria-hidden className="hidden truncate @xs/pr-row-meta:block">
+          {t("pullRequest.matchedInDescriptionLower")}
+        </span>
+      </TooltipTrigger>
+      <TooltipPopup side="top">{t("pullRequest.matchedInDescription")}</TooltipPopup>
+    </Tooltip>
+  );
+}
 
 function PullRequestRowLabels({ labels }: { labels: EnvironmentPullRequestEntry["labels"] }) {
   if (labels.length === 0) return null;
@@ -221,22 +242,7 @@ function PullRequestRowImpl({
           metaClassName="@container/pr-row-meta"
           meta={
             <>
-              {matchedElsewhere ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className="flex min-w-6 items-center gap-1 overflow-hidden rounded-full border border-border/60 px-1 text-3xs" />
-                    }
-                  >
-                    <span className="sr-only">matched in the description</span>
-                    <SearchIcon aria-hidden className="size-3 shrink-0" />
-                    <span aria-hidden className="hidden truncate @xs/pr-row-meta:block">
-                      matched in the description
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipPopup side="top">Matched in the description</TooltipPopup>
-                </Tooltip>
-              ) : null}
+              {matchedElsewhere ? <PullRequestMatchBadge /> : null}
               {showProvider ? (
                 <Tooltip>
                   <TooltipTrigger render={<span className="inline-flex shrink-0" />}>

@@ -172,6 +172,7 @@ import { Separator } from "~/components/ui/separator";
 import { primaryServerKeybindingsAtom } from "~/state/server";
 import { getSourceControlPresentationForKind } from "~/sourceControlPresentation";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
+import { useT, currentTranslator } from "../i18n/I18nProvider";
 
 function getShortcutContext() {
   return {
@@ -239,26 +240,110 @@ function PullRequestGroupHeader({
 
 // The state filters wear the same glyphs the rows do, so the two read as one vocabulary.
 const INVOLVEMENT_TABS = [
-  { value: "all", label: "All", Icon: LayersIcon },
-  { value: "reviewing", label: "Reviewing", Icon: EyeIcon },
-  { value: "authored", label: "Authored", Icon: PenLineIcon },
+  {
+    value: "all",
+    get label() {
+      return currentTranslator()("pullRequest.filterAll");
+    },
+    Icon: LayersIcon,
+  },
+  {
+    value: "reviewing",
+    get label() {
+      return currentTranslator()("pullRequest.involvementReviewing");
+    },
+    Icon: EyeIcon,
+  },
+  {
+    value: "authored",
+    get label() {
+      return currentTranslator()("pullRequest.involvementAuthored");
+    },
+    Icon: PenLineIcon,
+  },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<PullRequestInvolvement>>;
 
 const STATE_TABS = [
-  { value: "all", label: "All", Icon: LayersIcon },
-  { value: "open", label: "Open", Icon: PullRequestGlyph.pullRequest },
-  { value: "closed", label: "Closed", Icon: PullRequestGlyph.closed },
-  { value: "merged", label: "Merged", Icon: PullRequestGlyph.merged },
+  {
+    value: "all",
+    get label() {
+      return currentTranslator()("pullRequest.filterAll");
+    },
+    Icon: LayersIcon,
+  },
+  {
+    value: "open",
+    get label() {
+      return currentTranslator()("pullRequest.tabOpen");
+    },
+    Icon: PullRequestGlyph.pullRequest,
+  },
+  {
+    value: "closed",
+    get label() {
+      return currentTranslator()("pullRequest.tabClosed");
+    },
+    Icon: PullRequestGlyph.closed,
+  },
+  {
+    value: "merged",
+    get label() {
+      return currentTranslator()("pullRequest.tabMerged");
+    },
+    Icon: PullRequestGlyph.merged,
+  },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<PullRequestListState>>;
 
 const SORT_OPTIONS = [
-  { value: "ready", label: "Merge readiness", Icon: ListChecksIcon },
-  { value: "blocked", label: "Blocked on me", Icon: UserLockIcon },
-  { value: "updated", label: "Recently updated", Icon: ClockIcon },
-  { value: "newest", label: "Newest shown", Icon: CalendarArrowDownIcon },
-  { value: "oldest", label: "Oldest shown", Icon: CalendarArrowUpIcon },
-  { value: "largest", label: "Largest shown", Icon: Maximize2Icon },
-  { value: "smallest", label: "Smallest shown", Icon: Minimize2Icon },
+  {
+    value: "ready",
+    get label() {
+      return currentTranslator()("pullRequest.sortReadiness");
+    },
+    Icon: ListChecksIcon,
+  },
+  {
+    value: "blocked",
+    get label() {
+      return currentTranslator()("pullRequest.sortBlocked");
+    },
+    Icon: UserLockIcon,
+  },
+  {
+    value: "updated",
+    get label() {
+      return currentTranslator()("pullRequest.sortUpdated");
+    },
+    Icon: ClockIcon,
+  },
+  {
+    value: "newest",
+    get label() {
+      return currentTranslator()("pullRequest.sortNewest");
+    },
+    Icon: CalendarArrowDownIcon,
+  },
+  {
+    value: "oldest",
+    get label() {
+      return currentTranslator()("pullRequest.sortOldest");
+    },
+    Icon: CalendarArrowUpIcon,
+  },
+  {
+    value: "largest",
+    get label() {
+      return currentTranslator()("pullRequest.sortLargest");
+    },
+    Icon: Maximize2Icon,
+  },
+  {
+    value: "smallest",
+    get label() {
+      return currentTranslator()("pullRequest.sortSmallest");
+    },
+    Icon: Minimize2Icon,
+  },
 ] as const satisfies ReadonlyArray<PullRequestFilterOption<PullRequestListSort>>;
 
 /** Long enough that a keystroke does not become a request, short enough to feel answered. */
@@ -356,6 +441,7 @@ export const Route = createFileRoute("/_chat/pull-requests")({
 });
 
 function PullRequestsRouteView() {
+  const t = useT();
   useEscapeToGoBack();
   const modifiers = useShortcutModifierState(true);
   const speedMode =
@@ -1879,7 +1965,7 @@ function PullRequestsRouteView() {
       rightPanelAvailable={rightPanelAvailable}
       rightPanelOpen={rightPanelState.isOpen}
       rightPanelShortcutLabel={shortcutLabelForCommand(keybindings, "rightPanel.toggle")}
-      rightPanelUnavailableLabel="Select a pull request first"
+      rightPanelUnavailableLabel={t("pullRequest.selectPullRequestFirst")}
       onToggleTerminal={() => undefined}
       onToggleRightPanel={toggleRightPanel}
     />
@@ -1915,8 +2001,8 @@ function PullRequestsRouteView() {
         <PullRequestListGhost rows={7} />
       ) : !pullRequestsSupported ? (
         <PullRequestsUnavailableState
-          title="Pull requests unavailable"
-          error="Update your T3 Code servers to browse pull requests."
+          title={t("pullRequest.pullRequestsUnavailable")}
+          error={t("pullRequest.updateServersToBrowse")}
         />
       ) : firstLoad ? (
         <PullRequestListGhost rows={7} />
@@ -1995,9 +2081,9 @@ function PullRequestsRouteView() {
 
       {listQuery.error && shownCount > 0 ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-surface px-3 py-2 text-xs">
-          <span>{listQuery.error} Showing the last pull requests loaded.</span>
+          <span>{t("pullRequest.showingLastLoaded", { error: listQuery.error })}</span>
           <Button size="xs" variant="outline" onClick={() => listQuery.refresh()}>
-            Retry
+            {t("common.retry")}
           </Button>
         </div>
       ) : null}
@@ -2006,7 +2092,9 @@ function PullRequestsRouteView() {
           {loadingMore ? (
             <span className="flex items-center gap-2">
               <Spinner aria-hidden size="sm" />
-              {sentCursors === null ? "Updating pull requests" : "Loading more"}
+              {sentCursors === null
+                ? t("pullRequest.updatingPullRequests")
+                : t("pullRequest.loadingMore")}
             </span>
           ) : canContinue || pageSize < MAX_PAGE_SIZE ? (
             <Button
@@ -2015,10 +2103,10 @@ function PullRequestsRouteView() {
               onClick={loadMore}
               disabled={listQuery.isPending || showingCarried}
             >
-              Load more pull requests
+              {t("pullRequest.loadMorePullRequests")}
             </Button>
           ) : (
-            <span>Narrow your search to find more pull requests.</span>
+            <span>{t("pullRequest.narrowSearch")}</span>
           )}
         </div>
       ) : null}
@@ -2029,7 +2117,7 @@ function PullRequestsRouteView() {
   // kind force the hostname to tell them apart.
   const hostEntries = hosts.length > 0 ? hosts : expectedHosts;
   const hostMenuOptions: ReadonlyArray<PullRequestFilterOption<string>> = [
-    { value: "", label: "All", Icon: Plug2Icon },
+    { value: "", label: t("pullRequest.filterAll"), Icon: Plug2Icon },
     ...hostEntries.map((entry) => {
       // `expectedHosts` stands in before the server has answered, and nothing is known to be
       // unreadable yet; once the summaries arrive they carry whether each one could be read.
@@ -2040,14 +2128,14 @@ function PullRequestsRouteView() {
         Icon: getSourceControlPresentationForKind(entry.kind).Icon,
         ...(summary === undefined || summary.configured
           ? {}
-          : { unavailable: summary.detail ?? "This host could not be read." }),
+          : { unavailable: summary.detail ?? t("pullRequest.unreadableHost") }),
       };
     }),
   ];
   // The same shape the host pills take, so the two groups read as one control. Each server
   // wears the machine it runs on.
   const serverMenuOptions: ReadonlyArray<PullRequestFilterOption<string>> = [
-    { value: "", label: "All servers", Icon: LayersIcon },
+    { value: "", label: t("pullRequest.allServers"), Icon: LayersIcon },
     ...capableEnvironments.map((environment) => ({
       value: environment.environmentId,
       label: environment.label,
@@ -2056,7 +2144,7 @@ function PullRequestsRouteView() {
   ];
   const sortMenu = (
     <CompactFilterMenu
-      label="Sort pull requests"
+      label={t("pullRequest.sortPullRequests")}
       triggerIcon={<ArrowDownUpIcon aria-hidden className="size-4" />}
       triggerLabel="Sort"
       outlined
@@ -2206,13 +2294,20 @@ function PullRequestsRouteView() {
     void writeTextToClipboard(url, "pull request link").then(
       (didCopy) => {
         if (didCopy)
-          toastManager.add({ type: "success", title: "PR link copied", description: url });
+          toastManager.add({
+            type: "success",
+            title: currentTranslator()("pullRequest.prLinkCopied"),
+            description: url,
+          });
       },
       (error) => {
         toastManager.add({
           type: "error",
-          title: "Failed to copy PR link",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: currentTranslator()("pullRequest.failedToCopyPrLink"),
+          description:
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("pullRequest.gitErrorOccurred"),
         });
       },
     );
@@ -2514,6 +2609,7 @@ function ExpandableSearch({
    */
   onFocusWithin?: (focused: boolean) => void;
 }) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -2546,7 +2642,7 @@ function ExpandableSearch({
     <Button
       size="icon-sm"
       variant="ghost"
-      aria-label="Search pull requests"
+      aria-label={t("pullRequest.searchPullRequests")}
       onClick={() => onOpenChange(true)}
     >
       <SearchIcon className="size-4" />
@@ -2604,6 +2700,7 @@ function PullRequestsColumn({
   listBody: ReactNode;
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
+  const t = useT();
   const markerRef = useRef<HTMLDivElement | null>(null);
   const [condensed, setCondensed] = useState(false);
   useEffect(() => {
@@ -2686,26 +2783,26 @@ function PullRequestsColumn({
             {/* An expanded search owns the scarce horizontal space. The page title stays
                 available to readers while the live filters remain available in both states. */}
             <WorkspaceBreadcrumbItem current className={cn(searchExpanded && "sr-only")}>
-              <h1 className="truncate">Pull Requests</h1>
+              <h1 className="truncate">{t("pullRequest.pageTitle")}</h1>
             </WorkspaceBreadcrumbItem>
             {searchExpanded ? null : <WorkspaceBreadcrumbSeparator />}
             <WorkspaceBreadcrumbItem className="shrink gap-1.5">
               <CompactFilterMenu
-                label="Filter by state"
+                label={t("pullRequest.filterByState")}
                 value={state}
                 options={STATE_TABS}
                 onChange={onState}
                 className="shrink-0"
               />
               <CompactFilterMenu
-                label="Filter by involvement"
+                label={t("pullRequest.filterByInvolvement")}
                 value={involvement}
                 options={INVOLVEMENT_TABS}
                 onChange={onInvolvement}
               />
               {hostMenuOptions.length > 2 ? (
                 <CompactFilterMenu
-                  label="Filter by host"
+                  label={t("pullRequest.filterByHost")}
                   value={host ?? ""}
                   options={hostMenuOptions}
                   onChange={(next) => onHost(next === "" ? undefined : next)}
@@ -2714,9 +2811,9 @@ function PullRequestsColumn({
             </WorkspaceBreadcrumbItem>
           </WorkspaceBreadcrumb>
         ) : (
-          <WorkspaceBreadcrumb ariaLabel="Pull requests breadcrumb">
+          <WorkspaceBreadcrumb ariaLabel={t("pullRequest.pullRequestsBreadcrumb")}>
             <WorkspaceBreadcrumbItem current>
-              <h1 className="truncate">Pull Requests</h1>
+              <h1 className="truncate">{t("pullRequest.pageTitle")}</h1>
             </WorkspaceBreadcrumbItem>
           </WorkspaceBreadcrumb>
         )}
@@ -2755,7 +2852,7 @@ function PullRequestsColumn({
               {sortMenu}
               {filtersMenu}
               <CompactFilterMenu
-                label="Filter by provider"
+                label={t("pullRequest.filterByProvider")}
                 outlined
                 iconOnly={host !== undefined}
                 triggerIcon={<Plug2Icon aria-hidden className="size-4" />}
@@ -2788,11 +2885,12 @@ function PullRequestRefreshControl({
   refreshing: boolean;
   onRefresh: () => void;
 }) {
+  const t = useT();
   return (
     <Button
       size={compact ? "icon-sm" : "icon"}
       variant={compact ? "ghost" : "outline"}
-      aria-label="Refresh pull requests"
+      aria-label={t("pullRequest.refreshPullRequests")}
       onClick={onRefresh}
       disabled={refreshing}
     >

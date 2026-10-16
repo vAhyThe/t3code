@@ -4,12 +4,14 @@ import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
 import { observeResize } from "~/lib/observeResize";
+import { useT } from "../../i18n/I18nProvider";
 
 /** Keep the complete markdown intact while limiting long reports to a readable preview. */
 export function PullRequestCommentBody({
   className,
   ...props
 }: ComponentProps<typeof PullRequestMarkdown>) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const content = useRef<HTMLDivElement>(null);
@@ -52,7 +54,7 @@ export function PullRequestCommentBody({
             setExpanded(!expanded);
           }}
         >
-          {expanded ? "Show less" : "Show full comment"}
+          {expanded ? t("pullRequest.showLess") : t("pullRequest.showFullComment")}
         </Button>
       ) : null}
     </div>
