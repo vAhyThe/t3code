@@ -38,7 +38,7 @@ import { SettingsRow } from "./settingsLayout";
 import { AddCodexAccountDialog } from "./AddCodexAccountDialog";
 import { getOnboardingProviderState } from "../../onboarding/providerReadiness.logic";
 import { getProviderSummary } from "./providerStatus";
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { Trans } from "../../i18n/Trans";
 
 const noop = () => undefined;
@@ -349,14 +349,18 @@ function ManagedCodexSetup({
         if (result._tag === "Failure") {
           if (!isAtomCommandInterrupted(result)) {
             const failure = squashAtomCommandFailure(result);
-            setError(failure instanceof Error ? failure.message : t("settingsA.codexSetupFailed"));
+            setError(
+              failure instanceof Error
+                ? failure.message
+                : currentTranslator()("settingsA.codexSetupFailed"),
+            );
           }
         } else {
           succeeded = true;
           onSuccess?.(result.value);
         }
       } catch {
-        setError(t("settingsA.codexSetupFailed"));
+        setError(currentTranslator()("settingsA.codexSetupFailed"));
       }
       pendingRef.current = false;
       setPending(false);
@@ -398,8 +402,9 @@ function ManagedCodexSetup({
     ) {
       setError(
         handoffQuery.data?.phase === "auth"
-          ? (handoffQuery.data.state.message ?? t("settingsA.codexSignInNotFinished"))
-          : t("settingsA.codexPrimarySignInInterrupted"),
+          ? (handoffQuery.data.state.message ??
+              currentTranslator()("settingsA.codexSignInNotFinished"))
+          : currentTranslator()("settingsA.codexPrimarySignInInterrupted"),
       );
       setHandoff(null);
     }
@@ -554,7 +559,7 @@ function ManagedCodexSetup({
           await ensureLocalApi().shell.openExternal(authorizationUrl);
         }
       } catch {
-        setError(t("settingsA.codexFinishSignInFailed"));
+        setError(currentTranslator()("settingsA.codexFinishSignInFailed"));
       }
     },
     [clientCallback, flowId, run, completeAuth, environmentId, instanceId],
