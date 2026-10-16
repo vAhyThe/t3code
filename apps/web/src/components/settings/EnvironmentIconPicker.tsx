@@ -7,6 +7,7 @@ import {
   type ServerConfig,
 } from "@t3tools/contracts";
 
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
 import { useEnvironmentScope } from "../../state/session";
 import { ENVIRONMENT_MACHINE_KIND_LABELS, EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
@@ -29,13 +30,13 @@ export function resolveEnvironmentIconPickerLock(input: {
   readonly operateAccess: "granted" | "denied" | "pending";
 }): string | null {
   if (input.serverConfig === null) {
-    return "Connect to this environment to change its icon.";
+    return currentTranslator()("settingsB.iconLockDisconnected");
   }
   if (input.serverConfig.environment.capabilities.environmentIcon !== true) {
-    return "This environment's server is too old to keep an icon. Update it to choose one.";
+    return currentTranslator()("settingsB.iconLockOldServer");
   }
   if (input.operateAccess !== "granted") {
-    return "Your session on this environment cannot change its settings.";
+    return currentTranslator()("settingsB.iconLockNoAccess");
   }
   return null;
 }
@@ -54,6 +55,7 @@ export function EnvironmentIconMenu({
   readonly environmentId: EnvironmentId;
   readonly serverConfig: ServerConfig | null;
 }) {
+  const t = useT();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const operateAccess = useEnvironmentScope(environmentId, AuthSettingsWriteScope)
     ? "granted"
@@ -68,7 +70,7 @@ export function EnvironmentIconMenu({
     <MenuSub>
       <MenuSubTrigger>
         <EnvironmentMachineIcon kind={resolved} />
-        Icon
+        {t("settingsB.iconMenuLabel")}
       </MenuSubTrigger>
       <MenuSubPopup>
         {lock !== null ? (
@@ -95,7 +97,9 @@ export function EnvironmentIconMenu({
                 </span>
                 {kind === detected ? (
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {serverConfig?.environment.platform.machine ? "detected" : "default"}
+                    {serverConfig?.environment.platform.machine
+                      ? t("settingsB.iconDetected")
+                      : t("settingsB.iconDefault")}
                   </span>
                 ) : null}
               </span>

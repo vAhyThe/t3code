@@ -5,6 +5,8 @@ import {
 } from "@t3tools/contracts";
 import { type CustomModelDefinition, createModelCapabilities } from "@t3tools/shared/model";
 
+import { currentTranslator } from "../../i18n/I18nProvider";
+
 /** Editable mirror of a `ProviderOptionChoice`. `key` is only a React key. */
 export interface EditorChoice {
   readonly key: string;
@@ -39,10 +41,10 @@ export interface DescriptorPreset {
 }
 
 const EFFORT_CHOICES = [
-  { id: "low", label: "Low" },
-  { id: "medium", label: "Medium", isDefault: true },
-  { id: "high", label: "High" },
-  { id: "xhigh", label: "Extra High" },
+  { id: "low", label: "Low" }, // i18n-ignore: preset label saved into the model definition
+  { id: "medium", label: "Medium", isDefault: true }, // i18n-ignore: preset label saved into the model definition
+  { id: "high", label: "High" }, // i18n-ignore: preset label saved into the model definition
+  { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
 ] as const;
 
 /**
@@ -54,66 +56,66 @@ export const DESCRIPTOR_PRESETS_BY_KIND: Partial<
   Record<ProviderDriverKind, ReadonlyArray<DescriptorPreset>>
 > = {
   [ProviderDriverKind.make("codex")]: [
-    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
+    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
     {
       id: "serviceTier",
-      label: "Speed",
+      label: "Speed", // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "default", label: "Standard", isDefault: true },
-        { id: "fast", label: "Fast" },
+        { id: "default", label: "Standard", isDefault: true }, // i18n-ignore: preset label saved into the model definition
+        { id: "fast", label: "Fast" }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
   [ProviderDriverKind.make("claudeAgent")]: [
     {
       id: "effort",
-      label: "Reasoning",
+      label: "Reasoning", // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "low", label: "Low" },
-        { id: "medium", label: "Medium" },
-        { id: "high", label: "High", isDefault: true },
-        { id: "xhigh", label: "Extra High" },
-        { id: "max", label: "Max" },
+        { id: "low", label: "Low" }, // i18n-ignore: preset label saved into the model definition
+        { id: "medium", label: "Medium" }, // i18n-ignore: preset label saved into the model definition
+        { id: "high", label: "High", isDefault: true }, // i18n-ignore: preset label saved into the model definition
+        { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
+        { id: "max", label: "Max" }, // i18n-ignore: preset label saved into the model definition
       ],
     },
-    { id: "fastMode", label: "Fast Mode", type: "boolean" },
-    { id: "thinking", label: "Thinking", type: "boolean" },
+    { id: "fastMode", label: "Fast Mode", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
+    { id: "thinking", label: "Thinking", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("cursor")]: [
-    { id: "reasoning", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
-    { id: "fastMode", label: "Fast Mode", type: "boolean" },
-    { id: "thinking", label: "Thinking", type: "boolean" },
+    { id: "reasoning", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
+    { id: "fastMode", label: "Fast Mode", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
+    { id: "thinking", label: "Thinking", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("grok")]: [
-    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
+    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("pi")]: [
     {
       id: "thinking",
-      label: "Thinking",
+      label: "Thinking", // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "off", label: "Off" },
-        { id: "minimal", label: "Minimal" },
-        { id: "low", label: "Low" },
-        { id: "medium", label: "Medium", isDefault: true },
-        { id: "high", label: "High" },
-        { id: "xhigh", label: "Extra High" },
-        { id: "max", label: "Max" },
+        { id: "off", label: "Off" }, // i18n-ignore: preset label saved into the model definition
+        { id: "minimal", label: "Minimal" }, // i18n-ignore: preset label saved into the model definition
+        { id: "low", label: "Low" }, // i18n-ignore: preset label saved into the model definition
+        { id: "medium", label: "Medium", isDefault: true }, // i18n-ignore: preset label saved into the model definition
+        { id: "high", label: "High" }, // i18n-ignore: preset label saved into the model definition
+        { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
+        { id: "max", label: "Max" }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
   [ProviderDriverKind.make("opencode")]: [
-    { id: "variant", label: "Reasoning", type: "select", choices: EFFORT_CHOICES },
+    { id: "variant", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
     {
       id: "agent",
-      label: "Agent",
+      label: "Agent", // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "build", label: "Build", isDefault: true },
-        { id: "plan", label: "Plan" },
+        { id: "build", label: "Build", isDefault: true }, // i18n-ignore: preset label saved into the model definition
+        { id: "plan", label: "Plan" }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
@@ -209,22 +211,25 @@ export function descriptorsFromCapabilities(
  * order so the message is actionable, or `null` when the draft is sound.
  */
 export function validateDraft(draft: CustomModelDraft): string | null {
+  const t = currentTranslator();
   const seenIds = new Set<string>();
   for (const [index, descriptor] of draft.descriptors.entries()) {
-    const position = `Option ${index + 1}`;
+    const number = index + 1;
     const id = descriptor.id.trim();
-    if (!id) return `${position} needs an id.`;
-    if (seenIds.has(id)) return `${position}: id "${id}" is used twice.`;
+    if (!id) return t("settingsB.customModelErrorNoId", { number });
+    if (seenIds.has(id)) return t("settingsB.customModelErrorDuplicateId", { number, id });
     seenIds.add(id);
-    if (!descriptor.label.trim()) return `${position} needs a label.`;
+    if (!descriptor.label.trim()) return t("settingsB.customModelErrorNoLabel", { number });
     if (descriptor.type !== "select") continue;
-    if (descriptor.choices.length === 0) return `${position} needs at least one choice.`;
+    if (descriptor.choices.length === 0) {
+      return t("settingsB.customModelErrorNoChoices", { number });
+    }
     const seenChoices = new Set<string>();
     for (const choice of descriptor.choices) {
       const choiceId = choice.id.trim();
-      if (!choiceId) return `${position} has a choice without a value.`;
+      if (!choiceId) return t("settingsB.customModelErrorNoChoiceValue", { number });
       if (seenChoices.has(choiceId)) {
-        return `${position}: choice "${choiceId}" is used twice.`;
+        return t("settingsB.customModelErrorDuplicateChoice", { number, id: choiceId });
       }
       seenChoices.add(choiceId);
     }

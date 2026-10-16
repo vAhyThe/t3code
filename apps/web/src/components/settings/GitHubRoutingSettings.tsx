@@ -7,6 +7,7 @@ import {
 } from "@t3tools/client-runtime/connection";
 import { useState } from "react";
 
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { environmentCatalog } from "~/connection/catalog";
 import type { EnvironmentPresentation } from "~/state/environments";
 import { useAtomCommand } from "~/state/use-atom-command";
@@ -16,13 +17,16 @@ import { EnvironmentRow, environmentTransportLabel } from "./EnvironmentRow";
 import { FoldedSettingsSection } from "./FoldedSettingsSection";
 import { searchableSetting } from "./settingsSearch";
 
-const options: ReadonlyArray<{ value: GitHubRoutingPermission; label: string }> = [
-  { value: "off", label: "Off" },
-  { value: "read", label: "Read PRs" },
-  { value: "read-write", label: "Read and act" },
-];
+const options = [
+  { value: "off", labelKey: "settingsB.githubRoutingOff" },
+  { value: "read", labelKey: "settingsB.githubRoutingRead" },
+  { value: "read-write", labelKey: "settingsB.githubRoutingReadWrite" },
+] as const satisfies ReadonlyArray<{ value: GitHubRoutingPermission; labelKey: string }>;
 
-const summaryLabels = { "read-write": "read and act", read: "read PRs" } as const;
+const summaryKeys = {
+  "read-write": "settingsB.githubRoutingSummaryReadWrite",
+  read: "settingsB.githubRoutingSummaryRead",
+} as const;
 
 /**
  * Closed-header summary: the machines that share, grouped by permission.
@@ -35,7 +39,9 @@ export function summarizeGitHubRouting(
     const labels = entries.filter((entry) => entry.permission === permission);
     return labels.length === 0
       ? []
-      : [`${labels.map((entry) => entry.label).join(", ")} ${summaryLabels[permission]}`];
+      : [
+          `${labels.map((entry) => entry.label).join(", ")} ${currentTranslator()(summaryKeys[permission])}`,
+        ];
   });
   return groups.length === 0 ? null : groups.join(" · ");
 }
@@ -55,6 +61,7 @@ export function GitHubRoutingSettings({
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
   const update = useAtomCommand(environmentCatalog.setGitHubRoutingPermission);
   const [saving, setSaving] = useState(false);
+  const t = useT();
 
   if (environments.length < 2) return null;
 
@@ -69,13 +76,11 @@ export function GitHubRoutingSettings({
             label: environment.label,
             permission: gitHubRoutingPermissionFor(environment.entry, permissions),
           })),
-        ) ?? "Off"
+        ) ?? t("settingsB.githubRoutingOff")
       }
     >
       <p className="px-3 py-2.5 text-xs text-muted-foreground sm:px-4">
-        Machines you trust here can read PR data through each other's GitHub access. Enable both
-        machines. Read and act may use broader permissions than the machine that owns them. This
-        applies only to this device.
+        {t("settingsB.githubRoutingTrust")}
       </p>
       {environments.map((environment) => (
         <EnvironmentRow
@@ -85,7 +90,7 @@ export function GitHubRoutingSettings({
           subtitle={environmentTransportLabel(environment)}
         >
           <Select
-            items={options}
+            items={options.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
             value={gitHubRoutingPermissionFor(environment.entry, permissions)}
             disabled={
               !catalog.isReady || saving || gitHubRoutingConnectionKey(environment.entry) === null
@@ -99,7 +104,7 @@ export function GitHubRoutingSettings({
                   if (result._tag === "Failure")
                     toastManager.add({
                       type: "error",
-                      title: "Could not save GitHub routing permission",
+                      title: t("settingsB.githubRoutingSaveFailed"),
                     });
                 },
               );
@@ -108,14 +113,14 @@ export function GitHubRoutingSettings({
             <SelectTrigger
               size="xs"
               className="w-32"
-              aria-label={`${environment.label} GitHub routing`}
+              aria-label={t("settingsB.githubRoutingAria", { name: environment.label })}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectPopup align="end" alignItemWithTrigger={false}>
-              {options.map(({ value, label }) => (
+              {options.map(({ value, labelKey }) => (
                 <SelectItem key={value} value={value}>
-                  {label}
+                  {t(labelKey)}
                 </SelectItem>
               ))}
             </SelectPopup>

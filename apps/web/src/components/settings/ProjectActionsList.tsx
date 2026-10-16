@@ -1,5 +1,6 @@
 import type { ProjectScript, ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { SettingsIcon } from "lucide-react";
+import { useT } from "../../i18n/I18nProvider";
 import { shortcutLabelForCommand } from "../../keybindings";
 import { commandForProjectScript } from "../../projectScripts";
 import { ScriptIcon } from "../projectScriptEditor";
@@ -17,10 +18,11 @@ export function ProjectActionsList({
   disabled: boolean;
   onEdit: (script: ProjectScript) => void;
 }) {
+  const t = useT();
   if (scripts.length === 0)
     return (
       <p className="px-3 py-2 text-base text-muted-foreground sm:px-4 sm:text-sm">
-        No actions configured.
+        {t("settingsB.projectActionsNone")}
       </p>
     );
   return scripts.map((script) => {
@@ -60,7 +62,7 @@ export function ProjectActionsList({
               <Button
                 size="icon-xs"
                 variant="ghost-muted"
-                aria-label={`Edit ${script.name}`}
+                aria-label={t("settingsB.projectActionEdit", { name: script.name })}
                 disabled={disabled}
                 onClick={() => onEdit(script)}
               >
