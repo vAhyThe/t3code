@@ -29,6 +29,7 @@ import { GuideFileDiff } from "./GuideFileDiff";
 import { GuideNotes } from "./GuideNotes";
 import { GuideProse } from "./GuideProse";
 import { letterStopNotes } from "@t3tools/client-runtime/review-guide-tour";
+import { useT } from "../../../i18n/I18nProvider";
 
 const ATTENTION_LABELS = {
   tradeoff: "A tradeoff to weigh",
@@ -82,6 +83,7 @@ export function GuideStop({
   onFinish: (() => void) | null;
   onOpenFile: (path: string) => void;
 }) {
+  const t = useT();
   const { lettered, byExcerpt } = useMemo(() => letterStopNotes(stop), [stop]);
   const excerptPaths = new Set(stop.excerpts.map((excerpt) => excerpt.path));
   // Files the stop owns without excerpting, and excerpted ones listed again with a note.
@@ -101,7 +103,7 @@ export function GuideStop({
         <Collapsible open={railOpen} onOpenChange={onRailOpenChange}>
           <header className="flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground tabular-nums @max-[56rem]/guide:hidden">
-              Stop {index + 1} of {stopCount}
+              {t("pullRequest.stopOf", { current: index + 1, total: stopCount })}
             </p>
             <CollapsibleTrigger
               render={
@@ -109,7 +111,7 @@ export function GuideStop({
               }
             >
               <span className="tabular-nums">
-                Stop {index + 1} of {stopCount}
+                {t("pullRequest.stopOf", { current: index + 1, total: stopCount })}
               </span>
               <ChevronDownIcon aria-hidden className={cn(railOpen && "rotate-180")} />
             </CollapsibleTrigger>
@@ -117,7 +119,7 @@ export function GuideStop({
               <Button
                 size="icon-xs"
                 variant="outline"
-                aria-label="Previous stop"
+                aria-label={t("pullRequest.previousStop")}
                 disabled={index === 0}
                 onClick={() => onStep(-1)}
               >
@@ -126,7 +128,7 @@ export function GuideStop({
               <Button
                 size="icon-xs"
                 variant="outline"
-                aria-label="Next stop"
+                aria-label={t("pullRequest.nextStop")}
                 disabled={index === stopCount - 1}
                 onClick={() => onStep(1)}
               >
@@ -191,7 +193,9 @@ export function GuideStop({
         {otherFiles.length > 0 ? (
           <section className="flex flex-col gap-1.5">
             <h3 className="text-xs font-medium text-muted-foreground">
-              {stop.excerpts.length > 0 ? "Also in this stop" : "Files in this stop"}
+              {stop.excerpts.length > 0
+                ? t("pullRequest.alsoInThisStop")
+                : t("pullRequest.filesInThisStop")}
             </h3>
             <DiffWorkerPoolProvider>
               <ul className="flex flex-col overflow-hidden rounded-lg border border-border/60">
@@ -232,8 +236,8 @@ export function GuideStop({
                           ) : (
                             <p className="px-3 py-2 text-xs text-muted-foreground">
                               {diffLoading
-                                ? "Loading the diff..."
-                                : "This file is not in the loaded diff."}
+                                ? t("pullRequest.loadingDiff")
+                                : t("pullRequest.notInLoadedDiff")}
                             </p>
                           )}
                         </CollapsiblePanel>
@@ -249,7 +253,9 @@ export function GuideStop({
         {stop.questions.length > 0 || onAsk !== null ? (
           <section className="flex flex-col gap-1.5">
             {stop.questions.length > 0 ? (
-              <h3 className="text-xs font-medium text-muted-foreground">Questions to consider</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">
+                {t("pullRequest.questionsToConsider")}
+              </h3>
             ) : null}
             <div className="flex flex-col items-start gap-1.5">
               {stop.questions.map((question) =>
@@ -269,7 +275,7 @@ export function GuideStop({
                       aria-hidden
                       className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
                     />
-                    <span className="sr-only">Ask an agent: </span>
+                    <span className="sr-only">{t("pullRequest.askAgentPrefix")}</span>
                     <span>
                       <GuideProse text={question} plain />
                     </span>
@@ -279,7 +285,7 @@ export function GuideStop({
               {onAsk !== null ? (
                 <Button size="sm" variant="ghost-muted" onClick={() => onAsk("")}>
                   <MessageCircleQuestionIcon aria-hidden />
-                  Ask about this stop
+                  {t("pullRequest.askAboutStop")}
                 </Button>
               ) : null}
             </div>
@@ -289,13 +295,15 @@ export function GuideStop({
         <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border/60 pt-4">
           {nextTitle !== null ? (
             <Button className="min-w-0" onClick={() => onStep(1)}>
-              <span className="min-w-0 truncate">Next: {nextTitle}</span>
+              <span className="min-w-0 truncate">
+                {t("pullRequest.nextWithTitle", { title: nextTitle })}
+              </span>
               <ArrowRightIcon aria-hidden />
             </Button>
           ) : onFinish !== null ? (
             <Button onClick={onFinish}>
               <MessageSquareIcon aria-hidden />
-              Finish review
+              {t("pullRequest.finishReview")}
             </Button>
           ) : null}
         </footer>

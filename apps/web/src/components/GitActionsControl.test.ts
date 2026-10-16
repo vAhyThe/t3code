@@ -28,6 +28,7 @@ vi.mock("react", async (importOriginal) => ({
     return callback;
   },
   useMemo: (factory: () => unknown) => factory(),
+  useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) => getSnapshot(),
   useState: (initial: unknown) => [typeof initial === "function" ? initial() : initial, () => {}],
   useRef: (current: unknown) => ({ current }),
   useEffect: () => {},

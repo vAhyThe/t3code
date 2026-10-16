@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { useT } from "../../i18n/I18nProvider";
 
 /**
  * Which thread has the link dialog open, set by whichever entry point asked (command palette,
@@ -116,6 +117,7 @@ function LinkPullRequestDialog({
   projectId,
   onOpenChange,
 }: LinkPullRequestDialogProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [reference, setReference] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -200,16 +202,13 @@ function LinkPullRequestDialog({
     <Dialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Link pull request</DialogTitle>
-          <DialogDescription>
-            Attach a pull request to this thread by its URL, or by its number for this thread's
-            repository.
-          </DialogDescription>
+          <DialogTitle>{t("pullRequest.linkPullRequestTitle")}</DialogTitle>
+          <DialogDescription>{t("pullRequest.linkPullRequestDescription")}</DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <Input
             ref={inputRef}
-            placeholder="Pull request URL or #42"
+            placeholder={t("pullRequest.pullRequestUrlOrNumber")}
             value={reference}
             onChange={(event) => {
               setDirty(true);
@@ -238,7 +237,7 @@ function LinkPullRequestDialog({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -246,7 +245,7 @@ function LinkPullRequestDialog({
             onClick={() => void submit()}
             disabled={pending || resolved === null || "error" in resolved}
           >
-            {pending ? "Linking..." : "Link"}
+            {pending ? t("pullRequest.linking") : t("pullRequest.link")}
           </Button>
         </DialogFooter>
       </DialogPopup>

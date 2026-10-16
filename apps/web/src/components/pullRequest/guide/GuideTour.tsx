@@ -20,6 +20,7 @@ import {
 } from "./guideRunStore";
 import { stepTourPosition, stopFilePaths } from "@t3tools/client-runtime/review-guide-tour";
 import { useGuideDiffFiles } from "./useGuideDiffFiles";
+import { useT } from "../../../i18n/I18nProvider";
 
 /**
  * The guide as a tour: a rail of stops beside the stop being read. Progress is kept per guide
@@ -52,6 +53,7 @@ export function GuideTour({
   onFinish: (() => void) | null;
   onOpenFile: (path: string) => void;
 }) {
+  const t = useT();
   const key = guideProgressKey(guideRunKey(environmentId, reference), guide.headSha);
   const tour = useGuideProgress(key);
   const update = (change: (current: GuideProgress) => Partial<GuideProgress>) =>
@@ -128,11 +130,11 @@ export function GuideTour({
           {banner}
           {diff.error !== null ? (
             <p className="text-xs text-muted-foreground">
-              The diff could not be loaded, so excerpts are missing: {diff.error}
+              {t("pullRequest.diffLoadFailed", { error: diff.error })}
             </p>
           ) : null}
           {stop === null ? (
-            <p className="text-sm text-muted-foreground">This change has no files to tour.</p>
+            <p className="text-sm text-muted-foreground">{t("pullRequest.noFilesToTour")}</p>
           ) : (
             <GuideStop
               key={position}

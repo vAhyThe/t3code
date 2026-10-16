@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { PullRequestGlyph } from "./pullRequestIcons";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 export function PullRequestCommentForm({
   environmentId,
@@ -36,6 +37,7 @@ export function PullRequestCommentForm({
   onCommented: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState<"comment" | "close" | "reopen" | null>(null);
   const postComment = useAtomCommand(pullRequestEnvironment.comment, {
@@ -74,7 +76,10 @@ export function PullRequestCommentForm({
     });
     if (result._tag === "Failure") {
       setSubmitting(null);
-      toastManager.add({ type: "error", title: "Could not post the comment" });
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("pullRequest.couldNotPostComment"),
+      });
       return;
     }
     setBody("");
@@ -92,8 +97,8 @@ export function PullRequestCommentForm({
         disabled={submitting !== null || actionPending}
         value={body}
         rows={3}
-        placeholder="Leave a comment"
-        aria-label="Comment on this pull request"
+        placeholder={t("pullRequest.leaveComment")}
+        aria-label={t("pullRequest.commentOnThisPullRequest")}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
@@ -124,11 +129,11 @@ export function PullRequestCommentForm({
             )}
             {submitting === followUpAction
               ? followUpAction === "close"
-                ? "Closing..."
-                : "Reopening..."
+                ? t("pullRequest.closing")
+                : t("pullRequest.reopening")
               : followUpAction === "close"
-                ? "Close with comment"
-                : "Reopen with comment"}
+                ? t("pullRequest.closeWithComment")
+                : t("pullRequest.reopenWithComment")}
           </Button>
         )}
         <Button
@@ -138,7 +143,7 @@ export function PullRequestCommentForm({
           onClick={() => void submit("comment")}
         >
           <SendIcon className="size-3.5" />
-          {submitting === "comment" ? "Posting..." : "Comment"}
+          {submitting === "comment" ? t("pullRequest.posting") : t("pullRequest.comment")}
         </Button>
       </div>
     </div>

@@ -22,6 +22,7 @@ import { toastManager } from "../ui/toast";
 import { PullRequestCandidatePicker } from "./PullRequestCandidatePicker";
 import { PullRequestActorLabel } from "./pullRequestPresentation";
 import { readableFailure } from "./pullRequestDetail.logic";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 /** Long lists are common — an organisation repository lists everyone — so what arrived can be
  * narrowed here. It narrows only what arrived: the host is asked once, when the menu opens. */
@@ -45,6 +46,7 @@ export function PullRequestReviewerPicker({
    * hiding: the control disabled with a reason answers the question its absence would raise. */
   allowed: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<string | null>(null);
@@ -78,8 +80,8 @@ export function PullRequestReviewerPicker({
       toastManager.add({
         type: "error",
         title: candidate.isRequested
-          ? `Could not take back the review request to ${candidate.login}`
-          : `Could not ask ${candidate.login} for a review`,
+          ? currentTranslator()("pullRequest.couldNotTakeBackReview", { login: candidate.login })
+          : currentTranslator()("pullRequest.couldNotRequestReview", { login: candidate.login }),
         description: readableFailure(
           squashAtomCommandFailure(result),
           "The host refused it. Check that you have write access on this repository, and that they still have access to it.",
@@ -90,17 +92,17 @@ export function PullRequestReviewerPicker({
     toastManager.add({
       type: "success",
       title: candidate.isRequested
-        ? `Review request to ${candidate.login} taken back`
-        : `Review requested from ${candidate.login}`,
+        ? currentTranslator()("pullRequest.reviewRequestTakenBack", { login: candidate.login })
+        : currentTranslator()("pullRequest.reviewRequested", { login: candidate.login }),
     });
   };
 
   return (
     <PullRequestCandidatePicker
       icon={<UserPlusIcon className="size-3.5" />}
-      label="Request a review"
+      label={t("pullRequest.requestReview")}
       allowed={allowed}
-      disabledReason="Asking someone to review needs write access on this repository"
+      disabledReason={t("pullRequest.requestReviewNeedsWrite")}
       open={open}
       onOpenChange={setOpen}
       query={query}
@@ -125,7 +127,7 @@ export function PullRequestReviewerPicker({
             <span className="shrink-0 text-muted-foreground">team</span>
           ) : null}
           {candidate.isRequested ? (
-            <CheckIcon aria-label="Already asked" className="size-3.5 shrink-0" />
+            <CheckIcon aria-label={t("pullRequest.alreadyAsked")} className="size-3.5 shrink-0" />
           ) : null}
         </>
       )}

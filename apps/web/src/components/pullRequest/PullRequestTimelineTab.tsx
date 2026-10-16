@@ -49,6 +49,8 @@ import {
   pullRequestReviewOutcomeToneClassName,
 } from "./pullRequestPresentation";
 import { PullRequestGlyph } from "./pullRequestIcons";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 
 /** What every comment on the timeline needs to react; only the subject differs between them. */
 interface ReactionSurface {
@@ -149,24 +151,37 @@ function ActorTimelineMarker({
   );
 }
 
+const REVIEW_STATE_KEYS: Partial<Record<string, MessageKey>> = {
+  approved: "pullRequest.reviewStateApproved",
+  "changes requested": "pullRequest.reviewStateChangesRequested",
+  commented: "pullRequest.reviewStateCommented",
+  dismissed: "pullRequest.reviewStateDismissed",
+  pending: "pullRequest.reviewStatePending",
+};
+
 function friendlyReviewState(value: string): string {
   const words = value.toLowerCase().replaceAll("_", " ").replaceAll("-", " ");
   return words.replace(/^\w/u, (letter) => letter.toUpperCase());
 }
 
 function ReviewStateBadge({ state }: { state: string }) {
+  const t = useT();
+  const key = REVIEW_STATE_KEYS[state.toLowerCase().replaceAll("_", " ").replaceAll("-", " ")];
   return (
-    <span className="text-3xs font-medium text-muted-foreground">{friendlyReviewState(state)}</span>
+    <span className="text-3xs font-medium text-muted-foreground">
+      {key ? t(key) : friendlyReviewState(state)}
+    </span>
   );
 }
 
 function OpenOnHostButton({ url, onOpen }: { url: string | null; onOpen: (url: string) => void }) {
+  const t = useT();
   return url === null ? null : (
     <Button
       size="icon-xs"
       variant="ghost-muted"
       className="-mr-1 -mt-1 shrink-0"
-      aria-label="Open activity on host"
+      aria-label={t("pullRequest.openActivityOnHost")}
       onClick={() => onOpen(url)}
     >
       <ExternalLinkIcon className="size-3" />
@@ -188,6 +203,7 @@ function ConversationCard({
   onOpen: (url: string) => void;
   reactions: ReactionSurface;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const updateComment = useAtomCommand(pullRequestEnvironment.updateComment, {
@@ -205,7 +221,10 @@ function ConversationCard({
     });
     setSaving(false);
     if (result._tag === "Failure") {
-      toastManager.add({ type: "error", title: "Could not save the comment" });
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("pullRequest.couldNotSaveComment"),
+      });
       return;
     }
     setEditing(false);
@@ -235,7 +254,7 @@ function ConversationCard({
           {editable !== null && !editing ? (
             <PullRequestEditButton
               className="-mt-1"
-              aria-label="Edit comment"
+              aria-label={t("pullRequest.editComment")}
               onClick={() => setEditing(true)}
             />
           ) : null}
@@ -260,7 +279,7 @@ function ConversationCard({
             cwd={cwd}
             environmentId={reactions.environmentId}
             threadRef={reactions.threadRef}
-            label="Edit comment"
+            label={t("pullRequest.editComment")}
             saving={saving}
             onSave={(body) => void save(body)}
             onCancel={() => setEditing(false)}
@@ -373,11 +392,12 @@ function CommitEvent({
   event: PullRequestTimelineEvent;
   onOpen: (oid: string) => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       className="group relative mb-5 block w-full cursor-pointer rounded-sm pl-12 text-left outline-none [contain-intrinsic-block-size:48px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-      aria-label={`View commit ${event.id}`}
+      aria-label={t("pullRequest.viewCommit", { id: event.id })}
       onClick={() => onOpen(event.id)}
     >
       <ActorTimelineMarker
@@ -387,7 +407,7 @@ function CommitEvent({
       <div className="flex min-w-0 items-center gap-2.5 py-1.5">
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-semibold text-foreground transition-colors group-hover:text-primary">
-            {event.body ?? "Untitled commit"}
+            {event.body ?? t("pullRequest.untitledCommit")}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
             <code className="font-mono">{event.id.slice(0, 7)}</code>
@@ -407,20 +427,21 @@ function CommitEvent({
 }
 
 function LifecycleEvent({ event }: { event: PullRequestTimelineEvent }) {
+  const t = useT();
   const presentation =
     event.kind === "opened"
       ? {
           icon: <PullRequestGlyph.pullRequest className="size-3.5" />,
-          label: "Pull request opened",
+          label: t("pullRequest.lifecycleOpened"),
         }
       : event.kind === "merged"
         ? {
             icon: <PullRequestGlyph.merged className="size-3.5" />,
-            label: "Pull request merged",
+            label: t("pullRequest.lifecycleMerged"),
           }
         : {
             icon: <PullRequestGlyph.closed className="size-3.5" />,
-            label: "Pull request closed",
+            label: t("pullRequest.lifecycleClosed"),
           };
 
   return (
@@ -556,6 +577,7 @@ export function PullRequestTimelineTab({
   onOpenCommit: (oid: string) => void;
   onRefresh: () => void;
 }) {
+  const t = useT();
   const events = buildPullRequestTimeline(detail);
   const newestCommitAt = newestPullRequestCommitAt(detail.commits);
   const reactions: ReactionSurface = {
@@ -621,7 +643,7 @@ export function PullRequestTimelineTab({
         {events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
             <PullRequestGlyph.pullRequest className="mb-2 size-5" />
-            <p className="text-xs">No activity yet.</p>
+            <p className="text-xs">{t("pullRequest.noActivityYet")}</p>
           </div>
         ) : null}
       </div>

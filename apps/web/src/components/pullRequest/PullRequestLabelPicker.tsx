@@ -18,6 +18,7 @@ import { toastManager } from "../ui/toast";
 import { PullRequestCandidatePicker } from "./PullRequestCandidatePicker";
 import { readableFailure } from "./pullRequestDetail.logic";
 import { pullRequestLabelColor } from "./pullRequestList.logic";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 /** Narrows only what arrived: the host is asked once, when the menu opens. */
 function matches(candidate: PullRequestLabelCandidate, query: string): boolean {
@@ -40,6 +41,7 @@ export function PullRequestLabelPicker({
    * than hidden, like the reviewer control beside it. */
   allowed: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<string | null>(null);
@@ -69,8 +71,8 @@ export function PullRequestLabelPicker({
       toastManager.add({
         type: "error",
         title: candidate.isApplied
-          ? `Could not take ${candidate.name} off`
-          : `Could not put ${candidate.name} on`,
+          ? currentTranslator()("pullRequest.couldNotTakeLabelOff", { name: candidate.name })
+          : currentTranslator()("pullRequest.couldNotPutLabelOn", { name: candidate.name }),
         description: readableFailure(
           squashAtomCommandFailure(result),
           "The host refused it. Check that you have triage access on this repository.",
@@ -83,9 +85,9 @@ export function PullRequestLabelPicker({
   return (
     <PullRequestCandidatePicker
       icon={<TagIcon className="size-3.5" />}
-      label="Change labels"
+      label={t("pullRequest.changeLabels")}
       allowed={allowed}
-      disabledReason="Changing labels needs triage access on this repository"
+      disabledReason={t("pullRequest.changingLabelsNeedsTriage")}
       open={open}
       onOpenChange={setOpen}
       query={query}
@@ -119,7 +121,7 @@ export function PullRequestLabelPicker({
               ) : null}
             </span>
             {candidate.isApplied ? (
-              <CheckIcon aria-label="Applied" className="size-3.5 shrink-0" />
+              <CheckIcon aria-label={t("pullRequest.applied")} className="size-3.5 shrink-0" />
             ) : null}
           </>
         );

@@ -34,6 +34,7 @@ import {
   type PullRequestStatePresentation,
   type PullRequestGlyphIcon,
 } from "./pullRequestIcons";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 /**
  * A host label as a flat tinted tag in the label's own color: a wash of it behind, the name
@@ -79,19 +80,19 @@ function reviewDecisionPresentation(decision: PullRequestReviewDecision) {
     case "approved":
       return {
         Icon: UserCheckIcon,
-        label: "Approved",
+        label: currentTranslator()("pullRequest.reviewStateApproved"),
         toneClassName: CHECK_STATUS_PRESENTATION.success.toneClassName,
       };
     case "changes-requested":
       return {
         Icon: UserRoundXIcon,
-        label: "Changes requested",
+        label: currentTranslator()("pullRequest.reviewStateChangesRequested"),
         toneClassName: "text-amber-600/90 dark:text-amber-400/80",
       };
     case "review-required":
       return {
         Icon: UserRoundIcon,
-        label: "Awaiting review",
+        label: currentTranslator()("pullRequest.awaitingReview"),
         toneClassName: "text-muted-foreground/60",
       };
   }
@@ -145,7 +146,9 @@ export function resolvePullRequestConflict(input: {
     return null;
   }
   return {
-    label: input.baseBranch ? `Conflicts with ${input.baseBranch}` : "Has conflicts",
+    label: input.baseBranch
+      ? currentTranslator()("pullRequest.conflictsWithBranch", { branch: input.baseBranch })
+      : currentTranslator()("pullRequest.hasConflicts"),
     toneClassName: "text-destructive",
     Icon: PullRequestGlyph.conflicting,
   };
@@ -212,21 +215,55 @@ export function PullRequestConflictGlyph({
 }
 
 const CHECK_STATUS_PRESENTATION = {
-  pending: { label: "Running", Icon: Spinner, toneClassName: "text-amber-500" },
+  pending: {
+    get label() {
+      return currentTranslator()("pullRequest.checkRunning");
+    },
+    Icon: Spinner,
+    toneClassName: "text-amber-500",
+  },
   "action-required": {
-    label: "Awaiting action",
+    get label() {
+      return currentTranslator()("pullRequest.checkAwaitingAction");
+    },
     Icon: CircleDotIcon,
     toneClassName: "text-amber-600 dark:text-amber-400/90",
   },
   success: {
-    label: "Passed",
+    get label() {
+      return currentTranslator()("pullRequest.checkPassed");
+    },
     Icon: CircleCheckIcon,
     toneClassName: "text-emerald-600 dark:text-emerald-300/90",
   },
-  failure: { label: "Failed", Icon: CircleXIcon, toneClassName: "text-destructive" },
-  cancelled: { label: "Cancelled", Icon: CircleXIcon, toneClassName: "text-destructive" },
-  skipped: { label: "Skipped", Icon: CircleDashedIcon, toneClassName: "text-muted-foreground/70" },
-  neutral: { label: "Neutral", Icon: CircleDashedIcon, toneClassName: "text-muted-foreground/70" },
+  failure: {
+    get label() {
+      return currentTranslator()("pullRequest.checkFailed");
+    },
+    Icon: CircleXIcon,
+    toneClassName: "text-destructive",
+  },
+  cancelled: {
+    get label() {
+      return currentTranslator()("pullRequest.checkCancelled");
+    },
+    Icon: CircleXIcon,
+    toneClassName: "text-destructive",
+  },
+  skipped: {
+    get label() {
+      return currentTranslator()("pullRequest.checkSkipped");
+    },
+    Icon: CircleDashedIcon,
+    toneClassName: "text-muted-foreground/70",
+  },
+  neutral: {
+    get label() {
+      return currentTranslator()("pullRequest.checkNeutral");
+    },
+    Icon: CircleDashedIcon,
+    toneClassName: "text-muted-foreground/70",
+  },
 } as const satisfies Record<
   PullRequestCheckStatus,
   { label: string; Icon: typeof CircleCheckIcon | typeof Spinner; toneClassName: string }
@@ -264,17 +301,23 @@ export function PullRequestCheckStatusIcon({ status }: { status: PullRequestChec
  */
 const CHECKS_STATE_PRESENTATION = {
   passing: {
-    label: "All checks have passed",
+    get label() {
+      return currentTranslator()("pullRequest.checksAllPassed");
+    },
     Icon: CircleCheckIcon,
     toneClassName: CHECK_STATUS_PRESENTATION.success.toneClassName,
   },
   failing: {
-    label: "Some checks were not successful",
+    get label() {
+      return currentTranslator()("pullRequest.checksSomeFailing");
+    },
     Icon: CircleXIcon,
     toneClassName: "text-destructive",
   },
   pending: {
-    label: "Some checks haven't completed yet",
+    get label() {
+      return currentTranslator()("pullRequest.checksSomePending");
+    },
     Icon: CircleDotIcon,
     toneClassName: "text-amber-600 dark:text-amber-400/90",
   },
@@ -313,7 +356,9 @@ export function pullRequestChecksState(
  */
 const REVIEW_OUTCOME_PRESENTATION = {
   approved: {
-    label: "Approved",
+    get label() {
+      return currentTranslator()("pullRequest.reviewStateApproved");
+    },
     Icon: CircleCheckIcon,
     toneClassName: "text-emerald-600 dark:text-emerald-300/90",
     ringClassName: "ring-2 ring-emerald-500 dark:ring-emerald-400",
@@ -322,7 +367,9 @@ const REVIEW_OUTCOME_PRESENTATION = {
     badgeVariant: "success",
   },
   "changes-requested": {
-    label: "Changes requested",
+    get label() {
+      return currentTranslator()("pullRequest.reviewStateChangesRequested");
+    },
     Icon: CircleXIcon,
     toneClassName: "text-destructive",
     ringClassName: "ring-2 ring-destructive",
@@ -330,7 +377,9 @@ const REVIEW_OUTCOME_PRESENTATION = {
     badgeVariant: "error",
   },
   dismissed: {
-    label: "Review dismissed",
+    get label() {
+      return currentTranslator()("pullRequest.reviewDismissed");
+    },
     Icon: CircleDashedIcon,
     toneClassName: "text-muted-foreground/70",
     ringClassName: "ring-2 ring-muted-foreground/60",
@@ -374,7 +423,9 @@ export function pullRequestReviewOutcomeRingClassName(
  * landed after it, so it stands for code the branch no longer has.
  */
 export function pullRequestReviewOutcomeStaleLabel(outcome: PullRequestReviewOutcome): string {
-  return `${REVIEW_OUTCOME_PRESENTATION[outcome].label} earlier changes`;
+  return currentTranslator()("pullRequest.outcomeEarlierChanges", {
+    outcome: REVIEW_OUTCOME_PRESENTATION[outcome].label,
+  });
 }
 
 /** Decorative: every caller says which verdict this is in words beside it. */
@@ -466,6 +517,7 @@ export function PullRequestActorLabel({
   tooltip?: boolean;
   profileUrl?: string | null;
 }) {
+  const t = useT();
   const login = actor?.login ?? "ghost";
   const label = (
     <span className={cn("flex min-w-0 items-center", variant === "label" && "gap-1.5")}>
@@ -489,7 +541,7 @@ export function PullRequestActorLabel({
                   href={profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Open ${login}'s profile`}
+                  aria-label={t("pullRequest.openProfile", { login })}
                 />
               }
             />
@@ -571,7 +623,8 @@ export function PullRequestMetaLine({
 }
 
 export function summarizePullRequestChecks(checks: ReadonlyArray<PullRequestCheck>): string {
-  if (checks.length === 0) return "No checks reported";
+  const t = currentTranslator();
+  if (checks.length === 0) return t("pullRequest.noChecksReported");
   const actionRequired = checks.filter((check) => check.status === "action-required");
   const workflowApprovalRequired = actionRequired.filter(isWorkflowApprovalCheck).length;
   const otherActionRequired = actionRequired.length - workflowApprovalRequired;
@@ -580,16 +633,25 @@ export function summarizePullRequestChecks(checks: ReadonlyArray<PullRequestChec
   ).length;
   const pending = checks.filter((check) => check.status === "pending").length;
   const passed = checks.filter((check) => check.status === "success").length;
-  if (failed > 0) return `${failed} of ${checks.length} failing`;
+  if (failed > 0) return t("pullRequest.failedOfTotal", { failed, total: checks.length });
   if (workflowApprovalRequired > 0 && otherActionRequired > 0) {
-    return `${workflowApprovalRequired} ${workflowApprovalRequired === 1 ? "workflow" : "workflows"} and ${otherActionRequired} ${otherActionRequired === 1 ? "check" : "checks"} awaiting action`;
+    return t("pullRequest.workflowsAndChecksAwaiting", {
+      workflows: t("pullRequest.workflowsCount", { count: workflowApprovalRequired }),
+      checks: t("pullRequest.checksCount", { count: otherActionRequired }),
+    });
   }
   if (workflowApprovalRequired > 0) {
-    return `${workflowApprovalRequired} ${workflowApprovalRequired === 1 ? "workflow" : "workflows"} awaiting approval`;
+    return t("pullRequest.workflowsAwaitingApproval", {
+      workflows: t("pullRequest.workflowsCount", { count: workflowApprovalRequired }),
+    });
   }
   if (otherActionRequired > 0) {
-    return `${otherActionRequired} ${otherActionRequired === 1 ? "check" : "checks"} awaiting action`;
+    return t("pullRequest.checksAwaitingAction", {
+      checks: t("pullRequest.checksCount", { count: otherActionRequired }),
+    });
   }
-  if (pending > 0) return `${pending} of ${checks.length} running`;
-  return passed === checks.length ? "All checks passed" : `${passed} of ${checks.length} passing`;
+  if (pending > 0) return t("pullRequest.runningOfTotal", { pending, total: checks.length });
+  return passed === checks.length
+    ? t("pullRequest.allChecksPassed")
+    : t("pullRequest.passingOfTotal", { passed, total: checks.length });
 }

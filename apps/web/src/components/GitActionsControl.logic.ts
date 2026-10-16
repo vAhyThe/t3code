@@ -6,6 +6,8 @@ import type {
 import { isTemporaryWorktreeBranch } from "@t3tools/shared/git";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
+import type { MessageKey, Translate } from "@t3tools/client-runtime/i18n";
+import { currentTranslator } from "../i18n/I18nProvider";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -26,6 +28,36 @@ export interface GitQuickAction {
   kind: "run_action" | "run_pull" | "open_publish" | "show_hint";
   action?: GitStackedAction;
   hint?: string;
+}
+
+const GIT_ACTION_LABEL_KEYS: Readonly<Record<string, MessageKey>> = {
+  Commit: "pullRequest.gitCommit",
+  Push: "pullRequest.gitPush",
+  Pull: "pullRequest.gitPull",
+  "Commit & push": "pullRequest.gitCommitPush",
+  "Publish repository": "pullRequest.gitPublishRepository",
+  "Sync ref": "pullRequest.gitSyncRef",
+};
+
+/** Patterns for the labels the change-request terminology is spliced into. */
+const GIT_ACTION_LABEL_TEMPLATES: ReadonlyArray<readonly [RegExp, MessageKey]> = [
+  [/^Create (.+)$/u, "pullRequest.gitCreateTerm"],
+  [/^Commit, push & (.+)$/u, "pullRequest.gitCommitPushTerm"],
+  [/^Push & create (.+)$/u, "pullRequest.gitPushCreateTerm"],
+];
+
+/**
+ * The text shown for a menu item or quick action. The English `label` stays the identifier the
+ * logic and its callers compare against, so it is translated only here, at render.
+ */
+export function gitActionLabelText(t: Translate, label: string): string {
+  const key = GIT_ACTION_LABEL_KEYS[label];
+  if (key) return t(key);
+  for (const [pattern, templateKey] of GIT_ACTION_LABEL_TEMPLATES) {
+    const match = pattern.exec(label);
+    if (match?.[1]) return t(templateKey, { term: match[1] });
+  }
+  return label;
 }
 
 export interface DefaultBranchActionDialogCopy {
@@ -91,8 +123,8 @@ export function resolveGitActionProgressPresentation(input: {
       currentLabel && currentLabel !== "Running source control action"
         ? currentLabel
         : isPull
-          ? "Pulling latest changes..."
-          : "Starting source control action...",
+          ? currentTranslator()("pullRequest.gitPullingLatest")
+          : currentTranslator()("pullRequest.gitStarting"),
     output: !isPull && output ? output : null,
     startedAtMs: isPull
       ? input.phaseStartedAtMs
@@ -124,13 +156,16 @@ export function buildGitActionProgressStages(input: {
   shouldPushBeforePr?: boolean;
   terminology?: ChangeRequestTerminology;
 }): string[] {
+  const t = currentTranslator();
   const terminology = input.terminology ?? sourceControlClients.get(undefined).changeRequest;
-  const branchStages = input.featureBranch ? ["Preparing feature ref..."] : [];
-  const pushStage = input.pushTarget ? `Pushing to ${input.pushTarget}...` : "Pushing...";
+  const branchStages = input.featureBranch ? [t("pullRequest.gitStagePrepareFeatureRef")] : [];
+  const pushStage = input.pushTarget
+    ? t("pullRequest.gitStagePushingTo", { target: input.pushTarget })
+    : t("pullRequest.gitStagePushing");
   const prStages = [
-    `Preparing ${terminology.shortLabel}...`,
-    `Generating ${terminology.shortLabel} content...`,
-    `Creating ${terminology.singular}...`,
+    t("pullRequest.gitStagePreparing", { term: terminology.shortLabel }),
+    t("pullRequest.gitStageGeneratingContent", { term: terminology.shortLabel }),
+    t("pullRequest.gitStageCreating", { singular: terminology.singular }),
   ];
 
   if (input.action === "push") {
@@ -144,8 +179,8 @@ export function buildGitActionProgressStages(input: {
   const commitStages = !shouldIncludeCommitStages
     ? []
     : input.hasCustomCommitMessage
-      ? ["Committing..."]
-      : ["Generating commit message...", "Committing..."];
+      ? [t("pullRequest.gitStageCommitting")]
+      : [t("pullRequest.gitStageGenerateCommitMessage"), t("pullRequest.gitStageCommitting")];
   if (input.action === "commit") {
     return [...branchStages, ...commitStages];
   }
@@ -399,36 +434,42 @@ export function resolveDefaultBranchActionDialogCopy(input: {
   includesCommit: boolean;
   terminology?: ChangeRequestTerminology;
 }): DefaultBranchActionDialogCopy {
+  const t = currentTranslator();
   const branchLabel = input.branchName;
-  const suffix = ` on "${branchLabel}". You can continue on this ref or create a feature ref and run the same action there.`;
+  const suffix = t("pullRequest.gitDefaultRefSuffix", { branch: branchLabel });
   const terminology = input.terminology ?? sourceControlClients.get(undefined).changeRequest;
 
   if (input.action === "push" || input.action === "commit_push") {
     if (input.includesCommit) {
       return {
-        title: "Commit & push to default ref?",
-        description: `This action will commit and push changes${suffix}`,
-        continueLabel: `Commit & push to ${branchLabel}`,
+        title: t("pullRequest.gitConfirmCommitPushTitle"),
+        description: t("pullRequest.gitCommitPushDescription", { suffix }),
+        continueLabel: t("pullRequest.gitCommitPushTo", { branch: branchLabel }),
       };
     }
     return {
-      title: "Push to default ref?",
-      description: `This action will push local commits${suffix}`,
-      continueLabel: `Push to ${branchLabel}`,
+      title: t("pullRequest.gitConfirmPushTitle"),
+      description: t("pullRequest.gitPushDescription", { suffix }),
+      continueLabel: t("pullRequest.gitPushTo", { branch: branchLabel }),
     };
   }
-
   if (input.includesCommit) {
     return {
-      title: `Commit, push & create ${terminology.shortLabel} from default ref?`,
-      description: `This action will commit, push, and create a ${terminology.singular}${suffix}`,
-      continueLabel: `Commit, push & create ${terminology.shortLabel}`,
+      title: t("pullRequest.gitCommitPushCreateTitle", { term: terminology.shortLabel }),
+      description: t("pullRequest.gitCommitPushCreateDescription", {
+        singular: terminology.singular,
+        suffix,
+      }),
+      continueLabel: t("pullRequest.gitCommitPushCreateTerm", { term: terminology.shortLabel }),
     };
   }
   return {
-    title: `Push & create ${terminology.shortLabel} from default ref?`,
-    description: `This action will push local commits and create a ${terminology.singular}${suffix}`,
-    continueLabel: `Push & create ${terminology.shortLabel}`,
+    title: t("pullRequest.gitPushCreateTitle", { term: terminology.shortLabel }),
+    description: t("pullRequest.gitPushCreateDescription", {
+      singular: terminology.singular,
+      suffix,
+    }),
+    continueLabel: t("pullRequest.gitPushCreateTerm", { term: terminology.shortLabel }),
   };
 }
 

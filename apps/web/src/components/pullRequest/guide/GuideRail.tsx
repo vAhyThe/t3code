@@ -4,12 +4,19 @@ import { CheckIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 import { Badge } from "../../ui/badge";
-import { stopSubline } from "@t3tools/client-runtime/review-guide-tour";
+import { stopFilePaths } from "@t3tools/client-runtime/review-guide-tour";
+import type { Translate } from "@t3tools/client-runtime/i18n";
+import { useT } from "../../../i18n/I18nProvider";
 
 /**
  * The tour's table of contents: where the reader is and which stops they have read past. A stop
  * with a call to make is marked; that is the only sign of where to slow down.
  */
+function stopFilesLabel(t: Translate, stop: PullRequestReviewGuideStop): string {
+  const count = stopFilePaths(stop).length;
+  return count === 0 ? t("pullRequest.contextNoCode") : t("pullRequest.stopFilesCount", { count });
+}
+
 export function GuideRail({
   stops,
   position,
@@ -22,6 +29,7 @@ export function GuideRail({
   seen: ReadonlySet<number>;
   onSelect: (position: number) => void;
 }) {
+  const t = useT();
   const reviewed = seen.size;
   const renderStop = (stop: PullRequestReviewGuideStop, index: number) => (
     <li key={index}>
@@ -34,10 +42,10 @@ export function GuideRail({
           <>
             {stop.attention !== null ? (
               <Badge size="sm" variant="warning">
-                Look closely
+                {t("pullRequest.lookClosely")}
               </Badge>
             ) : null}
-            <span>{stopSubline(stop)}</span>
+            <span>{stopFilesLabel(t, stop)}</span>
           </>
         }
       />
@@ -45,7 +53,7 @@ export function GuideRail({
   );
 
   return (
-    <nav aria-label="Review tour" className="flex min-h-0 flex-col gap-4">
+    <nav aria-label={t("pullRequest.reviewTour")} className="flex min-h-0 flex-col gap-4">
       {/* Beside the stop only; narrow, the stop's own header says where the reader is. */}
       <p className="text-xs text-muted-foreground tabular-nums @max-[56rem]/guide:hidden">
         {reviewed} of {stops.length} read
@@ -95,6 +103,7 @@ function RailRow({
 }
 
 function StopBullet({ number, seen }: { number: number; seen: boolean }) {
+  const t = useT();
   return (
     <span
       className={cn(
@@ -102,7 +111,11 @@ function StopBullet({ number, seen }: { number: number; seen: boolean }) {
         seen ? "border-success/40 text-success-foreground" : "border-border text-muted-foreground",
       )}
     >
-      {seen ? <CheckIcon aria-label={`Stop ${number}, read`} className="size-3" /> : number}
+      {seen ? (
+        <CheckIcon aria-label={t("pullRequest.stopRead", { number })} className="size-3" />
+      ) : (
+        number
+      )}
     </span>
   );
 }
