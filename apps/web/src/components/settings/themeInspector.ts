@@ -55,6 +55,7 @@ const THEME_UTILITY_ROLES: Readonly<Partial<Record<string, ThemeColorRole>>> = {
   update: "update",
   "update-foreground": "updateForeground",
   "update-surface": "updateSurface",
+  // i18n-ignore: theme token name, not UI text
   message: "messageSurface",
   "message-foreground": "messageForeground",
   "message-action": "messageAction",
