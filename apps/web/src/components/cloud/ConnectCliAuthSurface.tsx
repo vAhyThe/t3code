@@ -1,3 +1,5 @@
+import type { Translate } from "@t3tools/client-runtime/i18n";
+import { useT } from "~/i18n/I18nProvider";
 import { useAuth, useClerk } from "@clerk/react";
 import { readConnectAuthorizeRequest } from "@t3tools/shared/connectAuth";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,12 +33,13 @@ function ConnectCliAuthMessage({
   );
 }
 
-const invalidLinkMessage = {
-  eyebrow: "Authorization request",
-  title: "This connect link is incomplete",
-  description:
-    "The link is missing its authorization request. Re-run `t3 connect` in your terminal and open the freshly printed URL.",
-} as const;
+function invalidLinkMessage(t: Translate) {
+  return {
+    eyebrow: t("shellDevice.connectCliInvalidEyebrow"),
+    title: t("shellDevice.connectCliInvalidTitle"),
+    description: t("shellDevice.connectCliInvalidDescription"),
+  };
+}
 
 /**
  * /connect: the URL the CLI prints for the loopback flow. Waits for a Clerk
@@ -45,6 +48,7 @@ const invalidLinkMessage = {
  * CLI. Headless hosts use Clerk's device authorization page instead.
  */
 export function ConnectCliAuthorizeSurface() {
+  const t = useT();
   const [request] = useState(() => readConnectAuthorizeRequest(new URL(window.location.href)));
   const clerk = useClerk();
   const { isLoaded, isSignedIn } = useAuth();
@@ -85,7 +89,7 @@ export function ConnectCliAuthorizeSurface() {
   if (!request) {
     return (
       <AuthSurfaceShell>
-        <ConnectCliAuthMessage {...invalidLinkMessage} />
+        <ConnectCliAuthMessage {...invalidLinkMessage(t)} />
       </AuthSurfaceShell>
     );
   }
@@ -93,18 +97,18 @@ export function ConnectCliAuthorizeSurface() {
   return (
     <AuthSurfaceShell>
       <ConnectCliAuthMessage
-        eyebrow="Browser authorization"
-        title="Connecting your terminal"
+        eyebrow={t("shellDevice.connectCliBrowserEyebrow")}
+        title={t("shellDevice.connectCliConnectingTitle")}
         description={
           isSignedIn
-            ? "Redirecting to authorize T3 Connect for your CLI…"
-            : "Sign in to continue authorizing T3 Connect for your CLI."
+            ? t("shellDevice.connectCliRedirecting")
+            : t("shellDevice.connectCliSignInToContinue")
         }
       />
       {isLoaded && !isSignedIn ? (
         <div className="mt-6">
           <Button type="button" onClick={openSignIn}>
-            Sign in
+            {t("shellDevice.connectCliSignIn")}
           </Button>
         </div>
       ) : null}

@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useAuth, useClerk } from "@clerk/react";
 import { ServerIcon, SmartphoneIcon } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
@@ -9,13 +10,13 @@ import { T3ConnectUserProfilePage } from "./T3ConnectUserProfilePage";
 /** Custom pages in the Clerk account modal, in menu order. */
 export const T3_CONNECT_ACCOUNT_PAGES = [
   {
-    label: "Mobile clients",
+    labelKey: "shellDevice.clerkPageMobileClients",
     url: "mobile-clients",
     icon: <SmartphoneIcon className="size-4" />,
     content: <MobileClientsUserProfilePage />,
   },
   {
-    label: "T3 Connect",
+    labelKey: "shellDevice.clerkPageT3Connect",
     url: "t3-connect",
     icon: <ServerIcon className="size-4" />,
     content: <T3ConnectUserProfilePage />,
@@ -43,7 +44,7 @@ export function useT3ConnectAccountPage(): {
     clerk.openUserProfile({
       __experimental_startPath: "/t3-connect",
       customPages: T3_CONNECT_ACCOUNT_PAGES.map((page) => ({
-        label: page.label,
+        label: currentTranslator()(page.labelKey),
         url: page.url,
         mount: (element: HTMLDivElement) => setTarget(`content:${page.url}`, element),
         unmount: () => setTarget(`content:${page.url}`, undefined),

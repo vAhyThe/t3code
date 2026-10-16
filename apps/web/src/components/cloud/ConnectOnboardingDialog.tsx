@@ -1,3 +1,4 @@
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { useAuth } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
 import {
@@ -51,6 +52,7 @@ type OnboardingStep = "publish" | "devices";
 const EMPTY_SESSION_STATE_ATOM = Atom.make(AsyncResult.initial<AuthSessionState>());
 
 function ConfiguredConnectOnboardingDialog() {
+  const t = useT();
   // Mirrors ManagedRelayAuthProvider: a pending Clerk session must not read as
   // signed-out, or its later activation would look like a fresh sign-in.
   const { isLoaded, isSignedIn, userId } = useAuth({ treatPendingAsSignedOut: false });
@@ -222,12 +224,13 @@ function ConfiguredConnectOnboardingDialog() {
     });
     setIsApplying(false);
     if (!ok) return;
+    const translate = currentTranslator();
     toastManager.add({
       type: "success",
-      title: "T3 Connect enabled",
+      title: translate("shellDevice.connectEnabledTitle"),
       description: exposeEnvironment
-        ? "This environment is available to your other devices through T3 Connect."
-        : "This environment publishes agent activity to your mobile clients.",
+        ? translate("shellDevice.connectEnabledExpose")
+        : translate("shellDevice.connectEnabledAgent"),
     });
     setStep("devices");
   };
@@ -243,13 +246,8 @@ function ConfiguredConnectOnboardingDialog() {
     >
       <WizardPopup>
         <WizardHeader
-          title="Set up T3 Connect"
-          description={
-            <>
-              Mesh your devices together — publish this environment and connect the rest, all in one
-              place.
-            </>
-          }
+          title={t("shellDevice.connectSetUpTitle")}
+          description={<>{t("shellDevice.connectSetUpDescription")}</>}
         >
           {steps.length > 1 ? (
             <WizardSteps
@@ -305,25 +303,25 @@ function ConfiguredConnectOnboardingDialog() {
                 checked={dontShowAgain}
                 onCheckedChange={(checked) => setDontShowAgain(checked === true)}
               />
-              Don&apos;t show this again
+              {t("shellDevice.connectDontShowAgain")}
             </label>
           }
         >
           {step === "publish" ? (
             <>
               <Button variant="ghost" disabled={isApplying} onClick={() => setStep("devices")}>
-                Not now
+                {t("shellDevice.connectNotNow")}
               </Button>
               <Button
                 disabled={isApplying || !canManageRelay || linkStateData === null}
                 onClick={() => void applyPublishSelection()}
               >
-                {isApplying ? "Enabling…" : "Continue"}
+                {isApplying ? t("shellDevice.connectEnabling") : t("common.continue")}
               </Button>
             </>
           ) : (
             <Button disabled={isApplying} onClick={complete}>
-              Done
+              {t("common.done")}
             </Button>
           )}
         </WizardFooter>
@@ -352,19 +350,20 @@ function PublishStep({
   readonly onExposeEnvironmentChange: (enabled: boolean) => void;
   readonly onPublishAgentActivityChange: (enabled: boolean) => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div className="rounded-lg border">
         <OnboardingToggleRow
-          title="Publish this environment"
-          description="Make this environment available to your other devices through T3 Connect."
+          title={t("shellDevice.connectPublishTitle")}
+          description={t("shellDevice.connectPublishDescription")}
           checked={exposeEnvironment}
           disabled={disabled}
           onCheckedChange={onExposeEnvironmentChange}
         />
         <OnboardingToggleRow
-          title="Publish agent activity"
-          description="Send activity from this environment to your mobile clients for push notifications and Live Activities."
+          title={t("shellDevice.connectPublishAgentActivity")}
+          description={t("shellDevice.connectPublishAgentDescription")}
           checked={publishAgentActivity}
           disabled={disabled}
           onCheckedChange={onPublishAgentActivityChange}
@@ -405,6 +404,7 @@ function OnboardingToggleRow({
 }
 
 function DevicesStep() {
+  const t = useT();
   const { environments } = useEnvironments();
   const primaryEnvironment = usePrimaryEnvironment();
   const savedEnvironments = environments.filter(
@@ -419,8 +419,7 @@ function DevicesStep() {
         showSavedEnvironments
         empty={
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            No other environments are published to your account yet. Publish one from another device
-            and it will show up here.
+            {t("shellDevice.connectNoOtherEnvironments")}
           </p>
         }
       />

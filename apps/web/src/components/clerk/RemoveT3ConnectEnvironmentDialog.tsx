@@ -1,3 +1,5 @@
+import { Trans } from "~/i18n/Trans";
+import { useT } from "~/i18n/I18nProvider";
 import { useState } from "react";
 
 import {
@@ -27,6 +29,7 @@ export function RemoveT3ConnectEnvironmentDialog({
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
 }) {
+  const t = useT();
   const accountPage = useT3ConnectAccountPage();
   // Keep the label through the close animation.
   const [shownLabel, setShownLabel] = useState(environmentLabel);
@@ -43,31 +46,36 @@ export function RemoveT3ConnectEnvironmentDialog({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {shownLabel} from this device?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("shellDevice.clerkRemoveTitle", { label: shownLabel ?? "" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("shellDevice.clerkRemoveForgets")}</AlertDialogDescription>
             <AlertDialogDescription>
-              This forgets its pairing, credentials, and cached threads here.
-            </AlertDialogDescription>
-            <AlertDialogDescription>
-              It stays on your T3 Connect account and keeps its host space. Deregister it in{" "}
-              {openAccountPage ? (
-                <InlineButton
-                  onClick={() => {
-                    onCancel();
-                    openAccountPage();
-                  }}
-                >
-                  T3 Connect settings
-                </InlineButton>
-              ) : (
-                "T3 Connect settings"
-              )}{" "}
-              to free it.
+              <Trans
+                k="shellDevice.clerkRemoveStays"
+                components={{
+                  settings: (children) =>
+                    openAccountPage ? (
+                      <InlineButton
+                        onClick={() => {
+                          openAccountPage();
+                        }}
+                      >
+                        {children}
+                      </InlineButton>
+                    ) : (
+                      children
+                    ),
+                }}
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
             <Button variant="destructive" onClick={onConfirm}>
-              Remove from this device
+              {t("shellDevice.clerkRemoveConfirm")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

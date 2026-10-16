@@ -1,3 +1,5 @@
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { useT } from "~/i18n/I18nProvider";
 import { DownloadIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import type { RelayClientInstallProgressStage } from "@t3tools/contracts";
@@ -20,18 +22,19 @@ import {
 } from "../ui/dialog";
 const installSteps: ReadonlyArray<{
   readonly stage: RelayClientInstallProgressStage;
-  readonly label: string;
+  readonly labelKey: MessageKey;
 }> = [
-  { stage: "checking", label: "Checking current installation" },
-  { stage: "waiting_for_lock", label: "Waiting for installer" },
-  { stage: "downloading", label: "Downloading relay client" },
-  { stage: "verifying", label: "Verifying download" },
-  { stage: "installing", label: "Installing relay client" },
-  { stage: "validating", label: "Validating executable" },
-  { stage: "activating", label: "Activating installation" },
+  { stage: "checking", labelKey: "shellDevice.relayStepChecking" },
+  { stage: "waiting_for_lock", labelKey: "shellDevice.relayStepWaitingForLock" },
+  { stage: "downloading", labelKey: "shellDevice.relayStepDownloading" },
+  { stage: "verifying", labelKey: "shellDevice.relayStepVerifying" },
+  { stage: "installing", labelKey: "shellDevice.relayStepInstalling" },
+  { stage: "validating", labelKey: "shellDevice.relayStepValidating" },
+  { stage: "activating", labelKey: "shellDevice.relayStepActivating" },
 ];
 
 export function RelayClientInstallDialog() {
+  const t = useT();
   const state = useSyncExternalStore(
     subscribeRelayClientInstallDialog,
     readRelayClientInstallDialogState,
@@ -65,12 +68,14 @@ export function RelayClientInstallDialog() {
             <DownloadIcon aria-hidden className="size-4.5 text-muted-foreground" />
           </div>
           <DialogTitle>
-            {isInstalling ? "Installing relay client" : "Install relay client?"}
+            {isInstalling
+              ? t("shellDevice.relayInstallingTitle")
+              : t("shellDevice.relayInstallTitle")}
           </DialogTitle>
           <DialogDescription>
             {isInstalling
-              ? "T3 Code is preparing this environment for secure access through T3 Connect."
-              : "T3 Code needs the relay client to make this environment available through T3 Connect."}
+              ? t("shellDevice.relayInstallingDescription")
+              : t("shellDevice.relayInstallDescription")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel scrollFade={false}>
@@ -78,28 +83,34 @@ export function RelayClientInstallDialog() {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <p aria-live="polite" className="font-medium text-foreground">
-                  {activeStep?.label}
+                  {activeStep ? t(activeStep.labelKey) : null}
                 </p>
                 <p className="shrink-0 tabular-nums text-muted-foreground">
-                  {activeStepIndex + 1} of {installSteps.length}
+                  {t("shellDevice.relayStepOf", {
+                    current: activeStepIndex + 1,
+                    total: installSteps.length,
+                  })}
                 </p>
               </div>
               <progress
-                aria-label="Relay client installation progress"
+                aria-label={t("shellDevice.relayProgressLabel")}
                 className="h-2 w-full appearance-none overflow-hidden rounded-full bg-muted [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary"
                 max={installSteps.length}
                 value={activeStepIndex + 1}
               />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Keep T3 Code open while the relay client is installed.
+                {t("shellDevice.relayKeepOpen")}
               </p>
             </div>
           ) : (
             <div className="rounded-xl border border-border/70 bg-muted/35 p-3">
-              <p className="text-sm font-medium text-foreground">Managed relay client</p>
+              <p className="text-sm font-medium text-foreground">
+                {t("shellDevice.relayManagedClient")}
+              </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                T3 Code will download and install version{" "}
-                {view.status === "confirming" ? view.version : ""} locally.
+                {t("shellDevice.relayWillInstallVersion", {
+                  version: view.status === "confirming" ? view.version : "",
+                })}
               </p>
             </div>
           )}
@@ -110,10 +121,10 @@ export function RelayClientInstallDialog() {
               variant="outline"
               onClick={() => respondToRelayClientInstallConfirmation(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={() => respondToRelayClientInstallConfirmation(true)}>
-              Download and install
+              {t("shellDevice.relayDownloadAndInstall")}
             </Button>
           </DialogFooter>
         ) : null}
