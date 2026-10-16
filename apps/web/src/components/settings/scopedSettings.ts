@@ -1,3 +1,5 @@
+import { currentTranslator } from "../../i18n/I18nProvider";
+
 import {
   ClientSettingsSchema,
   type ClientSettingsPatch,
@@ -475,7 +477,7 @@ export async function persistScopedSettingsPatch(
       return [
         {
           ...environment,
-          message: "This environment does not support this setting. Update T3 Code on it.",
+          message: currentTranslator()("settingsC.environmentNotSupportsSetting"),
         },
       ];
     }
@@ -489,9 +491,7 @@ export async function persistScopedSettingsPatch(
       {
         ...environment,
         message:
-          error instanceof Error
-            ? error.message
-            : "The save failed. Try reconnecting and saving again.",
+          error instanceof Error ? error.message : currentTranslator()("settingsC.saveFailedRetry"),
       },
     ];
   });

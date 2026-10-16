@@ -22,6 +22,8 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { currentTranslator } from "../../i18n/I18nProvider";
+import { Trans } from "../../i18n/Trans";
 import { SettingsRow } from "./settingsLayout";
 import { RedactedSensitiveText } from "./RedactedSensitiveText";
 
@@ -41,6 +43,7 @@ export function ProviderAuthenticationSection({
   readonly provider: ServerProvider;
   readonly readOnly: boolean;
 }) {
+  const t = currentTranslator();
   const target = { environmentId, input: { instanceId } };
   const query = useEnvironmentQuery(serverEnvironment.providerAuthState(target));
   const commands = { reportFailure: false, reportDefect: false };
@@ -76,21 +79,21 @@ export function ProviderAuthenticationSection({
       (provider.driver === "acpRegistry" && auth?.methods?.length === 0));
   const accountDescription = active
     ? auth?.phase === "starting"
-      ? "Starting sign-in…"
+      ? t("settingsC.authStarting")
       : auth?.phase === "verifying"
-        ? "Checking your account…"
+        ? t("settingsC.authVerifying")
         : interaction?.type === "terminal"
-          ? "Complete sign-in in the terminal below."
+          ? t("settingsC.authCompleteInTerminal")
           : interaction?.type === "credentials"
-            ? "Enter your credentials below."
-            : "Finish signing in in your browser."
+            ? t("settingsC.authEnterCredentials")
+            : t("settingsC.authFinishInBrowser")
     : signedIn
-      ? "Signed in."
+      ? t("settingsC.authSignedIn")
       : isDiscovering
-        ? "Discovering sign-in methods…"
+        ? t("settingsC.discoveringSignInMethods")
         : needsExternalSetup
-          ? "No in-app sign-in advertised. Follow the provider's docs to finish setup."
-          : `Sign in on ${environmentLabel}.`;
+          ? t("settingsC.noInAppSignIn")
+          : t("settingsC.authSignInOnEnvironment", { environment: environmentLabel });
   const statusMessage = auth?.phase === "failed" ? auth.message : null;
   const disabled = readOnly || pending || query.error !== null || isDiscovering;
   const draftId = `${auth?.flowId ?? ""}:${interaction?.id ?? ""}`;
@@ -161,18 +164,25 @@ export function ProviderAuthenticationSection({
 
   return (
     <SettingsRow
-      title="Account"
+      title={t("settingsC.accountTitle")}
       description={
         signedIn && !active && provider.auth.email?.trim() ? (
           <span>
-            Signed in as{" "}
-            <RedactedSensitiveText
-              key={provider.auth.email}
-              value={provider.auth.email}
-              ariaLabel="Toggle account email visibility"
-              revealTooltip="Click to reveal email"
-              hideTooltip="Click to hide email"
-              className="max-w-full truncate"
+            <Trans
+              k="settingsC.authSignedInAs"
+              params={{ email: provider.auth.email }}
+              components={{
+                email: () => (
+                  <RedactedSensitiveText
+                    key={provider.auth.email}
+                    value={provider.auth.email}
+                    ariaLabel={t("settingsC.authToggleEmailVisibility")}
+                    revealTooltip={t("settingsC.authRevealEmail")}
+                    hideTooltip={t("settingsC.authHideEmail")}
+                    className="max-w-full truncate"
+                  />
+                ),
+              }}
             />
           </span>
         ) : (
@@ -194,14 +204,18 @@ export function ProviderAuthenticationSection({
               disabled={disabled}
               onValueChange={(value) => setMethodId(value ?? "")}
             >
-              <SelectTrigger size="sm" aria-label="Sign-in method" className="w-44">
+              <SelectTrigger
+                size="sm"
+                aria-label={t("settingsC.authSignInMethod")}
+                className="w-44"
+              >
                 <SelectValue>
                   {auth?.methods?.find((method) => method.id === methodId)?.name ??
-                    "Provider default"}
+                    t("settingsC.authProviderDefault")}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup>
-                <SelectItem value="">Provider default</SelectItem>
+                <SelectItem value="">{t("settingsC.authProviderDefault")}</SelectItem>
                 {auth?.methods?.map((method) => (
                   <SelectItem key={method.id} value={method.id}>
                     {method.name}
@@ -218,13 +232,13 @@ export function ProviderAuthenticationSection({
                 disabled={disabled}
                 onClick={() => void openBrowser()}
               >
-                Open browser
+                {t("settingsC.authOpenBrowser")}
               </Button>
               <Tooltip>
                 <TooltipTrigger
                   render={
                     <Button
-                      aria-label="Copy sign-in link"
+                      aria-label={t("settingsC.authCopySignInLink")}
                       size="icon-sm"
                       variant="ghost-muted"
                       disabled={disabled}
@@ -243,7 +257,7 @@ export function ProviderAuthenticationSection({
                     </Button>
                   }
                 />
-                <TooltipPopup>Copy sign-in link</TooltipPopup>
+                <TooltipPopup>{t("settingsC.authCopySignInLink")}</TooltipPopup>
               </Tooltip>
             </>
           ) : null}
@@ -256,13 +270,13 @@ export function ProviderAuthenticationSection({
                   <a href={provider.setup.documentationUrl} target="_blank" rel="noreferrer" />
                 }
               >
-                Open docs
+                {t("settingsC.openDocs")}
               </Button>
             ) : active && auth?.flowId ? (
               <Button
                 size="sm"
                 variant="ghost-muted"
-                aria-label="Cancel sign-in"
+                aria-label={t("settingsC.authCancelSignIn")}
                 disabled={disabled}
                 onClick={() =>
                   void run(() =>
@@ -270,7 +284,7 @@ export function ProviderAuthenticationSection({
                   )
                 }
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
             ) : !active && !needsExternalSetup && provider.setup?.canAuthenticate !== false ? (
               <Button
@@ -292,10 +306,10 @@ export function ProviderAuthenticationSection({
                 }
               >
                 {signedIn
-                  ? "Change account"
+                  ? t("settingsC.authChangeAccount")
                   : auth?.phase === "failed" || auth?.phase === "cancelled"
-                    ? "Retry sign-in"
-                    : "Sign in"}
+                    ? t("settingsC.authRetrySignIn")
+                    : t("settingsC.signIn")}
               </Button>
             ) : null}
             {!active && signedIn && (provider.auth.canLogout ?? provider.setup?.canAuthenticate) ? (
@@ -313,7 +327,7 @@ export function ProviderAuthenticationSection({
                     });
                 }}
               >
-                Sign out
+                {t("settingsC.authSignOut")}
               </Button>
             ) : null}
           </>
@@ -329,16 +343,24 @@ export function ProviderAuthenticationSection({
         <>
           {interaction?.type === "deviceCode" ? (
             <p className="py-2 text-sm text-muted-foreground">
-              Enter code{" "}
-              <code className="select-all font-mono text-foreground">{interaction.userCode}</code>{" "}
-              in your browser.
+              <Trans
+                k="settingsC.authEnterCode"
+                params={{ code: interaction.userCode }}
+                components={{
+                  code: (children) => (
+                    <code className="select-all font-mono text-foreground">{children}</code>
+                  ),
+                }}
+              />
             </p>
           ) : null}
           {interaction?.type === "terminal" ? (
             <div className="py-2">
               <Suspense
                 fallback={
-                  <p className="text-xs text-muted-foreground">Loading sign-in terminal…</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("settingsC.authLoadingTerminal")}
+                  </p>
                 }
               >
                 <ProviderAuthTerminal
@@ -419,7 +441,7 @@ export function ProviderAuthenticationSection({
                 className="w-fit"
                 disabled={disabled}
               >
-                Connect
+                {t("settingsC.authConnect")}
               </Button>
             </form>
           ) : null}
@@ -440,7 +462,7 @@ export function ProviderAuthenticationSection({
               }}
             >
               <label className="grid gap-1">
-                If the final localhost page does not load, paste its full URL here.
+                {t("settingsC.authPasteFullUrl")}
                 <Input
                   size="sm"
                   id={`provider-callback-${instanceId}`}
@@ -459,7 +481,7 @@ export function ProviderAuthenticationSection({
                 className="w-fit"
                 disabled={disabled || !values.callback?.trim()}
               >
-                Continue
+                {t("common.continue")}
               </Button>
             </form>
           ) : null}

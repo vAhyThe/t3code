@@ -16,12 +16,12 @@ import { piClient } from "@t3tools/provider-pi/client";
 export const providerClients = makeProviderClientRegistry([
   {
     driverKind: ProviderDriverKind.make("codex"),
-    label: "Codex",
+    label: "Codex", // i18n-ignore: brand name
     settingsSchema: CodexSettings,
   },
   {
     driverKind: ProviderDriverKind.make("claudeAgent"),
-    label: "Claude",
+    label: "Claude", // i18n-ignore: brand name
     settingsSchema: ClaudeSettings,
   },
   cursorClient,
@@ -29,7 +29,7 @@ export const providerClients = makeProviderClientRegistry([
   openCodeClient,
   {
     driverKind: ProviderDriverKind.make("antigravity"),
-    label: "Antigravity",
+    label: "Antigravity", // i18n-ignore: brand name
     settingsSchema: AntigravitySettings,
   },
   museClient,

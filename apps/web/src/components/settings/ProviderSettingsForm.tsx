@@ -27,6 +27,7 @@ export type SettingsFormDefinition = Pick<ProviderClientDefinition, "settingsSch
   readonly driverKind?: ProviderClientDefinition["driverKind"];
 };
 import { SettingsRow } from "./settingsLayout";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 
 export interface ProviderSettingsFieldModel {
   readonly key: string;
@@ -120,10 +121,10 @@ export function deriveProviderSettingsFields(
           control: formAnnotation.control ?? "text",
           label:
             isLocalAcp && key === "commandPath"
-              ? "Executable"
+              ? currentTranslator()("settingsC.providerFieldExecutable")
               : (annotatedTitle ?? titleizeFieldKey(key)),
           ...(isLocalAcp && key === "commandPath"
-            ? { description: "Executable name or path on this environment." }
+            ? { description: currentTranslator()("settingsC.providerFieldExecutableDescription") }
             : annotatedDescription !== undefined
               ? { description: annotatedDescription }
               : {}),
@@ -159,6 +160,7 @@ function ProviderCommandArguments({
   value,
   onChange,
 }: Pick<ProviderSettingsFormProps, "value" | "onChange">) {
+  const t = useT();
   const args = useMemo(() => {
     const configured =
       value !== null && typeof value === "object"
@@ -200,8 +202,8 @@ function ProviderCommandArguments({
 
   return (
     <SettingsRow
-      title="Arguments"
-      description="One literal argument per row, in launch order."
+      title={t("settingsC.argumentsTitle")}
+      description={t("settingsC.argumentsDescription")}
       control={
         <Button
           type="button"
@@ -210,7 +212,7 @@ function ProviderCommandArguments({
           onClick={() => updateArguments([...rowsRef.current, makeCommandArgumentDraftRow("")])}
         >
           <PlusIcon />
-          Add argument
+          {t("settingsC.addArgument")}
         </Button>
       }
     >
@@ -229,7 +231,7 @@ function ProviderCommandArguments({
                     ),
                   )
                 }
-                aria-label={`Argument ${index + 1}`}
+                aria-label={t("settingsC.argumentNumber", { number: index + 1 })}
                 spellCheck={false}
               />
               <Button
@@ -239,7 +241,7 @@ function ProviderCommandArguments({
                 onClick={() =>
                   updateArguments(rowsRef.current.filter((current) => current.id !== argument.id))
                 }
-                aria-label={`Remove argument ${index + 1}`}
+                aria-label={t("settingsC.removeArgumentNumber", { number: index + 1 })}
               >
                 <XIcon />
               </Button>
