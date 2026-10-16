@@ -3,6 +3,7 @@ import type { PullRequestReviewGuideNote } from "@t3tools/contracts";
 import { cn } from "~/lib/utils";
 
 import { GuideProse } from "./GuideProse";
+import { useT } from "../../../i18n/I18nProvider";
 
 /** The letter that ties a note to its line in an excerpt. */
 export function GuideNoteMarker({ marker }: { marker: string }) {
@@ -24,13 +25,14 @@ export function GuideNotes({
   notes: ReadonlyArray<{ readonly marker: string; readonly note: PullRequestReviewGuideNote }>;
   className?: string;
 }) {
+  const t = useT();
   if (notes.length === 0) return null;
   return (
     <section className={cn("flex min-w-0 flex-col gap-2", className)}>
       <h4 className="flex items-baseline justify-between gap-2 text-xs font-medium text-foreground">
-        Notes on this stop
+        {t("pullRequest.notesOnStop")}
         <span className="font-normal text-muted-foreground tabular-nums">
-          {notes.length === 1 ? "1 note" : `${notes.length} notes`}
+          {t("pullRequest.notesCount", { count: notes.length })}
         </span>
       </h4>
       <ol className="flex flex-col gap-3">

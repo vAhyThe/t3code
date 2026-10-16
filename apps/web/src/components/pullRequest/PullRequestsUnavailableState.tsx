@@ -4,9 +4,10 @@ import { ExternalLinkIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../ui/empty";
 import { PullRequestGlyph } from "./pullRequestIcons";
+import { useT } from "../../i18n/I18nProvider";
 
 export function PullRequestsUnavailableState({
-  title = "Could not load pull requests",
+  title,
   error,
   onRetry,
   refreshing = false,
@@ -18,13 +19,14 @@ export function PullRequestsUnavailableState({
   refreshing?: boolean;
   gitHubUrl?: string;
 }) {
+  const t = useT();
   return (
     <Empty className="scrollbar-gutter-both min-h-0 justify-center-safe overflow-y-auto [&>*]:shrink-0">
       <EmptyMedia variant="icon">
         <PullRequestGlyph.pullRequest />
       </EmptyMedia>
       <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyTitle>{title ?? t("pullRequest.couldNotLoadPullRequests")}</EmptyTitle>
         {/* The caller names the fix — update the environment, install gh, sign in — so this
             shows its message rather than trying to infer one from the failure text. */}
         <EmptyDescription>{error}</EmptyDescription>
@@ -40,7 +42,7 @@ export function PullRequestsUnavailableState({
               aria-busy={refreshing}
             >
               <RefreshIcon size="sm" refreshing={refreshing} />
-              Retry
+              {t("common.retry")}
             </Button>
           ) : null}
           {gitHubUrl ? (
@@ -50,7 +52,7 @@ export function PullRequestsUnavailableState({
               render={<a href={gitHubUrl} target="_blank" rel="noopener noreferrer" />}
             >
               <ExternalLinkIcon aria-hidden className="size-3.5" />
-              Open on GitHub
+              {t("pullRequest.openOnGitHub")}
             </Button>
           ) : null}
         </div>

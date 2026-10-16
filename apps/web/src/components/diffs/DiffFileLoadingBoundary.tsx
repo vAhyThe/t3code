@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { DiffFileHeaderSkeleton } from "../DiffPanelShell";
+import { useT } from "../../i18n/I18nProvider";
 
 /** Load the next batch before the reader reaches the end of the current files. */
 export function DiffFileLoadingBoundary({ load, count }: { load: () => void; count: number }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -16,7 +18,7 @@ export function DiffFileLoadingBoundary({ load, count }: { load: () => void; cou
     return () => observer.disconnect();
   }, [load]);
   return (
-    <div ref={ref} role="status" aria-label="Loading diff…">
+    <div ref={ref} role="status" aria-label={t("pullRequest.diffLoading")}>
       {Array.from({ length: Math.min(count, 4) }, (_, index) => (
         <div key={index} aria-hidden className="border-b border-border/40">
           <DiffFileHeaderSkeleton titleWidth="medium" />
