@@ -49,14 +49,24 @@ import {
 import { PullRequestGlyph } from "./pullRequestIcons";
 import { pullRequestQuickActions } from "./pullRequestList.logic";
 import { PullRequestSpeedActions } from "./PullRequestSpeedActions";
-import { useT } from "../../i18n/I18nProvider";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 const SOURCE_LABELS: Record<ThreadPullRequestLink["source"], string> = {
-  manual: "Linked by you",
-  created: "Created from this thread",
-  agent: "Linked by the agent",
-  stack: "Found in the stack",
-  "stack-dismissed": "Dismissed",
+  get manual() {
+    return currentTranslator()("pullRequest.sourceManual");
+  },
+  get created() {
+    return currentTranslator()("pullRequest.sourceCreated");
+  },
+  get agent() {
+    return currentTranslator()("pullRequest.sourceAgent");
+  },
+  get stack() {
+    return currentTranslator()("pullRequest.sourceStack");
+  },
+  get "stack-dismissed"() {
+    return currentTranslator()("pullRequest.sourceStackDismissed");
+  },
 };
 
 function ChecksGlyph({

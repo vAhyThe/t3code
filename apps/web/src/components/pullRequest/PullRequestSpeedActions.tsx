@@ -12,7 +12,7 @@ import {
   usePullRequestActionRunner,
   usePullRequestDefaultMergeMethodResolver,
 } from "./usePullRequestActions";
-import { useT } from "../../i18n/I18nProvider";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 type PullRequestSpeedActionEntry = Pick<
   EnvironmentPullRequestEntry,
@@ -65,8 +65,7 @@ export function PullRequestSpeedActions<Entry extends PullRequestSpeedActionEntr
       const allowed = detail.capabilities.mergeMethods.filter(
         (method) => detail.mergeCapabilities[method],
       );
-      if (allowed.length === 0)
-        throw new Error("No merge method is available for this repository.");
+      if (allowed.length === 0) throw new Error(currentTranslator()("pullRequest.noMergeMethod"));
       return resolvePullRequestMergeMethod(
         allowed,
         null,

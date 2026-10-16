@@ -79,54 +79,113 @@ export function usePullRequestDefaultMergeMethodResolver(
 }
 
 const ACTION_SUCCESS_LABELS: Record<PullRequestAction, string> = {
-  merge: "Merge requested",
-  ready: "Marked ready for review",
-  draft: "Converted to draft",
-  close: "Pull request closed",
-  reopen: "Pull request reopened",
-  "update-branch": "Branch updated with the base branch",
-  "enable-auto-merge": "Auto-merge enabled",
-  "disable-auto-merge": "Auto-merge disabled",
-  revert: "Revert pull request opened",
-  "delete-branch": "Branch deleted",
-  "approve-workflows": "Workflows approved",
+  get merge() {
+    return currentTranslator()("pullRequest.runSuccessMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runSuccessReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runSuccessDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runSuccessClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runSuccessReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runSuccessUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runSuccessEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runSuccessDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runSuccessRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runSuccessDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runSuccessApproveWorkflows");
+  },
 };
 
 /** Said as the thing that did not happen, rather than as the operation that returned an error. */
 const ACTION_FAILURE_LABELS: Record<PullRequestAction, string> = {
-  merge: "Could not merge this pull request",
-  ready: "Could not mark this ready for review",
-  draft: "Could not convert this to a draft",
-  close: "Could not close this pull request",
-  reopen: "Could not reopen this pull request",
-  "update-branch": "Could not update this branch",
-  "enable-auto-merge": "Could not enable auto-merge",
-  "disable-auto-merge": "Could not disable auto-merge",
-  revert: "Could not open a revert pull request",
-  "delete-branch": "Could not delete this branch",
-  "approve-workflows": "Could not approve workflows",
+  get merge() {
+    return currentTranslator()("pullRequest.runFailureMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runFailureReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runFailureDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runFailureClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runFailureReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runFailureUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runFailureEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runFailureDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runFailureRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runFailureDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runFailureApproveWorkflows");
+  },
 };
 
 /** What to try, for the times the host says only that it refused. */
 const ACTION_FAILURE_HINTS: Record<PullRequestAction, string> = {
-  merge:
-    "The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting.",
-  ready: "The host refused it. Check that you have write access to this repository.",
-  draft: "The host refused it. Check that you have write access to this repository.",
-  close: "The host refused it. Check that you have write access, or that you opened it.",
-  reopen:
-    "The host refused it. Check that you have write access, and that the branch still exists.",
-  "update-branch":
-    "The host refused it. Check that you have write access, and that the base branch has not diverged in a way the host cannot merge.",
-  "enable-auto-merge":
-    "The host refused it. Check that auto-merge is enabled for this repository and that you have write access.",
-  "disable-auto-merge": "The host refused it. Check that you have write access to this repository.",
-  revert:
-    "The host refused it. Check that you have write access and that this pull request was merged on the host.",
-  "delete-branch":
-    "The host refused it. Check that you have write access to the source repository and that the branch has not moved since this page loaded.",
-  "approve-workflows":
-    "The host refused it. Check that you have Actions write access and that these workflow runs are still awaiting approval.",
+  get merge() {
+    return currentTranslator()("pullRequest.runHintMerge");
+  },
+  get ready() {
+    return currentTranslator()("pullRequest.runHintReady");
+  },
+  get draft() {
+    return currentTranslator()("pullRequest.runHintDraft");
+  },
+  get close() {
+    return currentTranslator()("pullRequest.runHintClose");
+  },
+  get reopen() {
+    return currentTranslator()("pullRequest.runHintReopen");
+  },
+  get "update-branch"() {
+    return currentTranslator()("pullRequest.runHintUpdateBranch");
+  },
+  get "enable-auto-merge"() {
+    return currentTranslator()("pullRequest.runHintEnableAutoMerge");
+  },
+  get "disable-auto-merge"() {
+    return currentTranslator()("pullRequest.runHintDisableAutoMerge");
+  },
+  get revert() {
+    return currentTranslator()("pullRequest.runHintRevert");
+  },
+  get "delete-branch"() {
+    return currentTranslator()("pullRequest.runHintDeleteBranch");
+  },
+  get "approve-workflows"() {
+    return currentTranslator()("pullRequest.runHintApproveWorkflows");
+  },
 };
 
 /**

@@ -250,8 +250,8 @@ export function PullRequestDetailGhost({
                     key={checkout}
                     value={checkout}
                     target="pull request checkout command"
-                    copyLabel="Copy checkout command"
-                    copiedLabel="Checkout command copied"
+                    copyLabel={t("pullRequest.copyCheckoutCommand")}
+                    copiedLabel={t("pullRequest.checkoutCommandCopied")}
                     className="ml-auto font-mono"
                     tooltipSide="bottom"
                     {...(onCheckoutError ? { onError: onCheckoutError } : {})}
@@ -275,8 +275,8 @@ export function PullRequestDetailGhost({
                     key={seed.headBranch}
                     value={seed.headBranch}
                     target="branch name"
-                    copyLabel="Copy pull request branch"
-                    copiedLabel="Branch name copied"
+                    copyLabel={t("pullRequest.copyPullRequestBranch")}
+                    copiedLabel={t("pullRequest.branchNameCopied")}
                     className="min-w-0 font-mono"
                   />
                 ) : (

@@ -598,7 +598,11 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
       if (result._tag === "Failure") {
         if (!isAtomCommandInterrupted(result)) {
           const error = squashAtomCommandFailure(result);
-          setPublishError(error instanceof Error ? error.message : "An error occurred.");
+          setPublishError(
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("pullRequest.gitErrorOccurred"),
+          );
         }
         return;
       }
@@ -854,6 +858,7 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                       id="publish-remote-name"
                       value={publishRemoteName}
                       onChange={(event) => setPublishRemoteName(event.target.value)}
+                      // i18n-ignore: default git remote name
                       placeholder="origin"
                       disabled={publishRepositoryAction.isPending}
                     />
@@ -876,7 +881,9 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                       aria-labelledby="publish-protocol-label"
                       disabled={publishRepositoryAction.isPending}
                     >
+                      {/* i18n-ignore: protocol name */}
                       <Toggle value="ssh">SSH</Toggle>
+                      {/* i18n-ignore: protocol name */}
                       <Toggle value="https">HTTPS</Toggle>
                     </ToggleGroup>
                   </div>
@@ -974,7 +981,7 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                   disabled={!hasReadyPublishProvider || !selectedPublishProviderReadiness.ready}
                   onClick={() => setPublishWizardStep((step) => Math.min(1, step + 1))}
                 >
-                  Next
+                  {t("pullRequest.gitNext")}
                 </Button>
               ) : (
                 <Button disabled={!canSubmitPublishRepository} onClick={submitPublishRepository}>
@@ -1208,9 +1215,9 @@ export default function GitActionsControl({
     [gitStatusForActions, hasPrimaryRemote, isDefaultRef, isGitActionRunning],
   );
   const quickActionDisabledReason = !canWriteSourceControl
-    ? "This connection cannot change source control."
+    ? t("pullRequest.connectionCannotChange")
     : quickAction.disabled
-      ? (quickAction.hint ?? "This action is currently unavailable.")
+      ? (quickAction.hint ?? t("pullRequest.actionUnavailable"))
       : null;
   const gitActionProgress = resolveGitActionProgressPresentation(vcsActionState);
   const pendingDefaultBranchActionCopy = pendingDefaultBranchAction
@@ -1509,7 +1516,10 @@ export default function GitActionsControl({
         }
 
         const pullResult = result.value;
-        const title = pullResult.status === "pulled" ? "Pulled" : "Already up to date";
+        const title =
+          pullResult.status === "pulled"
+            ? currentTranslator()("pullRequest.pulled")
+            : currentTranslator()("pullRequest.alreadyUpToDate");
         const description =
           pullResult.status === "pulled"
             ? `Updated ${pullResult.refName} from ${pullResult.upstreamRef ?? "upstream"}`
@@ -2111,7 +2121,7 @@ export default function GitActionsControl({
                 setIsEditingFiles(false);
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="outline"
@@ -2126,7 +2136,7 @@ export default function GitActionsControl({
               disabled={!canWriteSourceControl || noneSelected}
               onClick={runDialogAction}
             >
-              Commit
+              {t("pullRequest.gitCommit")}
             </Button>
           </DialogFooter>
         </DialogPopup>

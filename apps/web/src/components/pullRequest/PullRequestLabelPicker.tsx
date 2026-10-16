@@ -75,7 +75,7 @@ export function PullRequestLabelPicker({
           : currentTranslator()("pullRequest.couldNotPutLabelOn", { name: candidate.name }),
         description: readableFailure(
           squashAtomCommandFailure(result),
-          "The host refused it. Check that you have triage access on this repository.",
+          currentTranslator()("pullRequest.hostRefusedTriage"),
         ),
       });
       return;
@@ -92,15 +92,15 @@ export function PullRequestLabelPicker({
       onOpenChange={setOpen}
       query={query}
       onQueryChange={setQuery}
-      searchLabel="Search labels"
+      searchLabel={t("pullRequest.searchLabelsField")}
       isPending={candidatesQuery.isPending && candidatesQuery.data === null}
       error={candidatesQuery.data === null ? candidatesQuery.error : null}
       candidates={candidates}
-      emptyLabel="This repository has no labels."
-      noMatchLabel="No label matches that."
-      errorLabel="The labels could not be read."
+      emptyLabel={t("pullRequest.noLabelsInRepo")}
+      noMatchLabel={t("pullRequest.noLabelMatch")}
+      errorLabel={t("pullRequest.labelsNotRead")}
       truncated={candidatesQuery.data?.truncated === true}
-      truncatedLabel="This repository has more labels than are listed here. Apply the rest on the host."
+      truncatedLabel={t("pullRequest.labelsTruncated")}
       candidateKey={(candidate) => candidate.name}
       disabled={pending !== null}
       onSelect={(candidate) => void toggle(candidate)}

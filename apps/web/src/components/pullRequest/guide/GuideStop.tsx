@@ -29,14 +29,24 @@ import { GuideFileDiff } from "./GuideFileDiff";
 import { GuideNotes } from "./GuideNotes";
 import { GuideProse } from "./GuideProse";
 import { letterStopNotes } from "@t3tools/client-runtime/review-guide-tour";
-import { useT } from "../../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../../i18n/I18nProvider";
 
 const ATTENTION_LABELS = {
-  tradeoff: "A tradeoff to weigh",
-  contract: "A contract to check",
-  product: "A product call",
-  risk: "A risk to judge",
-  accessibility: "An accessibility call",
+  get tradeoff() {
+    return currentTranslator()("pullRequest.attentionTradeoff");
+  },
+  get contract() {
+    return currentTranslator()("pullRequest.attentionContract");
+  },
+  get product() {
+    return currentTranslator()("pullRequest.attentionProduct");
+  },
+  get risk() {
+    return currentTranslator()("pullRequest.attentionRisk");
+  },
+  get accessibility() {
+    return currentTranslator()("pullRequest.attentionAccessibility");
+  },
 } as const satisfies Record<PullRequestReviewGuideAttention["kind"], string>;
 
 /**
@@ -138,7 +148,9 @@ export function GuideStop({
                 aria-hidden
                 className="ml-1 flex items-center gap-0.5 @max-[30rem]/guide:hidden"
               >
+                {/* i18n-ignore: keyboard key */}
                 <Kbd>J</Kbd>
+                {/* i18n-ignore: keyboard key */}
                 <Kbd>K</Kbd>
               </span>
             </div>

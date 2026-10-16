@@ -281,7 +281,7 @@ export function pullRequestCheckStatusLabel(
   check: Pick<PullRequestCheck, "status" | "url">,
 ): string {
   return isWorkflowApprovalCheck(check)
-    ? "Awaiting approval"
+    ? currentTranslator()("pullRequest.checksAwaitingApproval")
     : CHECK_STATUS_PRESENTATION[check.status].label;
 }
 

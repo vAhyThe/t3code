@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { useT } from "../../i18n/I18nProvider";
+import { useT, currentTranslator } from "../../i18n/I18nProvider";
 
 /**
  * Which thread has the link dialog open, set by whichever entry point asked (command palette,
@@ -99,7 +99,7 @@ export function resolveLinkPullRequestInput(input: {
   const number = Number(parsed);
   if (!Number.isSafeInteger(number) || number < 1) return null;
   if (input.project === null) {
-    return { error: "Paste a full URL to link a pull request from another repository." };
+    return { error: currentTranslator()("pullRequest.pasteFullUrl") };
   }
   const webUrl = input.project.webUrl(number);
   const webReference = webUrl === null ? null : parseChangeRequestUrl(webUrl);
@@ -180,7 +180,11 @@ function LinkPullRequestDialog({
     try {
       await linking.changeLink(threadRef, resolved.link.url, true);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Could not link the pull request.");
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("pullRequest.couldNotLinkPullRequestDot"),
+      );
       return;
     } finally {
       setPending(false);

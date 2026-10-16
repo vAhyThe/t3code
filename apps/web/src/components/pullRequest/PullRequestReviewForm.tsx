@@ -129,10 +129,10 @@ export function PullRequestReviewForm({
   // The placeholder asks for exactly what the submit button is waiting on.
   const placeholder =
     selectedVerdict === undefined || canSubmit(selectedVerdict.value, "")
-      ? "Summarize your review (optional)"
+      ? t("pullRequest.summarizeReviewOptional")
       : selectedVerdict.value === "request-changes" && requestChangesSummaryRequired
-        ? "Summarize your review (required to request changes)"
-        : "Summarize your review or add line comments";
+        ? t("pullRequest.summarizeReviewRequired")
+        : t("pullRequest.summarizeReviewOrComments");
 
   return (
     <>

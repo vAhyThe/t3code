@@ -122,7 +122,7 @@ export function ReviewThreadCard({
   reference,
   pending,
   fixPending,
-  fixLabel = "Fix in a thread",
+  fixLabel,
   onFix,
   onReply,
   onLoadMore,
@@ -265,7 +265,9 @@ export function ReviewThreadCard({
             onClick={onFix}
           >
             <HammerIcon className="size-3" />
-            {fixPending ? t("pullRequest.preparingFix") : fixLabel}
+            {fixPending
+              ? t("pullRequest.preparingFix")
+              : (fixLabel ?? t("pullRequest.handoffFixInAThread"))}
           </Button>
         ) : null}
         {canResolve ? (

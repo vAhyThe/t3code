@@ -221,6 +221,7 @@ export function buildMenuItems(
 
   const commitItem: GitActionMenuItem = {
     id: "commit",
+    // i18n-ignore: English label identifier, shown through gitActionLabelText
     label: "Commit",
     disabled: !canCommit,
     icon: "commit",
@@ -234,6 +235,7 @@ export function buildMenuItems(
 
   const pushItem: GitActionMenuItem = {
     id: "push",
+    // i18n-ignore: English label identifier, shown through gitActionLabelText
     label: "Push",
     disabled: !canPush,
     icon: "push",
@@ -252,6 +254,7 @@ export function buildMenuItems(
     pushItem,
     {
       id: "pr",
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: `Create ${terminology.shortLabel}`,
       disabled: !canCreatePr,
       icon: "pr",
@@ -268,15 +271,23 @@ export function resolveQuickAction(
   hasPrimaryRemote = true,
 ): GitQuickAction {
   if (isBusy) {
-    return { label: "Commit", disabled: true, kind: "show_hint", hint: "Git action in progress." };
+    // i18n-ignore: English label identifier, shown through gitActionLabelText
+    return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
+      label: "Commit",
+      disabled: true,
+      kind: "show_hint",
+      hint: currentTranslator()("pullRequest.gitActionInProgress"),
+    };
   }
 
   if (!gitStatus) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: "Commit",
       disabled: true,
       kind: "show_hint",
-      hint: "Git status is unavailable.",
+      hint: currentTranslator()("pullRequest.gitStatusUnavailable"),
     };
   }
 
@@ -291,21 +302,27 @@ export function resolveQuickAction(
 
   if (!hasBranch) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: "Commit",
       disabled: true,
       kind: "show_hint",
-      hint: `Create and checkout a ref before pushing or opening a ${terminology.singular}.`,
+      hint: currentTranslator()("pullRequest.gitCreateRefBeforePush", {
+        singular: terminology.singular,
+      }),
     };
   }
 
   if (hasChanges) {
     if (!gitStatus.hasUpstream && !hasPrimaryRemote) {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       return { label: "Commit", disabled: false, kind: "run_action", action: "commit" };
     }
     if (hasOpenPr || isDefaultRef) {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       return { label: "Commit & push", disabled: false, kind: "run_action", action: "commit_push" };
     }
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: `Commit, push & ${terminology.shortLabel}`,
       disabled: false,
       kind: "run_action",
@@ -316,6 +333,7 @@ export function resolveQuickAction(
   if (!gitStatus.hasUpstream) {
     if (!hasPrimaryRemote) {
       return {
+        // i18n-ignore: English label identifier, shown through gitActionLabelText
         label: "Publish repository",
         disabled: false,
         kind: "open_publish",
@@ -324,21 +342,24 @@ export function resolveQuickAction(
     if (!isAhead) {
       if (hasOpenPr) {
         return {
+          // i18n-ignore: English label identifier, shown through gitActionLabelText
           label: "Commit",
           disabled: true,
           kind: "show_hint",
-          hint: "Branch is up to date. No action needed.",
+          hint: currentTranslator()("pullRequest.gitBranchUpToDate"),
         };
       }
       return {
+        // i18n-ignore: English label identifier, shown through gitActionLabelText
         label: "Push",
         disabled: true,
         kind: "show_hint",
-        hint: "No local commits to push.",
+        hint: currentTranslator()("pullRequest.gitNoLocalCommits"),
       };
     }
     if (hasOpenPr || isDefaultRef) {
       return {
+        // i18n-ignore: English label identifier, shown through gitActionLabelText
         label: "Push",
         disabled: false,
         kind: "run_action",
@@ -346,6 +367,7 @@ export function resolveQuickAction(
       };
     }
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: `Push & create ${terminology.shortLabel}`,
       disabled: false,
       kind: "run_action",
@@ -355,15 +377,17 @@ export function resolveQuickAction(
 
   if (isDiverged) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: "Sync ref",
       disabled: true,
       kind: "show_hint",
-      hint: "Branch has diverged from upstream. Rebase/merge first.",
+      hint: currentTranslator()("pullRequest.gitBranchDiverged"),
     };
   }
 
   if (isBehind) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: "Pull",
       disabled: false,
       kind: "run_pull",
@@ -373,6 +397,7 @@ export function resolveQuickAction(
   if (isAhead) {
     if (hasOpenPr || isDefaultRef) {
       return {
+        // i18n-ignore: English label identifier, shown through gitActionLabelText
         label: "Push",
         disabled: false,
         kind: "run_action",
@@ -380,6 +405,7 @@ export function resolveQuickAction(
       };
     }
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: `Push & create ${terminology.shortLabel}`,
       disabled: false,
       kind: "run_action",
@@ -391,15 +417,17 @@ export function resolveQuickAction(
   // details panel, so the action button rests in its disabled up-to-date state.
   if (hasOpenPr && gitStatus.hasUpstream) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: "Commit",
       disabled: true,
       kind: "show_hint",
-      hint: "Branch is up to date. No action needed.",
+      hint: currentTranslator()("pullRequest.gitBranchUpToDate"),
     };
   }
 
   if (hasDefaultBranchDelta && !isDefaultRef) {
     return {
+      // i18n-ignore: English label identifier, shown through gitActionLabelText
       label: `Create ${terminology.shortLabel}`,
       disabled: false,
       kind: "run_action",
@@ -408,10 +436,11 @@ export function resolveQuickAction(
   }
 
   return {
+    // i18n-ignore: English label identifier, shown through gitActionLabelText
     label: "Commit",
     disabled: true,
     kind: "show_hint",
-    hint: "Branch is up to date. No action needed.",
+    hint: currentTranslator()("pullRequest.gitBranchUpToDate"),
   };
 }
 

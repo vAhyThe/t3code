@@ -108,8 +108,8 @@ function EnabledPullRequestThreadLinks({
     linking.mode === "multiple" ? ((relations.data ?? lastRelations)?.threads ?? []) : [];
   const linkedThreadsLabel =
     linkedThreads.length > 0
-      ? `Linked from ${linkedThreads.length} ${linkedThreads.length === 1 ? "thread" : "threads"}`
-      : "Linked threads";
+      ? t("pullRequest.linkedFromThreads", { count: linkedThreads.length })
+      : t("pullRequest.linkedThreads");
   return (
     <>
       {display === "count" && (linkedThreads.length > 0 || relations.error !== null) ? (

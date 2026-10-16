@@ -84,7 +84,7 @@ export function PullRequestReviewerPicker({
           : currentTranslator()("pullRequest.couldNotRequestReview", { login: candidate.login }),
         description: readableFailure(
           squashAtomCommandFailure(result),
-          "The host refused it. Check that you have write access on this repository, and that they still have access to it.",
+          currentTranslator()("pullRequest.hostRefusedWrite"),
         ),
       });
       return;
@@ -107,15 +107,15 @@ export function PullRequestReviewerPicker({
       onOpenChange={setOpen}
       query={query}
       onQueryChange={setQuery}
-      searchLabel="Search people with access"
+      searchLabel={t("pullRequest.searchPeopleWithAccess")}
       isPending={candidatesQuery.isPending && candidatesQuery.data === null}
       error={candidatesQuery.data === null ? candidatesQuery.error : null}
       candidates={candidates}
-      emptyLabel="Nobody else has access to this repository."
-      noMatchLabel="Nobody with access matches that."
-      errorLabel="The people with access could not be read."
+      emptyLabel={t("pullRequest.nobodyElseHasAccess")}
+      noMatchLabel={t("pullRequest.nobodyWithAccessMatches")}
+      errorLabel={t("pullRequest.peopleNotRead")}
       truncated={candidatesQuery.data?.truncated === true}
-      truncatedLabel="This repository has more people with access than are listed here. Ask for the rest on the host."
+      truncatedLabel={t("pullRequest.peopleTruncated")}
       candidateKey={(candidate) => `${candidate.kind}:${candidate.id}`}
       disabled={pending !== null}
       onSelect={(candidate) => void toggle(candidate)}
