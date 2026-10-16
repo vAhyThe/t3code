@@ -15,6 +15,7 @@ import { type ReactNode } from "react";
 import { getThreadSortTimestamp, sortThreads } from "../lib/threadSort";
 import { normalizeSearchText } from "../lib/utils";
 import { formatRelativeTimeLabel } from "../timestampFormat";
+import { currentTranslator } from "../i18n/I18nProvider";
 import { type Project, type SidebarThreadSummary, type Thread } from "../types";
 import {
   SETTINGS_SECTION_LABELS,
@@ -37,8 +38,11 @@ export function buildLinkedThreadActionItems(
   return input.threads.map((thread) => ({
     kind: "action",
     value: `thread:${input.environmentId}:${thread.id}`,
-    title: thread.title || "Untitled thread",
-    description: thread.archivedAt === null ? "Linked thread" : "Archived thread",
+    title: thread.title || currentTranslator()("shellNav.untitledThread"),
+    description:
+      thread.archivedAt === null
+        ? currentTranslator()("shellNav.linkedThread")
+        : currentTranslator()("shellNav.archivedThread"),
     searchTerms: [input.query, thread.title],
     icon: input.icon,
     run: () => input.runThread({ environmentId: input.environmentId, id: thread.id }),
@@ -265,7 +269,9 @@ export function buildCommandPaletteProjectMetadata(input: {
   const environmentLabels = new Set<string>();
 
   for (const project of input.projects) {
-    const label = input.locationByEnvironmentId.get(project.environmentId)?.label ?? "Remote";
+    const label =
+      input.locationByEnvironmentId.get(project.environmentId)?.label ??
+      currentTranslator()("shellNav.remoteEnvironment");
     searchTerms.push(project.title, project.workspaceRoot, label);
     environmentLabels.add(label);
   }
@@ -353,7 +359,7 @@ export function buildThreadActionItems<TThread extends BuildThreadActionItemsThr
       descriptionParts.push(`#${thread.branch}`);
     }
     if (thread.id === input.activeThreadId) {
-      descriptionParts.push("Current thread");
+      descriptionParts.push(currentTranslator()("shellNav.currentThread"));
     }
 
     const leadingContent = input.renderLeadingContent?.(thread);
@@ -485,21 +491,21 @@ export function filterCommandPaletteGroups(input: {
     if (input.projectSearchItems.length > 0) {
       searchableGroups.push({
         value: "projects-search",
-        label: "Projects",
+        label: currentTranslator()("shellNav.paletteGroupProjects"),
         items: input.projectSearchItems,
       });
     }
     if (input.settingsSearchItems && input.settingsSearchItems.length > 0) {
       searchableGroups.push({
         value: "settings-search",
-        label: "Settings",
+        label: currentTranslator()("shellNav.paletteGroupSettings"),
         items: input.settingsSearchItems,
       });
     }
     if (input.threadSearchItems.length > 0) {
       searchableGroups.push({
         value: "threads-search",
-        label: "Threads",
+        label: currentTranslator()("shellNav.paletteGroupThreads"),
         items: input.threadSearchItems,
       });
     }
@@ -574,7 +580,9 @@ export function buildBrowseGroups(input: {
     });
   }
 
-  return [{ value: "directories", label: "Directories", items }];
+  return [
+    { value: "directories", label: currentTranslator()("shellNav.paletteGroupDirectories"), items },
+  ];
 }
 
 export function filterPinnedBrowseEntries(input: {
@@ -612,12 +620,16 @@ export function buildRootGroups(input: {
 }): CommandPaletteGroup[] {
   const groups: CommandPaletteGroup[] = [];
   if (input.actionItems.length > 0) {
-    groups.push({ value: "actions", label: "Actions", items: input.actionItems });
+    groups.push({
+      value: "actions",
+      label: currentTranslator()("shellNav.paletteGroupActions"),
+      items: input.actionItems,
+    });
   }
   if (input.recentThreadItems.length > 0) {
     groups.push({
       value: "recent-threads",
-      label: "Recent Threads",
+      label: currentTranslator()("shellNav.paletteGroupRecentThreads"),
       items: input.recentThreadItems,
     });
   }
@@ -627,12 +639,12 @@ export function buildRootGroups(input: {
 export function getCommandPaletteInputPlaceholder(mode: CommandPaletteMode): string {
   switch (mode) {
     case "root":
-      return "Search commands, projects, and threads...";
+      return currentTranslator()("shellNav.palettePlaceholderRoot");
     case "root-browse":
-      return "Enter project path (e.g. ~/projects/my-app)";
+      return currentTranslator()("shellNav.palettePlaceholderRootBrowse");
     case "submenu":
-      return "Search...";
+      return currentTranslator()("shellNav.palettePlaceholderSubmenu");
     case "submenu-browse":
-      return "Enter path (e.g. ~/projects/my-app)";
+      return currentTranslator()("shellNav.palettePlaceholderSubmenuBrowse");
   }
 }
