@@ -9,6 +9,7 @@ import { APP_VERSION } from "~/branding";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { useDesktopUpdateState } from "~/state/desktopUpdate";
 import { serverEnvironment } from "~/state/server";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { resolveVersionMismatch } from "~/versionSkew";
 import type { ServerUpdateOutcome, ServerUpdateTarget } from "../ServerUpdateAction";
 import { stackedThreadToast, toastManager } from "../ui/toast";
@@ -98,7 +99,7 @@ export function retryFailedUpdateRunServers(
           ? providerFailure
           : outcome.status === "failed"
             ? outcome.message
-            : "Could not start the update",
+            : currentTranslator()("shellNav.couldNotStartUpdate"),
         { serverUpdated: outcome.status === "updated" },
       ),
     );
@@ -322,7 +323,12 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
       }
     };
     const timer = setTimeout(
-      () => settle(`Not back after ${HANDOFF_TIMEOUT_MS / 60_000} minutes`),
+      () =>
+        settle(
+          currentTranslator()("shellNav.notBackAfterMinutes", {
+            minutes: HANDOFF_TIMEOUT_MS / 60_000,
+          }),
+        ),
       server.startedAt + HANDOFF_TIMEOUT_MS - Date.now(),
     );
     const unsubscribe = appAtomRegistry.subscribe(
@@ -365,8 +371,11 @@ export function DesktopUpdateLaunchNotice() {
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: "Update did not apply",
-        description: `T3 Code is still on ${APP_VERSION}. Install ${notAppliedVersion} again from the update button.`,
+        title: currentTranslator()("shellNav.updateDidNotApply"),
+        description: currentTranslator()("shellNav.updateNotAppliedDescription", {
+          version: APP_VERSION,
+          notAppliedVersion,
+        }),
       }),
     );
   }, [notAppliedVersion]);

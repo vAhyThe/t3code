@@ -22,6 +22,7 @@ import {
 import { useEnvironments } from "../state/environments";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
+import { useT } from "../i18n/I18nProvider";
 
 function ChatIndexRouteView() {
   const { authGateState } = Route.useRouteContext();
@@ -107,19 +108,18 @@ function IndexDraftLanding() {
 }
 
 function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
+  const t = useT();
   return (
     <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none">
       {isElectron ? <WorkspacePageHeader electron /> : null}
       <Empty className="flex-1">
         <EmptyHeader className="max-w-md">
-          <EmptyTitle>Couldn’t start a new thread</EmptyTitle>
-          <EmptyDescription>
-            The project is still available. Try opening the draft again.
-          </EmptyDescription>
+          <EmptyTitle>{t("shellNav.draftStartErrorTitle")}</EmptyTitle>
+          <EmptyDescription>{t("shellNav.draftStartErrorDescription")}</EmptyDescription>
           <div className="mt-5 flex justify-center">
             <Button size="sm" onClick={onRetry}>
               <RefreshIcon size="md" />
-              Try again
+              {t("common.tryAgain")}
             </Button>
           </div>
         </EmptyHeader>
@@ -133,13 +133,14 @@ export const Route = createFileRoute("/_chat/")({
 });
 
 function HostedStaticOnboardingState() {
+  const t = useT();
   const cloudEnabled = hasCloudPublicConfig();
   const localEnvironmentOff = isLocalEnvironmentDisabled();
   const description = localEnvironmentOff
-    ? "The local environment is turned off. Connect a remote environment, or turn the local environment back on in Connections."
+    ? t("shellNav.localEnvironmentOff")
     : cloudEnabled
-      ? "Enable T3 Connect on that machine, then open Connections here to sign in with the same account. You can also add the machine using a pairing link."
-      : "Open Connections and add that machine using its pairing link. This app must be able to reach it.";
+      ? t("shellNav.enableT3ConnectPairing")
+      : t("shellNav.openConnectionsPairing");
 
   return (
     <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none">
@@ -158,16 +159,13 @@ function HostedStaticOnboardingState() {
               <div className="mx-auto mb-5 flex size-11 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground">
                 <LinkIcon className="size-5" />
               </div>
-              <EmptyTitle>Connect to a computer running T3 Code</EmptyTitle>
-              <EmptyDescription>
-                This app connects to T3 Code running on your computer or a server. Start the T3 Code
-                desktop app or command-line server on that machine and keep it running.
-              </EmptyDescription>
+              <EmptyTitle>{t("shellNav.connectToComputer")}</EmptyTitle>
+              <EmptyDescription>{t("shellNav.connectToComputerDescription")}</EmptyDescription>
               <EmptyDescription>{description}</EmptyDescription>
               <div className="mt-6 flex justify-center">
                 <Button render={<Link to="/settings/connections" />} size="sm">
                   <PlusIcon className="size-4" />
-                  Open Connections
+                  {t("shellNav.openConnections")}
                 </Button>
               </div>
             </EmptyHeader>

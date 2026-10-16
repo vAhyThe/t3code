@@ -3,6 +3,7 @@ import { TriangleAlertIcon } from "lucide-react";
 import { type ComponentProps, useCallback, useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { isElectron } from "../../env";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { cn } from "../../lib/utils";
 import { ensureLocalApi } from "../../localApi";
@@ -116,6 +117,7 @@ export function SidebarUpdateArchitectureWarning() {
 }
 
 function SidebarUpdateArchitectureWarningContent() {
+  const t = useT();
   const state = useDesktopUpdateState();
   const visible = shouldShowArm64IntelBuildWarning(state);
   const description = state && visible ? getArm64IntelBuildWarningDescription(state) : null;
@@ -125,7 +127,7 @@ function SidebarUpdateArchitectureWarningContent() {
   return (
     <Alert variant="warning">
       <TriangleAlertIcon />
-      <AlertTitle>Intel build on Apple Silicon</AlertTitle>
+      <AlertTitle>{t("shellNav.intelBuildOnAppleSilicon")}</AlertTitle>
       <AlertDescription>{description}</AlertDescription>
     </Alert>
   );
@@ -152,12 +154,13 @@ async function downloadLocalUpdate(
     const actionError = shouldToastDesktopUpdateActionResult(result)
       ? getDesktopUpdateActionError(result)
       : null;
-    if (actionError) reportError("Could not download update", actionError);
+    if (actionError)
+      reportError(currentTranslator()("shellNav.couldNotDownloadUpdate"), actionError);
     return result.completed;
   } catch (error) {
     reportError(
-      "Could not start update download",
-      error instanceof Error ? error.message : "An unexpected error occurred.",
+      currentTranslator()("shellNav.couldNotStartUpdateDownload"),
+      error instanceof Error ? error.message : currentTranslator()("shellNav.unexpectedError"),
     );
     return false;
   }
@@ -181,12 +184,12 @@ async function installLocalUpdate(
       ? getDesktopUpdateActionError(result)
       : null;
     if (!actionError) return true;
-    reportError("Could not install update", actionError);
+    reportError(currentTranslator()("shellNav.couldNotInstallUpdate"), actionError);
     return false;
   } catch (error) {
     reportError(
-      "Could not install update",
-      error instanceof Error ? error.message : "An unexpected error occurred.",
+      currentTranslator()("shellNav.couldNotInstallUpdate"),
+      error instanceof Error ? error.message : currentTranslator()("shellNav.unexpectedError"),
     );
     return false;
   }
@@ -203,6 +206,7 @@ export function SidebarUpdatePill() {
 }
 
 function SidebarUpdateControl() {
+  const t = useT();
   const state = useDesktopUpdateState();
   const [isActionPending, setIsActionPending] = useState(false);
   const [isConfirmingEverything, setIsConfirmingEverything] = useState(false);
@@ -249,10 +253,10 @@ function SidebarUpdateControl() {
     : showUpdateDetails
       ? state
         ? getDesktopUpdateButtonTooltip(state)
-        : "Update available"
+        : t("shellNav.updateAvailable")
       : showCheckIcon
-        ? "Checking for updates…"
-        : "Check for updates";
+        ? t("shellNav.checkingForUpdates")
+        : t("shellNav.checkForUpdates");
   const disabled = showCheckIcon
     ? true
     : runsEverything
@@ -307,8 +311,11 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not confirm update",
-            description: error instanceof Error ? error.message : "Update confirmation failed.",
+            title: currentTranslator()("shellNav.couldNotConfirmUpdate"),
+            description:
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellNav.updateConfirmationFailed"),
           }),
         );
         return;
@@ -332,9 +339,9 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not check for updates",
+            title: currentTranslator()("shellNav.couldNotCheckForUpdates"),
             description:
-              result.state.message ?? "Automatic updates are not available in this build.",
+              result.state.message ?? currentTranslator()("shellNav.automaticUpdatesUnavailable"),
           }),
         );
       })
@@ -342,8 +349,11 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not check for updates",
-            description: error instanceof Error ? error.message : "Update check failed.",
+            title: currentTranslator()("shellNav.couldNotCheckForUpdates"),
+            description:
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellNav.updateCheckFailed"),
           }),
         );
       })
@@ -370,8 +380,11 @@ function SidebarUpdateControl() {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not update everything",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          title: currentTranslator()("shellNav.couldNotUpdateEverything"),
+          description:
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("shellNav.unexpectedError"),
         }),
       );
     } finally {
@@ -539,7 +552,7 @@ function SidebarUpdateControl() {
         {showReleaseNotesPopover && state ? (
           <PopoverPopup
             align="center"
-            aria-label="Nightly update release notes"
+            aria-label={t("shellNav.nightlyUpdateReleaseNotes")}
             initialFocus={false}
             onKeyDownCapture={(event) => {
               if (

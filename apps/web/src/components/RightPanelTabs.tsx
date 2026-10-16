@@ -94,6 +94,8 @@ import { PierreEntryIcon } from "./chat/PierreEntryIcon";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { observeResize } from "~/lib/observeResize";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 interface RightPanelTabsProps {
   mode: PreviewPanelMode;
@@ -171,13 +173,13 @@ export function shouldOpenDefaultBrowserProfileFromMenuClick(
 }
 
 const SURFACE_DISABLED_REASONS = {
-  browser: "Browser previews are only available in the T3 Code desktop app.",
-  terminal: "Terminal surfaces are only available from a project thread.",
-  files: "Files are only available when a project is open.",
-  diff: "Diff is only available for server threads in Git repositories.",
-  pullRequest: "This thread's branch has no pull request yet.",
-  pullRequests: "No linked pull requests are available for this thread.",
-  device: "Devices are only available from a thread.",
+  browser: "shellNav.surfaceDisabledBrowser",
+  terminal: "shellNav.surfaceDisabledTerminal",
+  files: "shellNav.surfaceDisabledFiles",
+  diff: "shellNav.surfaceDisabledDiff",
+  pullRequest: "shellNav.surfaceDisabledPullRequest",
+  pullRequests: "shellNav.surfaceDisabledPullRequests",
+  device: "shellNav.surfaceDisabledDevice",
 } as const;
 
 /** Overlays that must win over the launcher's letter shortcuts. */
@@ -194,13 +196,13 @@ const LAUNCHER_SHORTCUT_BLOCKING_LAYERS = [
 
 /** One-line unavailability hints for the empty-state rows. */
 const SURFACE_UNAVAILABLE_HINTS = {
-  browser: "Only available in the desktop app.",
-  terminal: "Available when a project is open.",
-  files: "Available when a project is open.",
-  diff: "Available for Git repositories.",
-  pullRequest: "No pull request on this branch yet.",
-  pullRequests: "No linked pull requests available.",
-  device: "Available from a thread.",
+  browser: "shellNav.surfaceHintBrowser",
+  terminal: "shellNav.surfaceHintTerminal",
+  files: "shellNav.surfaceHintFiles",
+  diff: "shellNav.surfaceHintDiff",
+  pullRequest: "shellNav.surfaceHintPullRequest",
+  pullRequests: "shellNav.surfaceHintPullRequests",
+  device: "shellNav.surfaceHintDevice",
 } as const;
 
 type TabContextMenuAction =
@@ -243,7 +245,9 @@ export function tabMuteMenuItem(input: {
 }): { label: string; disabled: boolean } {
   const muted = input.overlay?.audioMuted ?? false;
   return {
-    label: muted ? "Unmute tab" : "Mute tab",
+    label: muted
+      ? currentTranslator()("shellNav.unmuteTab")
+      : currentTranslator()("shellNav.muteTab"),
     disabled: input.overlay === null || !input.canResolveRuntimeTabId,
   };
 }
@@ -293,18 +297,19 @@ export function surfaceShortcutTargetsTypingContext(
   );
 }
 
-function DisabledReasonTooltip(props: { reason: string; trigger: ReactElement }) {
+function DisabledReasonTooltip(props: { reason: MessageKey; trigger: ReactElement }) {
+  const t = useT();
   return (
     <Tooltip>
       <TooltipTrigger render={props.trigger} />
-      <TooltipPopup side="top">{props.reason}</TooltipPopup>
+      <TooltipPopup side="top">{t(props.reason)}</TooltipPopup>
     </Tooltip>
   );
 }
 
 function SurfaceMenuItem(props: {
   available: boolean;
-  disabledReason?: string;
+  disabledReason?: MessageKey;
   shortcut: string;
   onClick: () => void;
   children: ReactNode;
@@ -349,12 +354,14 @@ function RightPanelEmptyState(props: {
   pullRequestsAvailable: boolean;
   deviceAvailable: boolean;
 }) {
+  const t = useT();
   // -1 means no highlight: it only appears on hover or arrow use.
   const [highlight, setHighlight] = useState(-1);
 
   const actions = [
     {
-      label: "Browser",
+      label: "Browser", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceBrowser" as const,
       icon: Globe2,
       shortcut: "B",
       available: props.browserAvailable,
@@ -362,7 +369,8 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddBrowser,
     },
     {
-      label: "Terminal",
+      label: "Terminal", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceTerminal" as const,
       icon: TerminalSquare,
       shortcut: "T",
       available: props.terminalAvailable,
@@ -370,7 +378,8 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddTerminal,
     },
     {
-      label: "Files",
+      label: "Files", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceFiles" as const,
       icon: Files,
       shortcut: "F",
       available: props.filesAvailable,
@@ -378,7 +387,8 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddFiles,
     },
     {
-      label: "Diff",
+      label: "Diff", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceDiff" as const,
       icon: FileDiff,
       shortcut: "D",
       available: props.diffAvailable,
@@ -386,7 +396,8 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddDiff,
     },
     {
-      label: "Pull request",
+      label: "Pull request", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfacePullRequest" as const,
       icon: PullRequestGlyph.pullRequest,
       shortcut: "P",
       available: props.pullRequestAvailable,
@@ -394,7 +405,8 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddPullRequest,
     },
     {
-      label: "Linked pull requests",
+      label: "Linked pull requests", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceLinkedPullRequests" as const,
       icon: PullRequestGlyph.link,
       shortcut: "L",
       available: props.pullRequestsAvailable,
@@ -402,7 +414,9 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddPullRequests,
     },
     {
-      label: "Device",
+      label: "Device", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceDevice" as const,
+      // i18n-ignore: field is not rendered
       description: "Watch an iOS Simulator or Android Emulator.",
       icon: Smartphone,
       shortcut: "M",
@@ -492,7 +506,7 @@ function RightPanelEmptyState(props: {
       ref={focusOnMount}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      aria-label="Open a surface"
+      aria-label={t("shellNav.openASurface")}
       data-surface-launcher-keys={availableActions.map((action) => action.shortcut).join("")}
       className={cn(
         "scrollbar-gutter-both flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 outline-none",
@@ -502,7 +516,9 @@ function RightPanelEmptyState(props: {
       )}
     >
       <div className="w-full max-w-xs py-6">
-        <h3 className="mb-3 text-center font-medium text-foreground text-sm">Open a surface</h3>
+        <h3 className="mb-3 text-center font-medium text-foreground text-sm">
+          {t("shellNav.openASurface")}
+        </h3>
         <div className="flex flex-col gap-0.5">
           {actions.map((action) =>
             action.available ? (
@@ -535,7 +551,7 @@ function RightPanelEmptyState(props: {
                       action.label === "Browser" && props.browserProfiles.length > 1 && "pr-7",
                     )}
                   >
-                    {action.label}
+                    {t(action.labelKey)}
                   </span>
                   <Kbd>{action.shortcut}</Kbd>
                 </button>
@@ -549,7 +565,7 @@ function RightPanelEmptyState(props: {
                     <MenuTrigger
                       render={
                         <Button
-                          aria-label="Open browser in a profile"
+                          aria-label={t("shellNav.openBrowserInProfile")}
                           className="absolute top-1/2 right-8 -translate-y-1/2"
                           size="icon-xs"
                           variant="ghost-muted"
@@ -582,7 +598,7 @@ function RightPanelEmptyState(props: {
                     className="flex h-8 w-full cursor-default items-center gap-2.5 rounded-(--control-radius) px-2.5 text-left text-sm opacity-50"
                   >
                     {actionIcon(action, "size-4")}
-                    <span className="min-w-0 flex-1 truncate">{action.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{t(action.labelKey)}</span>
                     <Kbd>{action.shortcut}</Kbd>
                   </div>
                 }
@@ -602,9 +618,9 @@ function surfaceTitle(
 ): string {
   switch (surface.kind) {
     case "diff":
-      return "Diff";
+      return currentTranslator()("shellNav.surfaceDiff");
     case "files":
-      return "Files";
+      return currentTranslator()("shellNav.surfaceFiles");
     case "file":
       return surface.relativePath.slice(
         Math.max(surface.relativePath.lastIndexOf("/"), surface.relativePath.lastIndexOf("\\")) + 1,
@@ -617,17 +633,20 @@ function surfaceTitle(
     case "pull-request":
       return `#${surface.number}`;
     case "pull-requests":
-      return "Pull requests";
+      return currentTranslator()("shellNav.surfacePullRequests");
     case "device":
-      return surface.title ?? surface.target?.name ?? "Device";
+      return surface.title ?? surface.target?.name ?? currentTranslator()("shellNav.surfaceDevice");
     case "preview": {
       const snapshot = surface.resourceId ? sessions[surface.resourceId] : null;
-      if (!snapshot || snapshot.navStatus._tag === "Idle") return "Browser";
+      if (!snapshot || snapshot.navStatus._tag === "Idle")
+        return currentTranslator()("shellNav.surfaceBrowser");
       if (snapshot.navStatus.title.trim().length > 0) return snapshot.navStatus.title;
       try {
-        return new URL(snapshot.navStatus.url).host || "Browser";
+        return (
+          new URL(snapshot.navStatus.url).host || currentTranslator()("shellNav.surfaceBrowser")
+        );
       } catch {
-        return "Browser";
+        return currentTranslator()("shellNav.surfaceBrowser");
       }
     }
   }
@@ -866,6 +885,7 @@ function SortableTab({
 }
 
 export function RightPanelTabs(props: RightPanelTabsProps) {
+  const t = useT();
   const ownsDesktopTitleBar = isElectron && props.mode === "inline";
   const browserProfiles = useBrowserDefaults().profiles;
   const { resolvedTheme } = useTheme();
@@ -936,7 +956,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
 
   const addSurfaceActions = [
     {
-      label: "Browser",
+      label: "Browser", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceBrowser" as const,
       icon: Globe2,
       shortcut: "B",
       available: props.browserAvailable,
@@ -944,7 +965,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddBrowser,
     },
     {
-      label: "Terminal",
+      label: "Terminal", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceTerminal" as const,
       icon: TerminalSquare,
       shortcut: "T",
       available: props.terminalAvailable,
@@ -952,7 +974,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddTerminal,
     },
     {
-      label: "Files",
+      label: "Files", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceFiles" as const,
       icon: Files,
       shortcut: "F",
       available: props.filesAvailable,
@@ -960,7 +983,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddFiles,
     },
     {
-      label: "Diff",
+      label: "Diff", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceDiff" as const,
       icon: FileDiff,
       shortcut: "D",
       available: props.diffAvailable,
@@ -968,7 +992,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddDiff,
     },
     {
-      label: "Pull request",
+      label: "Pull request", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfacePullRequest" as const,
       icon: PullRequestGlyph.pullRequest,
       shortcut: "P",
       available: props.pullRequestAvailable,
@@ -976,7 +1001,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddPullRequest,
     },
     {
-      label: "Linked pull requests",
+      label: "Linked pull requests", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceLinkedPullRequests" as const,
       icon: PullRequestGlyph.link,
       shortcut: "L",
       available: props.pullRequestsAvailable,
@@ -984,7 +1010,8 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddPullRequests,
     },
     {
-      label: "Device",
+      label: "Device", // i18n-ignore: surface id, translated at render
+      labelKey: "shellNav.surfaceDevice" as const,
       icon: Smartphone,
       shortcut: "M",
       available: props.deviceAvailable,
@@ -1015,9 +1042,9 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
 
       const items: ContextMenuItem<TabContextMenuAction>[] = [];
       if (surface.kind === "device" && props.onRenameDevice)
-        items.push({ id: "rename", label: "Rename" });
+        items.push({ id: "rename", label: currentTranslator()("shellNav.renameSurface") });
       if (surface.kind === "file" && surface.attachment === undefined) {
-        items.push({ id: "copy-path", label: "Copy path" });
+        items.push({ id: "copy-path", label: currentTranslator()("shellNav.copyPathSurface") });
       }
       const menuPreviewTabId = previewTabIdOf(surface, props.previewSessions);
       // Desktop overlay state only arrives once the preview manager has created
@@ -1039,20 +1066,20 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
         });
       }
       items.push(
-        { id: "close", label: "Close" },
+        { id: "close", label: currentTranslator()("shellNav.closeTab") },
         {
           id: "close-others",
-          label: "Close others",
+          label: currentTranslator()("shellNav.closeOthers"),
           disabled: props.surfaces.length <= 1,
         },
         {
           id: "close-to-right",
-          label: "Close to the right",
+          label: currentTranslator()("shellNav.closeToTheRight"),
           disabled: surfaceIndex >= props.surfaces.length - 1,
         },
         {
           id: "close-all",
-          label: "Close all",
+          label: currentTranslator()("shellNav.closeAll"),
           disabled: props.surfaces.length === 0,
         },
       );
@@ -1224,7 +1251,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     )}
                   >
                     <PanelTabCloseButton
-                      label={`Close ${title}`}
+                      label={t("shellNav.closeTitle", { title })}
                       onClick={() => props.onCloseSurface(surface)}
                     >
                       <SurfaceIcon
@@ -1249,7 +1276,11 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                             <button
                               type="button"
                               className="cursor-pointer flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted"
-                              aria-label={audio === "muted" ? `Unmute ${title}` : `Mute ${title}`}
+                              aria-label={
+                                audio === "muted"
+                                  ? t("shellNav.unmuteTitle", { title })
+                                  : t("shellNav.muteTitle", { title })
+                              }
                               onClick={(event) => {
                                 // Sibling of the close button, inside a tab that
                                 // activates on click: keep this to the toggle.
@@ -1266,12 +1297,14 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                             </button>
                           }
                         />
-                        <TooltipPopup>{audio === "muted" ? "Unmute tab" : "Mute tab"}</TooltipPopup>
+                        <TooltipPopup>
+                          {audio === "muted" ? t("shellNav.unmuteTab") : t("shellNav.muteTab")}
+                        </TooltipPopup>
                       </Tooltip>
                     )}
                     {renamingDevice === surface.id ? (
                       <input
-                        aria-label="Device tab name"
+                        aria-label={t("shellNav.deviceTabName")}
                         className="w-24 min-w-0 rounded-sm bg-background px-1 outline-none ring-1 ring-inset ring-ring"
                         defaultValue={title}
                         ref={(element) => {
@@ -1331,7 +1364,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                   ref={addSurfaceTriggerRef}
                   render={
                     <Button
-                      aria-label="Add panel surface"
+                      aria-label={t("shellNav.addPanelSurface")}
                       className="shrink-0"
                       size="icon-xs"
                       variant="ghost-muted"
@@ -1376,7 +1409,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                             }}
                           >
                             <Icon />
-                            {action.label}
+                            {t(action.labelKey)}
                             <MenuShortcut>{action.shortcut}</MenuShortcut>
                           </MenuSubTrigger>
                           {/*
@@ -1406,7 +1439,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                         onClick={action.onClick}
                       >
                         <Icon />
-                        {action.label}
+                        {t(action.labelKey)}
                       </SurfaceMenuItem>
                     );
                   })}
@@ -1419,14 +1452,14 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
           <div
             className="flex shrink-0 items-center gap-0.5 [-webkit-app-region:no-drag]"
             role="group"
-            aria-label="Scroll panel tabs"
+            aria-label={t("shellNav.scrollPanelTabs")}
           >
             <Tooltip>
               <TooltipTrigger
                 render={
                   <span className="inline-flex">
                     <Button
-                      aria-label="Scroll tabs left"
+                      aria-label={t("shellNav.scrollTabsLeft")}
                       disabled={!tabScrollState.canScrollLeft}
                       onClick={() => scrollTabs(-1)}
                       size="icon-xs"
@@ -1437,14 +1470,14 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                   </span>
                 }
               />
-              <TooltipPopup>Scroll tabs left</TooltipPopup>
+              <TooltipPopup>{t("shellNav.scrollTabsLeft")}</TooltipPopup>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 render={
                   <span className="inline-flex">
                     <Button
-                      aria-label="Scroll tabs right"
+                      aria-label={t("shellNav.scrollTabsRight")}
                       disabled={!tabScrollState.canScrollRight}
                       onClick={() => scrollTabs(1)}
                       size="icon-xs"
@@ -1455,7 +1488,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                   </span>
                 }
               />
-              <TooltipPopup>Scroll tabs right</TooltipPopup>
+              <TooltipPopup>{t("shellNav.scrollTabsRight")}</TooltipPopup>
             </Tooltip>
           </div>
         ) : null}
@@ -1504,6 +1537,7 @@ function DeviceTabTooltip(props: {
   environmentId: EnvironmentId | null;
   title: string;
 }) {
+  const t = useT();
   const target = props.surface.target;
   const { state } = useDeviceState(target ? props.environmentId : null);
   const device = target
@@ -1515,7 +1549,7 @@ function DeviceTabTooltip(props: {
       <span>{props.title}</span>
       {target ? (
         <span className="text-muted-foreground">
-          {host?.label ?? "Device host"} ·{" "}
+          {host?.label ?? t("shellNav.deviceHost")} · {/* i18n-ignore: platform names */}
           {device?.version ?? (target.platform === "ios" ? "iOS" : "Android")}
         </span>
       ) : null}

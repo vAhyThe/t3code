@@ -65,6 +65,7 @@ import {
 } from "../logicalProject";
 import { useUiStateStore } from "../uiStateStore";
 import { syncBrowserChromeTheme } from "../hooks/useTheme";
+import { currentTranslator, useT } from "../i18n/I18nProvider";
 import { configureClientTracing } from "../observability/clientTracing";
 import { resolveInitialServerAuthGateState } from "../environments/primary";
 import { hasHostedPairingRequest, isHostedStaticApp } from "../hostedPairing";
@@ -127,15 +128,15 @@ export const Route = createRootRoute({
 });
 
 function RootRouteNotFoundView() {
+  const t = useT();
   return (
     <main className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-6">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
-        <h1 className="text-lg font-medium text-foreground">Page not found</h1>
+        <h1 className="text-lg font-medium text-foreground">{t("shellNav.pageNotFound")}</h1>
         <p className="text-sm text-muted-foreground">
-          This link doesn't point to a page in {APP_DISPLAY_NAME}. Go home to choose a project or
-          start a thread.
+          {t("shellNav.pageNotFoundDescription", { app: APP_DISPLAY_NAME })}
         </p>
-        <Button render={<Link to="/" replace />}>Go home</Button>
+        <Button render={<Link to="/" replace />}>{t("shellNav.goHome")}</Button>
       </div>
     </main>
   );
@@ -402,6 +403,7 @@ function HostedStaticEnvironmentBootstrap() {
 }
 
 function RootRouteErrorView({ error }: ErrorComponentProps) {
+  const t = useT();
   const router = useRouter();
   const message = errorMessage(error);
   // Router pathname rather than window.location: desktop uses hash history, where the window path is always "/".
@@ -412,22 +414,24 @@ function RootRouteErrorView({ error }: ErrorComponentProps) {
     <StandalonePage tone="error">
       <StandalonePageHeader
         eyebrow={APP_DISPLAY_NAME}
-        title="Something went wrong."
+        title={t("shellNav.somethingWentWrong")}
         description={message}
       />
 
       <div className="mt-5 flex flex-wrap gap-2">
         <Button size="sm" onClick={() => void router.invalidate()}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-          Reload app
+          {t("shellNav.reloadApp")}
         </Button>
         <CopyErrorButton report={report} />
       </div>
 
       <div className="mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
-        <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground">Error report</p>
+        <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          {t("shellNav.errorReport")}
+        </p>
         <pre className="max-h-64 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs whitespace-pre-wrap text-foreground/85">
           {report}
         </pre>
@@ -438,12 +442,13 @@ function RootRouteErrorView({ error }: ErrorComponentProps) {
 
 /** Copies the full error report and swaps to a check mark for a moment as confirmation. */
 function CopyErrorButton({ report }: { report: string }) {
+  const t = useT();
   const { copyToClipboard, isCopied } = useCopyToClipboard({ target: "error-report" });
 
   return (
     <Button size="sm" variant="outline" onClick={() => copyToClipboard(report)}>
       <MorphIcon className={cn(isCopied && "text-success")} icon={isCopied ? Check : Copy} />
-      {isCopied ? "Copied" : "Copy error"}
+      {isCopied ? t("shellNav.copied") : t("shellNav.copyError")}
     </Button>
   );
 }
@@ -457,7 +462,7 @@ function errorMessage(error: unknown): string {
     return error;
   }
 
-  return "An unexpected router error occurred.";
+  return currentTranslator()("shellNav.unexpectedRouterError");
 }
 
 function errorDetails(error: unknown): string {
@@ -472,7 +477,7 @@ function errorDetails(error: unknown): string {
   try {
     return JSON.stringify(error, null, 2);
   } catch {
-    return "No additional error details are available.";
+    return currentTranslator()("shellNav.noErrorDetails");
   }
 }
 
@@ -582,8 +587,8 @@ function EventRouter({
     if (decision._tag === "Success") {
       toastManager.add({
         type: "success",
-        title: "Keybindings updated",
-        description: "Keybindings configuration reloaded successfully.",
+        title: currentTranslator()("shellNav.keybindingsUpdated"),
+        description: currentTranslator()("shellNav.keybindingsReloaded"),
       });
       return;
     }
@@ -591,7 +596,7 @@ function EventRouter({
     toastManager.add(
       stackedThreadToast({
         type: "warning",
-        title: "Invalid keybindings configuration",
+        title: currentTranslator()("shellNav.invalidKeybindingsConfig"),
         description: (
           <KeybindingsConfigWarning
             message={decision.message}
