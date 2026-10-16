@@ -11,6 +11,7 @@ import {
   ComboboxPopup,
   ComboboxTrigger,
 } from "../ui/combobox";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { SelectButton } from "../ui/select";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 
@@ -157,6 +158,7 @@ export function FontFamilyPicker({
     return result;
   }, [query, families]);
 
+  const t = useT();
   const selectedValue = selectedFamily.length === 0 ? DEFAULT_FONT_VALUE : selectedFamily;
 
   const handlePick = (value: string) => {
@@ -165,8 +167,8 @@ export function FontFamilyPicker({
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: `"${value}" isn't monospace`,
-          description: "Code and terminal need a fixed-width font, so the current font was kept.",
+          title: currentTranslator()("settingsB.fontNotMonospace", { font: value }),
+          description: currentTranslator()("settingsB.fontMonospaceRequired"),
         }),
       );
       return;
@@ -218,12 +220,12 @@ export function FontFamilyPicker({
       </ComboboxTrigger>
       <ComboboxPopup align="end" className="flex w-72 flex-col">
         <ComboboxSearchInput
-          placeholder="Search fonts…"
+          placeholder={t("settingsB.fontSearch")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ComboboxEmpty>No fonts found.</ComboboxEmpty>
+          <ComboboxEmpty>{t("settingsB.fontNoneFound")}</ComboboxEmpty>
           <div className="relative min-h-0 max-h-72 w-full flex-1 overflow-hidden">
             <ComboboxListVirtualized>
               <LegendList<string>
