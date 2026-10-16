@@ -2,7 +2,7 @@ import type { ProviderAuthResponse } from "@t3tools/contracts";
 import { useEffect, useRef, useState } from "react";
 import { GhosttyTerminalSurface } from "../../terminal/ghostty/surface";
 import { ensureLocalApi } from "../../localApi";
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { terminalThemeFromApp } from "../ThreadTerminalDrawer";
 
 /** Loaded only for an interactive login. PTY input is serialized by the parent. */
@@ -46,7 +46,7 @@ export default function ProviderAuthTerminal({
         if (/^https?:\/\//i.test(url))
           void ensureLocalApi()
             .shell.openExternal(url)
-            .catch(() => setError("Could not open the provider link."));
+            .catch(() => setError(currentTranslator()("settingsC.authOpenLinkFailed")));
       },
     })
       .then((terminal) => {

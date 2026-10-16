@@ -142,18 +142,18 @@ function ProviderSetupActions({
     installation?.phase === "downloading"
       ? `Downloading ${(installation.downloadedBytes / 1_000_000).toFixed(1)} MB${installation.totalBytes === null ? "" : ` of ${(installation.totalBytes / 1_000_000).toFixed(1)} MB`}.`
       : installation?.phase === "extracting"
-        ? "Extracting Antigravity."
+        ? currentTranslator()("settingsC.extractingAntigravity")
         : installation?.phase === "verifying"
-          ? "Checking the downloaded runtime."
+          ? currentTranslator()("settingsC.checkingDownloadedRuntime")
           : installed
             ? "Installed."
             : usesCustomBinary
               ? enabled
-                ? "The configured Antigravity runtime is unavailable."
-                : "The configured Antigravity runtime has not been checked."
+                ? currentTranslator()("settingsC.configuredRuntimeUnavailable")
+                : currentTranslator()("settingsC.configuredRuntimeNotChecked")
               : installation?.totalBytes
                 ? `${Math.ceil(installation.totalBytes / 1_000_000)} MB download.`
-                : "Not installed.";
+                : currentTranslator()("settingsC.notInstalled");
 
   async function runCommand<A, E>(
     label: string,
@@ -168,7 +168,11 @@ function ProviderSetupActions({
       if (result._tag === "Failure") {
         if (!isAtomCommandInterrupted(result)) {
           const failure = squashAtomCommandFailure(result);
-          setError(failure instanceof Error ? failure.message : "Provider setup failed.");
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : currentTranslator()("settingsC.providerSetupFailed"),
+          );
         }
         return false;
       }
@@ -187,7 +191,9 @@ function ProviderSetupActions({
       `Remove the downloaded Antigravity runtime from ${environmentLabel}? Google sign-in and thread history are kept.`,
     );
     if (confirmed) {
-      await runCommand("Removing runtime", () => removeInstall(target));
+      await runCommand(currentTranslator()("settingsC.removingRuntime"), () =>
+        removeInstall(target),
+      );
     }
   }
 
@@ -241,7 +247,7 @@ function ProviderSetupActions({
                     onClick={() => {
                       const operationId = installation.operationId;
                       if (!operationId) return;
-                      void runCommand("Cancelling installation", () =>
+                      void runCommand(currentTranslator()("settingsC.cancellingInstallation"), () =>
                         cancelInstall({ environmentId, input: { instanceId, operationId } }),
                       );
                     }}
@@ -254,7 +260,9 @@ function ProviderSetupActions({
                     variant="outline"
                     disabled={actionsDisabled || installation === null || authActive}
                     onClick={() =>
-                      void runCommand("Starting installation", () => startInstall(target))
+                      void runCommand(currentTranslator()("settingsC.startingInstallation"), () =>
+                        startInstall(target),
+                      )
                     }
                   >
                     {installation?.installedVersion

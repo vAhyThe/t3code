@@ -17,7 +17,7 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { CustomModelEditor } from "./CustomModelEditor";
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 
 /**
  * Placeholder text for the "add a custom model" input, keyed by driver
@@ -51,8 +51,9 @@ function describeModelCapabilities(model: ServerProviderModel): string[] {
         descriptor.type === "select" &&
         descriptor.options.some((option) => option.id === "fast" || option.label === "Fast")),
   );
-  if (hasFastMode) labels.push("Fast mode");
-  if (descriptors.some((descriptor) => descriptor.id === "thinking")) labels.push("Thinking");
+  if (hasFastMode) labels.push(currentTranslator()("settingsC.capFastMode"));
+  if (descriptors.some((descriptor) => descriptor.id === "thinking"))
+    labels.push(currentTranslator()("settingsC.capThinking"));
   if (
     descriptors.some(
       (descriptor) =>
@@ -63,7 +64,7 @@ function describeModelCapabilities(model: ServerProviderModel): string[] {
           descriptor.id === "variant"),
     )
   ) {
-    labels.push("Reasoning");
+    labels.push(currentTranslator()("settingsC.capReasoning"));
   }
   return labels;
 }
@@ -161,7 +162,7 @@ interface ProviderModelsSectionProps {
  * cards on screen don't fight over the input value.
  *
  * Validation mirrors the pre-consolidation logic in `SettingsPanels`:
- *   - empty / whitespace → "Enter a model slug."
+ *   - empty / whitespace → currentTranslator()("settingsC.enterModelSlug")
  *   - duplicate of a non-custom (probe-reported) slug → "already built in"
  *   - exceeds `MAX_CUSTOM_MODEL_LENGTH` → length error
  *   - duplicate of an already-saved custom slug → already-saved error
@@ -238,11 +239,11 @@ export function ProviderModelsSection({
     if (!canManageCustomModels || driverKind === "antigravity") return;
     const normalized = normalizeCustomModelSlug(input);
     if (!normalized) {
-      setError("Enter a model slug.");
+      setError(currentTranslator()("settingsC.enterModelSlug"));
       return;
     }
     if (models.some((model) => !model.isCustom && model.slug === normalized)) {
-      setError("That model is already built in.");
+      setError(currentTranslator()("settingsC.modelAlreadyBuiltIn"));
       return;
     }
     if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
@@ -250,7 +251,7 @@ export function ProviderModelsSection({
       return;
     }
     if (customModels.some((entry) => entry.slug === normalized)) {
-      setError("That custom model is already saved.");
+      setError(currentTranslator()("settingsC.customModelAlreadySaved"));
       return;
     }
 
@@ -435,10 +436,10 @@ export function ProviderModelsSection({
 
   const pickerTooltip = (model: DisplayModel, isHidden: boolean) =>
     model.isCustom
-      ? "Custom models are always shown in the picker"
+      ? currentTranslator()("settingsC.customAlwaysShown")
       : isHidden
-        ? "Hidden from picker"
-        : "Shown in picker";
+        ? currentTranslator()("settingsC.hiddenFromPicker")
+        : currentTranslator()("settingsC.shownInPicker");
 
   // The trigger is a wrapper span: a disabled switch gets no pointer events,
   // so it could not open the tooltip itself.
@@ -589,13 +590,13 @@ export function ProviderModelsSection({
           return (
             <div key={`${instanceId}:${model.slug}:group`}>
               {startsGroup && favoriteCount > 0 && group === "favorite"
-                ? groupLabel("Favorites", index === 0)
+                ? groupLabel(currentTranslator()("settingsC.favoritesGroup"), index === 0)
                 : null}
               {startsGroup && favoriteCount > 0 && group === "visible"
-                ? groupLabel("All", index === 0)
+                ? groupLabel(currentTranslator()("settingsC.allGroup"), index === 0)
                 : null}
               {startsGroup && group === "hidden"
-                ? groupLabel("Hidden from picker", index === 0)
+                ? groupLabel(currentTranslator()("settingsC.hiddenFromPicker"), index === 0)
                 : null}
               {renderRow(model)}
               {editingEntry ? (

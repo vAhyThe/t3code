@@ -245,12 +245,17 @@ export function ProviderAuthenticationSection({
                       onClick={() => {
                         // Copy inside the click so the clipboard keeps the user
                         // activation; the link only works once consent is recorded.
-                        const copied = writeTextToClipboard(url, "Provider sign-in link");
+                        const copied = writeTextToClipboard(
+                          url,
+                          currentTranslator()("settingsC.authSignInLinkTarget"),
+                        );
                         void (async () => {
                           await copied;
                           if (interaction?.type === "browser" && interaction.requiresConsent)
                             await send({ type: "browser", action: "accept" });
-                        })().catch(() => setError("Could not copy the sign-in link."));
+                        })().catch(() =>
+                          setError(currentTranslator()("settingsC.couldNotCopySignInLink")),
+                        );
                       }}
                     >
                       <CopyIcon />
@@ -393,14 +398,14 @@ export function ProviderAuthenticationSection({
                         if (result._tag !== "Success") {
                           terminalQueue.current = [];
                           if (!isAtomCommandInterrupted(result))
-                            setError("The provider sign-in terminal is no longer available.");
+                            setError(currentTranslator()("settingsC.terminalNoLongerAvailable"));
                           break;
                         }
                       }
                     })()
                       .catch(() => {
                         terminalQueue.current = [];
-                        setError("Could not send input to the provider sign-in terminal.");
+                        setError(currentTranslator()("settingsC.couldNotSendTerminalInput"));
                       })
                       .finally(() => {
                         terminalSending.current = false;

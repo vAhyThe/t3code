@@ -22,7 +22,7 @@ import {
   usePrimarySettingsAvailable,
 } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { WorkspacePageContainer, type WorkspacePageWidth } from "../WorkspacePageContainer";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -412,7 +412,7 @@ export function SettingsRow({
                   : (primaryEnvironment?.label ?? "the primary environment")
               }.`
             : context
-              ? "Reconnect the selected environment to change this setting."
+              ? currentTranslator()("settingsC.reconnectToChangeSetting")
               : PRIMARY_SETTINGS_UNAVAILABLE_MESSAGE,
         )
       : environmentWide && control
@@ -432,16 +432,16 @@ export function SettingsRow({
       }),
     );
   const inheritance: { state: SettingInheritanceState; summary: string } = mixed
-    ? { state: "mixed", summary: "Mixed across selected environments" }
+    ? { state: "mixed", summary: currentTranslator()("settingsC.mixedAcrossEnvironments") }
     : source === "project"
-      ? { state: "overridden", summary: "Overridden for this project" }
+      ? { state: "overridden", summary: currentTranslator()("settingsC.overriddenForProject") }
       : source === "t3.json"
         ? { state: "inherited", summary: "Inherited from the repository's t3.json" }
         : source === "environment" && scopedKeys.length > 0
           ? { state: "inherited", summary: `Inherited from ${inheritedFrom}` }
           : customized
-            ? { state: "environment", summary: "Set on the environment" }
-            : { state: "default", summary: "Built-in default" };
+            ? { state: "environment", summary: currentTranslator()("settingsC.setOnEnvironment") }
+            : { state: "default", summary: currentTranslator()("settingsC.builtInDefault") };
   const renderedInheritance =
     context && serverScoped && settingKeys.length > 0 ? (
       <SettingInheritance

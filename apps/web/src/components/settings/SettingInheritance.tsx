@@ -30,9 +30,15 @@ interface InheritanceLayer {
 }
 
 const WRITING_STYLE_LABELS: Record<string, string> = {
-  repo_conventions: "Repository conventions",
-  conventional_commits: "Conventional Commits",
-  custom: "Custom instructions",
+  get repo_conventions() {
+    return currentTranslator()("settingsC.writingRepoConventions");
+  },
+  get conventional_commits() {
+    return currentTranslator()("settingsC.writingConventionalCommits");
+  },
+  get custom() {
+    return currentTranslator()("settingsC.writingCustom");
+  },
 };
 
 /** Human labels for the values the chain can show; falls back to a type summary. */
