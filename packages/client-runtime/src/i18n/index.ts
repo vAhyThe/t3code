@@ -1,4 +1,5 @@
 export * from "./locales.ts";
+export * from "./relativeTime.ts";
 export * from "./richText.ts";
 export {
   createTranslator,
