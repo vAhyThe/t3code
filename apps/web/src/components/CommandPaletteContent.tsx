@@ -3,6 +3,7 @@ import { type ComponentProps, type ReactNode, useLayoutEffect, useRef } from "re
 
 import { Command, CommandFooter, CommandInput, CommandPanel } from "./ui/command";
 import { Kbd, KbdGroup } from "./ui/kbd";
+import { useT } from "~/i18n/I18nProvider";
 
 type CommandPaletteContentProps = Omit<ComponentProps<typeof Command>, "children"> & {
   readonly children: ReactNode;
@@ -37,6 +38,7 @@ export function CommandPaletteContent({
   testId,
   ...commandProps
 }: CommandPaletteContentProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Direct-open flows replace the initial palette view after the dialog has
@@ -73,21 +75,24 @@ export function CommandPaletteContent({
               <Kbd>
                 <ArrowDownIcon />
               </Kbd>
-              <span>Navigate</span>
+              <span>{t("shellRest.commandPaletteNavigate")}</span>
             </KbdGroup>
             {footerActionLabel !== undefined ? (
               <KbdGroup>
+                {/* i18n-ignore: key name shown on the key cap */}
                 <Kbd>Enter</Kbd>
                 <span>{footerActionLabel}</span>
               </KbdGroup>
             ) : null}
             {showBackHint ? (
               <KbdGroup>
+                {/* i18n-ignore: key name shown on the key cap */}
                 <Kbd>Backspace</Kbd>
-                <span>Back</span>
+                <span>{t("shellRest.commandPaletteBack")}</span>
               </KbdGroup>
             ) : null}
             <KbdGroup>
+              {/* i18n-ignore: key name shown on the key cap */}
               <Kbd>Esc</Kbd>
               <span>{escapeLabel}</span>
             </KbdGroup>

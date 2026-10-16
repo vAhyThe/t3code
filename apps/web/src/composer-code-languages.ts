@@ -1,3 +1,5 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 /**
  * The languages a composer fence can be switched to from its header, and how
  * a choice is written back into the fence's info string.
@@ -8,45 +10,50 @@
  * fence line, where it shows as its own entry.
  */
 export const CODE_BLOCK_LANGUAGES = [
-  { id: "", label: "Plain text" },
-  { id: "bash", label: "Bash" },
-  { id: "c", label: "C" },
-  { id: "cpp", label: "C++" },
-  { id: "csharp", label: "C#" },
-  { id: "css", label: "CSS" },
-  { id: "dart", label: "Dart" },
-  { id: "diff", label: "Diff" },
-  { id: "dockerfile", label: "Dockerfile" },
-  { id: "elixir", label: "Elixir" },
-  { id: "go", label: "Go" },
-  { id: "graphql", label: "GraphQL" },
-  { id: "haskell", label: "Haskell" },
-  { id: "html", label: "HTML" },
-  { id: "java", label: "Java" },
-  { id: "javascript", label: "JavaScript" },
-  { id: "json", label: "JSON" },
-  { id: "jsx", label: "JSX" },
-  { id: "kotlin", label: "Kotlin" },
-  { id: "lua", label: "Lua" },
-  { id: "markdown", label: "Markdown" },
-  { id: "php", label: "PHP" },
-  { id: "powershell", label: "PowerShell" },
-  { id: "python", label: "Python" },
-  { id: "r", label: "R" },
-  { id: "ruby", label: "Ruby" },
-  { id: "rust", label: "Rust" },
-  { id: "scala", label: "Scala" },
-  { id: "scss", label: "SCSS" },
-  { id: "sql", label: "SQL" },
-  { id: "svelte", label: "Svelte" },
-  { id: "swift", label: "Swift" },
-  { id: "toml", label: "TOML" },
-  { id: "tsx", label: "TSX" },
-  { id: "typescript", label: "TypeScript" },
-  { id: "vue", label: "Vue" },
-  { id: "xml", label: "XML" },
-  { id: "yaml", label: "YAML" },
-  { id: "zig", label: "Zig" },
+  {
+    id: "",
+    get label() {
+      return currentTranslator()("shellRest.plainText");
+    },
+  },
+  { id: "bash", label: "Bash" }, // i18n-ignore: language name in the picker
+  { id: "c", label: "C" }, // i18n-ignore: language name in the picker
+  { id: "cpp", label: "C++" }, // i18n-ignore: language name in the picker
+  { id: "csharp", label: "C#" }, // i18n-ignore: language name in the picker
+  { id: "css", label: "CSS" }, // i18n-ignore: language name in the picker
+  { id: "dart", label: "Dart" }, // i18n-ignore: language name in the picker
+  { id: "diff", label: "Diff" }, // i18n-ignore: language name in the picker
+  { id: "dockerfile", label: "Dockerfile" }, // i18n-ignore: language name in the picker
+  { id: "elixir", label: "Elixir" }, // i18n-ignore: language name in the picker
+  { id: "go", label: "Go" }, // i18n-ignore: language name in the picker
+  { id: "graphql", label: "GraphQL" }, // i18n-ignore: language name in the picker
+  { id: "haskell", label: "Haskell" }, // i18n-ignore: language name in the picker
+  { id: "html", label: "HTML" }, // i18n-ignore: language name in the picker
+  { id: "java", label: "Java" }, // i18n-ignore: language name in the picker
+  { id: "javascript", label: "JavaScript" }, // i18n-ignore: language name in the picker
+  { id: "json", label: "JSON" }, // i18n-ignore: language name in the picker
+  { id: "jsx", label: "JSX" }, // i18n-ignore: language name in the picker
+  { id: "kotlin", label: "Kotlin" }, // i18n-ignore: language name in the picker
+  { id: "lua", label: "Lua" }, // i18n-ignore: language name in the picker
+  { id: "markdown", label: "Markdown" }, // i18n-ignore: language name in the picker
+  { id: "php", label: "PHP" }, // i18n-ignore: language name in the picker
+  { id: "powershell", label: "PowerShell" }, // i18n-ignore: language name in the picker
+  { id: "python", label: "Python" }, // i18n-ignore: language name in the picker
+  { id: "r", label: "R" }, // i18n-ignore: language name in the picker
+  { id: "ruby", label: "Ruby" }, // i18n-ignore: language name in the picker
+  { id: "rust", label: "Rust" }, // i18n-ignore: language name in the picker
+  { id: "scala", label: "Scala" }, // i18n-ignore: language name in the picker
+  { id: "scss", label: "SCSS" }, // i18n-ignore: language name in the picker
+  { id: "sql", label: "SQL" }, // i18n-ignore: language name in the picker
+  { id: "svelte", label: "Svelte" }, // i18n-ignore: language name in the picker
+  { id: "swift", label: "Swift" }, // i18n-ignore: language name in the picker
+  { id: "toml", label: "TOML" }, // i18n-ignore: language name in the picker
+  { id: "tsx", label: "TSX" }, // i18n-ignore: language name in the picker
+  { id: "typescript", label: "TypeScript" }, // i18n-ignore: language name in the picker
+  { id: "vue", label: "Vue" }, // i18n-ignore: language name in the picker
+  { id: "xml", label: "XML" }, // i18n-ignore: language name in the picker
+  { id: "yaml", label: "YAML" }, // i18n-ignore: language name in the picker
+  { id: "zig", label: "Zig" }, // i18n-ignore: language name in the picker
 ] as const;
 
 export type CodeBlockLanguage = { readonly id: string; readonly label: string };

@@ -29,6 +29,7 @@ vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useCallback: (callback: unknown) => callback,
   useMemo: (factory: () => unknown) => factory(),
+  useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) => getSnapshot(),
   useState: (initial: unknown) => {
     const index = state.hookIndex++;
     if (index === state.hookValues.length) state.hookValues.push(initial);

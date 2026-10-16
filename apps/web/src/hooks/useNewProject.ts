@@ -16,11 +16,12 @@ import { projectEnvironment } from "~/state/projects";
 import { sourceControlEnvironment } from "~/state/sourceControl";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { useNewThreadHandler } from "./useHandleNewThread";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim().length > 0
     ? error.message
-    : "An error occurred.";
+    : currentTranslator()("shellRest.genericError");
 }
 
 /**
@@ -59,8 +60,10 @@ export function useNewProject() {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: `Could not create the ${label} repository`,
-              description: `${errorMessage(squashAtomCommandFailure(result))} Use Publish Repository in the Git menu to try again.`,
+              title: currentTranslator()("shellRest.couldNotCreateRepository", { label }),
+              description: currentTranslator()("shellRest.publishRepositoryHint", {
+                error: errorMessage(squashAtomCommandFailure(result)),
+              }),
             }),
           );
         }
@@ -69,7 +72,7 @@ export function useNewProject() {
       toastManager.add(
         stackedThreadToast({
           type: "success",
-          title: `Published to ${label}`,
+          title: currentTranslator()("shellRest.publishedTo", { label }),
           description: result.value.repository.nameWithOwner,
         }),
       );
@@ -92,7 +95,7 @@ export function useNewProject() {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Could not create the project",
+              title: currentTranslator()("shellRest.couldNotCreateProject"),
               description: errorMessage(squashAtomCommandFailure(result)),
             }),
           );
@@ -105,11 +108,20 @@ export function useNewProject() {
       toastManager.add(
         stackedThreadToast(
           commitError === undefined
-            ? { type: "success", title: `Created ${input.name}`, description: workspaceRoot }
+            ? {
+                type: "success",
+                title: currentTranslator()("shellRest.createdProject", { name: input.name }),
+                description: workspaceRoot,
+              }
             : {
                 type: "warning",
-                title: `Created ${input.name} without a first commit`,
-                description: `${commitError} The project is in ${workspaceRoot}.`,
+                title: currentTranslator()("shellRest.createdWithoutFirstCommit", {
+                  name: input.name,
+                }),
+                description: currentTranslator()("shellRest.projectInWorkspace", {
+                  error: commitError,
+                  path: workspaceRoot,
+                }),
               },
         ),
       );
@@ -128,8 +140,10 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to open project",
-            description: `${errorMessage(error)} It will appear in the sidebar once this client catches up.`,
+            title: currentTranslator()("shellRest.failedToOpenProject"),
+            description: currentTranslator()("shellRest.projectAppearsAfterSync", {
+              error: errorMessage(error),
+            }),
           }),
         );
         return null;
@@ -139,7 +153,7 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to open project",
+            title: currentTranslator()("shellRest.failedToOpenProject"),
             description: errorMessage(error),
           }),
         );

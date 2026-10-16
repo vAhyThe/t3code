@@ -120,6 +120,7 @@ import { composerCodeBlockHighlight } from "./composerCodeBlockHighlight";
 import { importPastedComposerText } from "./composerInlineTokenPaste";
 import { didComposerSelectionChangeVisibly } from "./composerSelection";
 import type { ComposerDraftContextRecords } from "./composerContextPresentation";
+import { useT } from "~/i18n/I18nProvider";
 
 export interface ComposerPromptEditorHandle {
   focus: () => void;
@@ -281,6 +282,7 @@ const ComposerMentionExtension = Node.create({
 });
 
 function ComposerMentionNodeView({ node }: NodeViewProps) {
+  const t = useT();
   const actions = use(ComposerContextActionsContext);
   const path = (node.attrs.path as string) ?? "";
   const chip = (
@@ -288,7 +290,7 @@ function ComposerMentionNodeView({ node }: NodeViewProps) {
       kind="mention"
       render={<button type="button" />}
       onClick={() => actions.openMention(path)}
-      aria-label={`Preview ${path}`}
+      aria-label={t("shellRest.previewPath", { path })}
       contentEditable={false}
       spellCheck={false}
       data-composer-mention-chip="true"
@@ -343,6 +345,7 @@ const ComposerSkillExtension = Node.create({
 });
 
 function ComposerSkillNodeView({ node }: NodeViewProps) {
+  const t = useT();
   const actions = use(ComposerContextActionsContext);
   const skills = use(RichComposerSkillsContext);
   const skillName = (node.attrs.skillName as string) ?? "";
@@ -359,14 +362,10 @@ function ComposerSkillNodeView({ node }: NodeViewProps) {
       >
         <div className="space-y-3 p-2 text-sm">
           <p className="font-medium">{skillLabel}</p>
-          <p>
-            {skill?.description ??
-              skillDescription ??
-              "No description is available for this skill."}
-          </p>
+          <p>{skill?.description ?? skillDescription ?? t("shellRest.noSkillDescription")}</p>
           {skill?.path ? (
             <Button variant="outline" size="sm" onClick={() => actions.openMention(skill.path)}>
-              View instructions
+              {t("shellRest.viewInstructions")}
             </Button>
           ) : null}
         </div>

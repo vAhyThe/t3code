@@ -19,7 +19,7 @@ const cloudLinkConcurrency = {
 };
 
 export const linkPrimaryEnvironment = createRuntimeCommand(connectionAtomRuntime, {
-  label: "web:cloud:link-primary-environment",
+  label: "web:cloud:link-primary-environment", // i18n-ignore: atom command ID
   scheduler: cloudLinkScheduler,
   concurrency: cloudLinkConcurrency,
   execute: (input: {
@@ -30,7 +30,7 @@ export const linkPrimaryEnvironment = createRuntimeCommand(connectionAtomRuntime
 });
 
 export const unlinkPrimaryEnvironment = createRuntimeCommand(connectionAtomRuntime, {
-  label: "web:cloud:unlink-primary-environment",
+  label: "web:cloud:unlink-primary-environment", // i18n-ignore: atom command ID
   scheduler: cloudLinkScheduler,
   concurrency: cloudLinkConcurrency,
   execute: (input: { readonly target: CloudLinkTarget; readonly clerkToken: string | null }) =>
@@ -38,7 +38,7 @@ export const unlinkPrimaryEnvironment = createRuntimeCommand(connectionAtomRunti
 });
 
 export const updatePrimaryEnvironmentPreferences = createRuntimeCommand(connectionAtomRuntime, {
-  label: "web:cloud:update-primary-environment-preferences",
+  label: "web:cloud:update-primary-environment-preferences", // i18n-ignore: atom command ID
   scheduler: cloudLinkScheduler,
   concurrency: cloudLinkConcurrency,
   execute: (input: {

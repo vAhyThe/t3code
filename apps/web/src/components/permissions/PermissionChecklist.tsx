@@ -1,6 +1,7 @@
 import { CircleCheckIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "../ui/button";
+import { useT } from "~/i18n/I18nProvider";
 
 export interface PermissionItem {
   id: string;
@@ -18,6 +19,7 @@ export function PermissionChecklist({
   permissions: readonly PermissionItem[];
   busy?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="space-y-2">
       {permissions.map((permission) => (
@@ -30,11 +32,11 @@ export function PermissionChecklist({
           {permission.granted ? (
             <span role="status" className="flex items-center gap-1 text-xs text-success">
               <CircleCheckIcon className="size-4" aria-hidden="true" />
-              Allowed
+              {t("shellRest.allowedLabel")}
             </span>
           ) : (
             <Button size="xs" variant="outline" disabled={busy} onClick={permission.onAllow}>
-              Allow
+              {t("shellRest.allowLabel")}
             </Button>
           )}
         </div>

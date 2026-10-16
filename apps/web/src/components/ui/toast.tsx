@@ -30,6 +30,7 @@ import {
   shouldRenderThreadScopedToast,
 } from "./toast.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./tooltip";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 export type ThreadToastData = {
   threadRef?: ScopedThreadRef | null;
@@ -112,7 +113,9 @@ function handleToastDismissClick(
 
 function CopyErrorButton({ text }: { text: string }) {
   const { copyToClipboard, isCopied } = useCopyToClipboard({ target: "error-message" });
-  const label = isCopied ? "Copied error" : "Copy error";
+  const label = isCopied
+    ? currentTranslator()("shellRest.copiedError")
+    : currentTranslator()("shellRest.copyError");
 
   return (
     <Tooltip>
@@ -149,8 +152,8 @@ function ToastExpandableSection({
   labels: { expand?: string; collapse?: string };
 }) {
   const [open, setOpen] = useState(false);
-  const expandLabel = labels.expand ?? "Show details";
-  const collapseLabel = labels.collapse ?? "Hide details";
+  const expandLabel = labels.expand ?? currentTranslator()("shellRest.showDetails");
+  const collapseLabel = labels.collapse ?? currentTranslator()("shellRest.hideDetails");
 
   return (
     <div className="min-w-0">
@@ -203,8 +206,8 @@ function ToastDescriptionAndExpandable({
     );
   }
 
-  const expandLabel = labels.expand ?? "Show details";
-  const collapseLabel = labels.collapse ?? "Hide details";
+  const expandLabel = labels.expand ?? currentTranslator()("shellRest.showDetails");
+  const collapseLabel = labels.collapse ?? currentTranslator()("shellRest.hideDetails");
 
   const toggle = () => setOpen((v) => !v);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -527,6 +530,7 @@ function ToastProvider({ children, position = "top-right", ...props }: ToastProv
 }
 
 function Toasts({ position }: { position: ToastPosition }) {
+  const t = useT();
   const { toasts } = Toast.useToastManager<ThreadToastData>();
   const activeThreadRef = useActiveThreadRefFromRoute();
   const isTop = position.startsWith("top");
@@ -651,7 +655,7 @@ function Toasts({ position }: { position: ToastPosition }) {
               />
               <div className={toastCornerDismissClass}>
                 <button
-                  aria-label="Dismiss notification"
+                  aria-label={t("shellRest.dismissNotification")}
                   className={toastCornerOrbClass}
                   data-slot="toast-close"
                   onClick={() =>
@@ -700,6 +704,7 @@ function AnchoredToastProvider({ children, ...props }: Toast.Provider.Props) {
 }
 
 function AnchoredToasts() {
+  const t = useT();
   const { toasts } = Toast.useToastManager<ThreadToastData>();
   const activeThreadRef = useActiveThreadRefFromRoute();
 
@@ -742,7 +747,7 @@ function AnchoredToasts() {
                     <>
                       <div className={toastCornerDismissClass}>
                         <button
-                          aria-label="Dismiss notification"
+                          aria-label={t("shellRest.dismissNotification")}
                           className={toastCornerOrbClass}
                           data-slot="toast-close"
                           onClick={() =>

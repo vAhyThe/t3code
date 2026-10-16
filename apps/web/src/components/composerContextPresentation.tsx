@@ -47,6 +47,7 @@ import {
   PullRequestChip,
   UnresolvedChip,
 } from "./contextChipParts";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 /**
  * Draft-side payload behind a context reference chip. Each kind keeps its existing draft
@@ -219,6 +220,7 @@ function FileContextChip(props: {
   record: ComposerFileAttachment;
   upload: AttachmentUploadState | undefined;
 }) {
+  const t = useT();
   const actions = use(ComposerContextActionsContext);
   const { resolvedTheme } = useTheme();
   const needsReattach = composerFileNeedsReattach(props.record);
@@ -234,7 +236,11 @@ function FileContextChip(props: {
       error={props.upload?.status === "failed"}
       unresolved={needsReattach}
       suffix={suffix}
-      accessibleLabel={`${isVideo && !needsReattach ? "Preview video" : "File"} attachment, ${props.record.name}, ${size}`}
+      accessibleLabel={t("shellRest.attachmentLabel", {
+        kind: isVideo && !needsReattach ? t("shellRest.previewVideoKind") : t("shellRest.fileKind"),
+        name: props.record.name,
+        size: size,
+      })}
       onOpen={
         !needsReattach
           ? () =>
@@ -243,7 +249,7 @@ function FileContextChip(props: {
       }
       tooltip={
         needsReattach
-          ? `${props.record.name} was not saved with this draft. Attach it again to send it.`
+          ? t("shellRest.contextNotSavedWithDraft", { name: props.record.name })
           : attachmentTooltip(props.record, props.upload)
       }
     />
@@ -307,6 +313,7 @@ function ComposerPreviewAnnotationDetails({
   annotation: PreviewAnnotationPayload;
   screenshot: ComposerImageAttachment | undefined;
 }) {
+  const t = useT();
   const summary = previewAnnotationTooltip(annotation);
   // The draft drops the annotation's own data URL and keeps the crop as an image.
   const screenshotUrl = annotation.screenshot?.dataUrl || screenshot?.previewUrl;
@@ -315,12 +322,12 @@ function ComposerPreviewAnnotationDetails({
       {screenshotUrl ? (
         <img
           src={screenshotUrl}
-          alt="Annotated preview crop"
+          alt={t("shellRest.annotatedPreviewCrop")}
           className="max-h-64 w-full border-border/70 border-b bg-muted object-contain"
         />
       ) : (
         <div className="border-border/70 border-b bg-muted/40 px-3 py-2 text-secondary-label text-xs">
-          Screenshot unavailable
+          {t("shellRest.screenshotUnavailable")}
         </div>
       )}
       <div className="whitespace-pre-wrap wrap-break-word px-3 py-2.5 text-sm text-foreground">
@@ -331,12 +338,8 @@ function ComposerPreviewAnnotationDetails({
 }
 
 function UnresolvedContextChip(props: { label: string }) {
-  return (
-    <UnresolvedChip
-      label={props.label}
-      tooltip="This context is no longer available. Remove it or attach it again."
-    />
-  );
+  const t = useT();
+  return <UnresolvedChip label={props.label} tooltip={t("shellRest.contextNoLongerAvailable")} />;
 }
 
 interface ComposerContextRenderContext {
@@ -404,7 +407,11 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={isPullRequest ? <PullRequestGlyph.pullRequest /> : <MessageCircleIcon />}
             label={reviewCommentContextLabel(entry.record)}
-            kindLabel={isPullRequest ? pullRequestContextKindLabel(entry.record) : "Review comment"}
+            kindLabel={
+              isPullRequest
+                ? pullRequestContextKindLabel(entry.record)
+                : currentTranslator()("shellRest.reviewCommentKind")
+            }
             details={<ComposerReviewCommentDetails comment={entry.record} />}
             detailsMode={definition.capabilities.details}
             kind={isPullRequest ? PULL_REQUEST_CHIP_KINDS[pullRequestState] : "review-comment"}
@@ -420,7 +427,7 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={<MousePointerClickIcon />}
             label={previewAnnotationContextLabel(entry.record)}
-            kindLabel="Preview annotation"
+            kindLabel={currentTranslator()("shellRest.previewAnnotationKind")}
             details={
               <ComposerPreviewAnnotationDetails
                 annotation={entry.record}

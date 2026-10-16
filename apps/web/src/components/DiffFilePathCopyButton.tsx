@@ -10,8 +10,10 @@ import {
 import { Button } from "./ui/button";
 import { MorphIcon } from "~/components/MorphIcon";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { useT } from "~/i18n/I18nProvider";
 
 export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
+  const t = useT();
   const ref = useRef<HTMLButtonElement>(null);
   const { copyToClipboard, isCopied } = useCopyToClipboard<void>({
     onCopy: () => showAnchoredCopySuccessToast(ref),
@@ -27,7 +29,7 @@ export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
             ref={ref}
             size="icon-micro"
             variant="ghost-muted"
-            aria-label="Copy file path"
+            aria-label={t("shellRest.copyFilePath")}
             onClick={() => copyToClipboard(filePath, undefined)}
           />
         }
@@ -38,7 +40,7 @@ export function DiffFilePathCopyButton({ filePath }: { filePath: string }) {
         />
       </TooltipTrigger>
       <TooltipPopup>
-        <p>{isCopied ? "Copied" : "Copy path"}</p>
+        <p>{isCopied ? t("shellRest.copied") : t("shellRest.copyPath")}</p>
       </TooltipPopup>
     </Tooltip>
   );

@@ -70,6 +70,7 @@ import { measureRestingComposerControls } from "./chat/restingComposerControlsMe
 import { resolveRestingComposerControlsNaturalWidth } from "./composerFooterLayout";
 import { cn } from "~/lib/utils";
 import { observeResize } from "~/lib/observeResize";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 export interface BranchToolbarHandle {
   openBranchPicker: () => void;
@@ -109,10 +110,13 @@ function showWorkspaceContextMenu(event: ReactMouseEvent, workspacePath: string)
   event.preventDefault();
   event.stopPropagation();
   void api.contextMenu
-    .show([{ id: "copy-path", label: "Copy full path", icon: "copy" }], {
-      x: event.clientX,
-      y: event.clientY,
-    })
+    .show(
+      [{ id: "copy-path", label: currentTranslator()("shellRest.copyFullPath"), icon: "copy" }],
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    )
     .then((action) => {
       if (action !== "copy-path") return;
       void writeTextToClipboard(workspacePath, "workspace path").then(
@@ -120,7 +124,7 @@ function showWorkspaceContextMenu(event: ReactMouseEvent, workspacePath: string)
           if (didCopy) {
             toastManager.add({
               type: "success",
-              title: "Path copied",
+              title: currentTranslator()("shellRest.pathCopied"),
               description: workspacePath,
             });
           }
@@ -129,8 +133,11 @@ function showWorkspaceContextMenu(event: ReactMouseEvent, workspacePath: string)
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Failed to copy path",
-              description: error instanceof Error ? error.message : "An error occurred.",
+              title: currentTranslator()("shellRest.copyPathFailed"),
+              description:
+                error instanceof Error
+                  ? error.message
+                  : currentTranslator()("shellRest.genericError"),
             }),
           );
         },
@@ -179,6 +186,7 @@ const RunContextSelector = memo(function RunContextSelector({
   previousWorktreeBranch,
   onUsePreviousWorktree,
 }: RunContextSelectorProps) {
+  const t = useT();
   const composerFloatingLayerProps = useComposerMenuProps();
   const activeEnvironment = useMemo(
     () => availableEnvironments?.find((env) => env.environmentId === environmentId) ?? null,
@@ -222,7 +230,7 @@ const RunContextSelector = memo(function RunContextSelector({
       <TooltipPopup>
         {isPanel
           ? forceNewWorktree
-            ? "Each model starts in its own worktree."
+            ? t("shellRest.eachModelOwnWorktree")
             : (workspacePath ?? workspaceLabel)
           : workspaceLabel}
       </TooltipPopup>
@@ -246,7 +254,9 @@ const RunContextSelector = memo(function RunContextSelector({
             />
           )}
         </TooltipTrigger>
-        <TooltipPopup>{autoEnvironmentLabel ?? activeEnvironment?.label ?? "Run on"}</TooltipPopup>
+        <TooltipPopup>
+          {autoEnvironmentLabel ?? activeEnvironment?.label ?? t("shellRest.runOn")}
+        </TooltipPopup>
       </Tooltip>
       {workspaceIcon}
     </span>
@@ -258,7 +268,9 @@ const RunContextSelector = memo(function RunContextSelector({
       {icon}
       <ComposerContextLabel displayMode={displayMode}>
         {autoEnvironmentLabel ??
-          (showEnvironmentIndicator ? (activeEnvironment?.label ?? "Run on") : workspaceLabel)}
+          (showEnvironmentIndicator
+            ? (activeEnvironment?.label ?? t("shellRest.runOn"))
+            : workspaceLabel)}
       </ComposerContextLabel>
     </>
   );
@@ -272,7 +284,7 @@ const RunContextSelector = memo(function RunContextSelector({
           isPanel && THREAD_DETAILS_PANEL_LOCKED_ROW_CLASS,
         )}
         onContextMenu={handleContextMenu}
-        aria-label={isPanel ? "Run context" : undefined}
+        aria-label={isPanel ? t("shellRest.runContext") : undefined}
         data-composer-context-control
       >
         {triggerContent}
@@ -293,7 +305,7 @@ const RunContextSelector = memo(function RunContextSelector({
               }
             : undefined
         }
-        aria-label={isPanel ? "Run context" : undefined}
+        aria-label={isPanel ? t("shellRest.runContext") : undefined}
         data-composer-context-control
         data-composer-shortcut={[
           showEnvironmentPicker && !envLocked ? "composer.host" : "",
@@ -318,7 +330,7 @@ const RunContextSelector = memo(function RunContextSelector({
         {showEnvironmentPicker && availableEnvironments && onEnvironmentChange ? (
           <>
             <MenuGroup>
-              <MenuGroupLabel>Run on</MenuGroupLabel>
+              <MenuGroupLabel>{t("shellRest.runOn")}</MenuGroupLabel>
               <MenuRadioGroup
                 value={autoEnvironmentLabel ? "auto" : environmentId}
                 onValueChange={(value) =>
@@ -339,7 +351,7 @@ const RunContextSelector = memo(function RunContextSelector({
                     <span className="flex min-w-0 items-center gap-1.5">
                       <ScaleIcon className="size-3" aria-hidden="true" />
                       <span className="min-w-0 truncate">
-                        {autoEnvironmentLabel ?? "Auto balance"}
+                        {autoEnvironmentLabel ?? t("shellRest.autoBalance")}
                       </span>
                     </span>
                   </MenuRadioItem>
@@ -363,7 +375,7 @@ const RunContextSelector = memo(function RunContextSelector({
           </>
         ) : null}
         <MenuGroup>
-          <MenuGroupLabel>Workspace</MenuGroupLabel>
+          <MenuGroupLabel>{t("shellRest.workspace")}</MenuGroupLabel>
           <MenuRadioGroup
             value={effectiveEnvMode}
             onValueChange={(value) => {

@@ -13,13 +13,13 @@ import { connectionAtomRuntime } from "../connection/runtime";
  * import step remounts.
  */
 export const agentSessionScan = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "environment-data:agent-sessions:scan",
+  label: "environment-data:agent-sessions:scan", // i18n-ignore: atom query ID
   tag: WS_METHODS.agentSessionsScan,
   staleTimeMs: 30_000,
   idleTtlMs: 5 * 60_000,
 });
 
 export const agentSessionImport = createEnvironmentRpcCommand(connectionAtomRuntime, {
-  label: "environment-data:agent-sessions:import",
+  label: "environment-data:agent-sessions:import", // i18n-ignore: atom command ID
   tag: WS_METHODS.agentSessionsImport,
 });

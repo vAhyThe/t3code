@@ -21,7 +21,7 @@ export function useAtomQueryRunner<T, A, E>(
     (target: T) => {
       const atom = family(target);
       return executeAtomQuery(registry, atom, {
-        label: explicitLabel ?? atom.label?.[0] ?? "atom query",
+        label: explicitLabel ?? atom.label?.[0] ?? "atom query", // i18n-ignore: diagnostic label, not shown in UI
         reportFailure,
         reportDefect,
         refresh,

@@ -56,6 +56,7 @@ import {
   useSidebarVisibility,
 } from "./ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { useT } from "~/i18n/I18nProvider";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -81,6 +82,7 @@ function readInitialThreadSidebarWidth(): number {
 }
 
 function SidebarControl() {
+  const t = useT();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const { toggleSidebar, isMobile, mobileSheetMounted } = useSidebar();
@@ -157,12 +159,14 @@ function SidebarControl() {
                 "pointer-events-auto",
                 isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
               )}
-              aria-label="Toggle main sidebar"
+              aria-label={t("shellRest.toggleMainSidebar")}
             />
           }
         />
         <TooltipPopup side="bottom">
-          Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
+          {shortcutLabel
+            ? t("shellRest.toggleMainSidebarShortcut", { shortcut: shortcutLabel })
+            : t("shellRest.toggleMainSidebar")}
         </TooltipPopup>
       </Tooltip>
     </div>
@@ -228,6 +232,7 @@ function ProjectProjectionRetention() {
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
+  const t = useT();
   const navigate = useNavigate();
   const legacySidebarEnabled = useLegacySidebarEnabled();
   const { active: panelAnimationsActive, durationMs: panelAnimationDurationMs } =
@@ -326,7 +331,9 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           collapsible="offcanvas"
           data-app-sidebar=""
           role="navigation"
-          aria-label={isOnSettings ? "Settings" : "Threads"}
+          aria-label={
+            isOnSettings ? t("shellRest.settingsNavLabel") : t("shellRest.threadsNavLabel")
+          }
           resizable={{
             maxWidth: sidebarMaximumWidth,
             minWidth: sidebarMinimumWidth,

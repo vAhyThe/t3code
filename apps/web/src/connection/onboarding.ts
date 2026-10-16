@@ -11,7 +11,7 @@ import { connectionAtomRuntime } from "./runtime";
 const onboardingScheduler = createAtomCommandScheduler();
 
 export const connectPairing = createRuntimeCommand(connectionAtomRuntime, {
-  label: "web:connection:connect-pairing",
+  label: "web:connection:connect-pairing", // i18n-ignore: atom command ID
   scheduler: onboardingScheduler,
   concurrency: {
     mode: "singleFlight",
@@ -24,7 +24,7 @@ export const connectPairing = createRuntimeCommand(connectionAtomRuntime, {
 });
 
 export const connectSshEnvironment = createRuntimeCommand(connectionAtomRuntime, {
-  label: "web:connection:connect-ssh",
+  label: "web:connection:connect-ssh", // i18n-ignore: atom command ID
   scheduler: onboardingScheduler,
   concurrency: {
     mode: "serial",

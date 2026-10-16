@@ -9,6 +9,7 @@ import { useOpenInPreferredEditor } from "../editorPreferences";
 import { useEnvironmentScope } from "../state/session";
 import { Button } from "./ui/button";
 import { stackedThreadToast, toastManager } from "./ui/toast";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 export function KeybindingsConfigWarning({
   message,
@@ -21,6 +22,7 @@ export function KeybindingsConfigWarning({
   configPath: string | null;
   availableEditors: readonly EditorId[];
 }) {
+  const t = useT();
   const canOpenEditor = useEnvironmentScope(environmentId, AuthOrchestrationOperateScope);
   const openInEditor = useOpenInPreferredEditor(environmentId, availableEditors);
 
@@ -40,13 +42,16 @@ export function KeybindingsConfigWarning({
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Unable to open keybindings file",
-                description: error instanceof Error ? error.message : "Unknown error opening file.",
+                title: currentTranslator()("shellRest.keybindingsOpenFailed"),
+                description:
+                  error instanceof Error
+                    ? error.message
+                    : currentTranslator()("shellRest.unknownErrorOpeningFile"),
               }),
             );
           }}
         >
-          Open keybindings.json
+          {t("shellRest.openKeybindingsJson")}
         </Button>
       </span>
     </>

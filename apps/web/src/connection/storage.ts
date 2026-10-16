@@ -38,6 +38,7 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import { projectFaviconCache } from "../assets/projectFaviconCache";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 const DATABASE_NAME = "t3code:connection-runtime";
 const DATABASE_VERSION = 4;
@@ -79,7 +80,7 @@ const encodeStoredVcsRefs = Schema.encodeEffect(StoredVcsRefsJson);
 function catalogError(operation: string, cause: unknown) {
   return new ConnectionTransientError({
     reason: "remote-unavailable",
-    detail: `Could not ${operation} the local connection catalog: ${String(cause)}`,
+    detail: `Could not ${operation} the local connection catalog: ${String(cause)}`, // i18n-ignore: developer-facing persistence error, operation is a machine id
   });
 }
 
@@ -107,7 +108,8 @@ function persistenceError(
 ) {
   return new Persistence.ConnectionPersistenceError({
     operation,
-    message: `Could not ${operation.replaceAll("-", " ")}: ${String(cause)}`,
+    // i18n-ignore: developer-facing persistence error, operation is a machine id
+    message: `Could not ${operation.replaceAll("-", " ")}: ${String(cause)}`, // i18n-ignore: developer-facing persistence error, operation is a machine id
   });
 }
 
@@ -413,7 +415,7 @@ export function makeCatalogBackend(database: DatabaseHandle): CatalogBackend {
               : Effect.fail(
                   catalogError(
                     "save",
-                    "Desktop secure storage is unavailable in this system context.",
+                    currentTranslator()("shellRest.desktopSecureStorageUnavailable"),
                   ),
                 ),
           ),
@@ -583,7 +585,7 @@ export function makeBrowserGitHubRoutingPermissions(
         return Effect.fail(
           new ConnectionBlockedError({
             reason: "configuration",
-            detail: "This environment does not have a saved connection endpoint.",
+            detail: currentTranslator()("shellRest.environmentNoConnectionEndpoint"),
           }),
         );
       return write(

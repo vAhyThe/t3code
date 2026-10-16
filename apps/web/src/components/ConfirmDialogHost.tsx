@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 type ConfirmationCopy = {
   readonly title: string;
@@ -46,12 +47,13 @@ function resolveConfirmDialogCopy(message: string): ConfirmationCopy {
   }
 
   return {
-    title: "Confirm action",
-    description: normalizedMessage || "This action requires your confirmation.",
+    title: currentTranslator()("shellRest.confirmActionTitle"),
+    description: normalizedMessage || currentTranslator()("shellRest.confirmActionDescription"),
   };
 }
 
 export function ConfirmDialogHost() {
+  const t = useT();
   const state = useSyncExternalStore(
     subscribeConfirmDialog,
     readConfirmDialogState,
@@ -85,9 +87,11 @@ export function ConfirmDialogHost() {
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {t("common.cancel")}
+          </AlertDialogClose>
           <Button variant={confirmVariant} onClick={onConfirm}>
-            Confirm
+            {t("shellRest.confirmButton")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>

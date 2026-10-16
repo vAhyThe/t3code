@@ -13,6 +13,7 @@ import {
 import { Button } from "./ui/button";
 import { stackedThreadToast, toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { useT } from "~/i18n/I18nProvider";
 
 /**
  * Every outdated provider with a one-click update on every connected machine,
@@ -78,6 +79,7 @@ export function useProviderUpdates() {
 /** Provider settings button for {@link useProviderUpdates}. Renders nothing
     when no machine has a one-click update. */
 export function ProviderUpdatesAction() {
+  const t = useT();
   const { machines, updateAll } = useProviderUpdates();
   const pending = useRef(false);
   const [isPending, setIsPending] = useState(false);
@@ -109,7 +111,7 @@ export function ProviderUpdatesAction() {
             disabled={isPending}
             onClick={() => void handleUpdate()}
           >
-            {isPending ? "Updating…" : "Update all"}
+            {isPending ? t("shellRest.updatingEllipsis") : t("shellRest.updateAllButton")}
           </Button>
         }
       />

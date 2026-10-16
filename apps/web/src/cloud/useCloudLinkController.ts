@@ -26,6 +26,7 @@ import {
 } from "./linkEnvironmentAtoms";
 import { readCachedPrimaryCloudLinkState, usePrimaryCloudLinkState } from "./primaryCloudLinkState";
 import { resolveRelayClerkTokenOptions } from "./publicConfig";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export interface CloudLinkDesiredState {
   readonly managedTunnel: boolean;
@@ -93,12 +94,12 @@ export function useCloudLinkController() {
     setOperationError(traceId ? `${message} Trace ID: ${traceId}` : message);
     toastManager.add({
       type: "error",
-      title: "Could not update T3 Connect",
+      title: currentTranslator()("shellRest.cloudLinkUpdateFailed"),
       description: message,
       data: traceId
         ? {
             secondaryActionProps: {
-              children: "Copy trace ID",
+              children: currentTranslator()("shellRest.copyTraceId"),
               onClick: () => void navigator.clipboard?.writeText(traceId),
             },
           }
@@ -122,7 +123,7 @@ export function useCloudLinkController() {
     setOperationError(null);
     const target = primaryCloudLinkState.target;
     if (!target) {
-      reportUpdateFailure(new Error("Local environment is not ready yet."));
+      reportUpdateFailure(new Error(currentTranslator()("shellRest.localEnvironmentNotReady")));
       return false;
     }
     const environmentId = EnvironmentId.make(target.environmentId);

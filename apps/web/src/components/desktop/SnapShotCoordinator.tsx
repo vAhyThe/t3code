@@ -33,6 +33,7 @@ import {
 } from "../../lib/desktopSnapShot";
 import { readFileAsDataUrl } from "../ChatView.logic";
 import { stackedThreadToast, toastManager } from "../ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 type CaptureTarget = DraftId | ScopedThreadRef;
 
@@ -143,7 +144,7 @@ export async function deliverSnapShot(
   const compressed = await compressImageToByteLimit(original, PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
   if (!compressed.ok) {
     finishSnapShotAnimation(item.id);
-    throw new Error("The captured window is too large to attach.");
+    throw new Error(currentTranslator()("shellRest.capturedWindowTooLarge"));
   }
   const file = compressed.file;
   const source = resizeSnapShotSource(capture.source, compressed.imageSize);
@@ -163,7 +164,7 @@ export async function deliverSnapShot(
       source,
     })
   ) {
-    throw new Error("Remove an attachment, then try this capture again.");
+    throw new Error(currentTranslator()("shellRest.removeAttachmentRetryCapture"));
   }
   const persisted: PersistedComposerImageAttachment = {
     id: capture.id,
@@ -179,7 +180,7 @@ export async function deliverSnapShot(
       ?.persistedAttachments.filter((attachment) => attachment.id !== capture.id) ?? [];
   await store.syncPersistedAttachments(target, [...persistedAttachments, persisted]);
   if (!store.getComposerDraft(target)?.persistedAttachments.some(({ id }) => id === capture.id)) {
-    throw new Error("The captured window could not be saved to the draft.");
+    throw new Error(currentTranslator()("shellRest.capturedWindowNotSaved"));
   }
 
   // Reveal the attachment under the flying capture before the desktop tears the overlay down,
@@ -285,8 +286,8 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot taken, but no project is available",
-                description: "Add a project, then capture the window again.",
+                title: currentTranslator()("shellRest.snapshotTakenNoProject"),
+                description: currentTranslator()("shellRest.addProjectThenCapture"),
               }),
             );
             continue;
@@ -302,10 +303,14 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: `Capture ${item.id}: ${
-                  error instanceof Error ? error.message : "Try the capture again."
-                }`,
+                title: currentTranslator()("shellRest.snapshotFailed"),
+                description: currentTranslator()("shellRest.captureItemFailed", {
+                  id: item.id,
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : currentTranslator()("shellRest.tryCaptureAgain"),
+                }),
               }),
             );
           }
@@ -317,8 +322,11 @@ export function SnapShotCoordinator() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Snapshot failed",
-            description: error instanceof Error ? error.message : "Try the capture again.",
+            title: currentTranslator()("shellRest.snapshotFailed"),
+            description:
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellRest.tryCaptureAgain"),
           }),
         );
       })
@@ -376,8 +384,8 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: state.message ?? "Try the capture again.",
+                title: currentTranslator()("shellRest.snapshotFailed"),
+                description: state.message ?? currentTranslator()("shellRest.tryCaptureAgain"),
               }),
             );
           });

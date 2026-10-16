@@ -31,6 +31,7 @@ import {
 } from "./ProviderUpdateLaunchNotification.logic";
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 type ProviderUpdateCommandResult = AtomCommandResult<
   { readonly providers: ReadonlyArray<ServerProvider> },
@@ -70,7 +71,10 @@ function toProviderUpdateOutcome(input: {
     const error = squashAtomCommandFailure(input.result);
     return {
       status: "rejected",
-      reason: error instanceof Error ? error : new Error("Provider update failed."),
+      reason:
+        error instanceof Error
+          ? error
+          : new Error(currentTranslator()("shellRest.providerUpdateFailedPeriod")),
     };
   }
 
@@ -120,6 +124,7 @@ function EnvironmentUpdateRow({
   readonly status: ProviderUpdateRowStatus;
   readonly onUpdate: () => void;
 }) {
+  const t = useT();
   const canManageProviders = useEnvironmentScope(group.environmentId, AuthProvidersManageScope);
   let trailing: ReactNode;
   switch (status.kind) {
@@ -133,14 +138,14 @@ function EnvironmentUpdateRow({
     case "unchanged":
       trailing = (
         <Button size="xs" variant="outline" disabled={!canManageProviders} onClick={onUpdate}>
-          Retry
+          {t("common.retry")}
         </Button>
       );
       break;
     default:
       trailing = (
         <Button size="xs" variant="outline" disabled={!canManageProviders} onClick={onUpdate}>
-          Update
+          {t("shellRest.updateButton")}
         </Button>
       );
       break;
@@ -153,7 +158,7 @@ function EnvironmentUpdateRow({
         <span className={cn("truncate text-xs", rowToneClass(status.kind))}>{status.text}</span>
         {!canManageProviders ? (
           <span className="text-xs text-muted-foreground">
-            This connection cannot manage provider accounts.
+            {t("shellRest.connectionCannotManageProviders")}
           </span>
         ) : null}
       </div>
@@ -295,7 +300,10 @@ export function ProviderUpdateEnvironmentRows({
             } catch (error) {
               return {
                 status: "rejected",
-                reason: error instanceof Error ? error : new Error("Provider update failed."),
+                reason:
+                  error instanceof Error
+                    ? error
+                    : new Error(currentTranslator()("shellRest.providerUpdateFailedPeriod")),
               };
             }
           }),
@@ -353,7 +361,9 @@ export function ProviderUpdateEnvironmentRows({
           setErrorByEnvironment((previous) =>
             new Map(previous).set(
               environmentId,
-              error instanceof Error ? error.message : "Provider update failed.",
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellRest.providerUpdateFailedPeriod"),
             ),
           );
         }

@@ -1,5 +1,7 @@
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 
+import { currentTranslator, localeStore } from "~/i18n/I18nProvider";
+
 function getTimestampFormatOptions(
   timestampFormat: TimestampFormat,
   includeSeconds: boolean,
@@ -188,7 +190,7 @@ export function formatDayAwareTimestamp(
   const dayDiff = Math.round((startOfToday - startOfMessageDay) / 86_400_000);
 
   if (dayDiff <= 0) return time;
-  if (dayDiff === 1) return `yesterday at ${time}`;
+  if (dayDiff === 1) return currentTranslator()("shellRest.yesterdayAt", { time: time });
   const dateFormatter =
     date.getFullYear() === now.getFullYear() ? numericDateFormatter : numericDateWithYearFormatter;
   return `${dateFormatter.format(date)} ${time}`;
@@ -215,7 +217,7 @@ export function formatUpcomingTimestamp(
 
   if (dayDiff < 0) return formatDayAwareTimestamp(isoDate, timestampFormat, nowMs);
   if (dayDiff === 0) return time;
-  if (dayDiff === 1) return `tomorrow at ${time}`;
+  if (dayDiff === 1) return currentTranslator()("shellRest.tomorrowAt", { time: time });
   const dateFormatter =
     date.getFullYear() === now.getFullYear() ? numericDateFormatter : numericDateWithYearFormatter;
   return `${dateFormatter.format(date)} ${time}`;
@@ -232,25 +234,64 @@ export type RelativeTimeState =
   | { status: "invalid" }
   | { status: "relative"; value: string; suffix: string | null };
 
+type RelativeUnit = "seconds" | "minutes" | "hours" | "days";
+
+const UNIT_KEY = {
+  seconds: "shellRest.unitSeconds",
+  minutes: "shellRest.unitMinutes",
+  hours: "shellRest.unitHours",
+  days: "shellRest.unitDays",
+} as const;
+
+function durationText(count: number, unit: RelativeUnit): string {
+  return currentTranslator()(UNIT_KEY[unit], { count });
+}
+
+// English keeps the number and the word apart so callers can style them. Other
+// languages put the word around the whole duration, so they return the phrase
+// as the value with no suffix.
+function relativePhrase(
+  count: number,
+  unit: RelativeUnit,
+  direction: "ago" | "left",
+): RelativeTimeParts {
+  const t = currentTranslator();
+  const duration = durationText(count, unit);
+  if (localeStore.getLocale() === "en") {
+    return { value: duration, suffix: t(direction === "ago" ? "shellRest.ago" : "shellRest.left") };
+  }
+  return {
+    value: t(direction === "ago" ? "shellRest.agoPhrase" : "shellRest.leftPhrase", { duration }),
+    suffix: null,
+  };
+}
+
 export function formatRelativeTime(isoDate: string): RelativeTimeParts | null {
   const date = parseTimestampDate(isoDate);
   if (!date) return null;
   const diffMs = Date.now() - date.getTime();
-  if (diffMs < 0) return { value: "just now", suffix: null };
+  if (diffMs < 0) return { value: currentTranslator()("shellRest.justNow"), suffix: null };
   const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 60) return { value: "just now", suffix: null };
+  if (seconds < 60) return { value: currentTranslator()("shellRest.justNow"), suffix: null };
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return { value: `${minutes}m`, suffix: "ago" };
+  if (minutes < 60) return relativePhrase(minutes, "minutes", "ago");
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { value: `${hours}h`, suffix: "ago" };
-  const days = Math.floor(hours / 24);
-  return { value: `${days}d`, suffix: "ago" };
+  if (hours < 24) return relativePhrase(hours, "hours", "ago");
+  return relativePhrase(Math.floor(hours / 24), "days", "ago");
 }
 
 export function formatRelativeTimeLabel(isoDate: string) {
   const relative = formatRelativeTime(isoDate);
   if (!relative) return "";
   return relative.suffix ? `${relative.value} ${relative.suffix}` : relative.value;
+}
+
+/** Sidebar label such as "now" or "15m"; the English "ago" is dropped, other languages keep the phrase. */
+export function formatCompactRelativeTimeLabel(isoDate: string): string {
+  const date = parseTimestampDate(isoDate);
+  if (!date) return "";
+  if (Date.now() - date.getTime() < 60_000) return currentTranslator()("shellRest.justNowCompact");
+  return formatRelativeTime(isoDate)?.value ?? "";
 }
 
 export function getRelativeTimeState(isoDate: string | null): RelativeTimeState {
@@ -268,20 +309,19 @@ export function formatElapsedDurationLabel(isoDate: string, nowMs: number = Date
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
   const diffMs = nowMs - date.getTime();
-  if (diffMs <= 0) return "just now";
+  if (diffMs <= 0) return currentTranslator()("shellRest.justNow");
 
   const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 5) return "just now";
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 5) return currentTranslator()("shellRest.justNow");
+  if (seconds < 60) return durationText(seconds, "seconds");
 
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return durationText(minutes, "minutes");
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return durationText(hours, "hours");
 
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
+  return durationText(Math.floor(hours / 24), "days");
 }
 
 /**
@@ -291,22 +331,35 @@ export function formatRelativeTimeUntil(isoDate: string): RelativeTimeParts | nu
   const date = parseTimestampDate(isoDate);
   if (!date) return null;
   const diffMs = date.getTime() - Date.now();
-  if (diffMs <= 0) return { value: "Expired", suffix: null };
+  if (diffMs <= 0) return { value: currentTranslator()("shellRest.expired"), suffix: null };
   const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 5) return { value: "Soon", suffix: null };
-  if (seconds < 60) return { value: `${seconds}s`, suffix: "left" };
+  if (seconds < 5) return { value: currentTranslator()("shellRest.soon"), suffix: null };
+  if (seconds < 60) return relativePhrase(seconds, "seconds", "left");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return { value: `${minutes}m`, suffix: "left" };
+  if (minutes < 60) return relativePhrase(minutes, "minutes", "left");
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { value: `${hours}h`, suffix: "left" };
-  const days = Math.floor(hours / 24);
-  return { value: `${days}d`, suffix: "left" };
+  if (hours < 24) return relativePhrase(hours, "hours", "left");
+  return relativePhrase(Math.floor(hours / 24), "days", "left");
 }
 
 export function formatRelativeTimeUntilLabel(isoDate: string): string {
   const relative = formatRelativeTimeUntil(isoDate);
   if (!relative) return "";
   return relative.suffix ? `${relative.value} ${relative.suffix}` : relative.value;
+}
+
+// Units from largest to smallest, each shown only when non-zero: "2d 3h 4m 5s".
+function formatCountdown(totalSeconds: number): string {
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const units: string[] = [];
+  if (days > 0) units.push(durationText(days, "days"));
+  if (hours > 0) units.push(durationText(hours, "hours"));
+  if (minutes > 0) units.push(durationText(minutes, "minutes"));
+  if (seconds > 0) units.push(durationText(seconds, "seconds"));
+  return units.join(" ");
 }
 
 /**
@@ -316,40 +369,11 @@ export function formatRelativeTimeUntilLabel(isoDate: string): string {
 export function formatExpiresInLabel(isoDate: string, nowMs: number = Date.now()): string {
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
+  const t = currentTranslator();
   const diffMs = date.getTime() - nowMs;
-  if (diffMs <= 0) return "Expired";
+  if (diffMs <= 0) return t("shellRest.expired");
 
   const totalSeconds = Math.floor(diffMs / 1000);
-  if (totalSeconds < 5) return "Expires in a moment";
-  if (totalSeconds < 60) return `Expires in ${totalSeconds}s`;
-
-  if (totalSeconds < 3600) {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return seconds === 0 ? `Expires in ${minutes}m` : `Expires in ${minutes}m ${seconds}s`;
-  }
-
-  if (totalSeconds < 86_400) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const rem = totalSeconds % 3600;
-    const minutes = Math.floor(rem / 60);
-    const seconds = rem % 60;
-    const parts = [`${hours}h`];
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (seconds > 0) parts.push(`${seconds}s`);
-    return `Expires in ${parts.join(" ")}`;
-  }
-
-  const days = Math.floor(totalSeconds / 86_400);
-  const remAfterDays = totalSeconds % 86_400;
-  if (remAfterDays === 0) return `Expires in ${days}d`;
-  const hours = Math.floor(remAfterDays / 3600);
-  const rem = remAfterDays % 3600;
-  const minutes = Math.floor(rem / 60);
-  const seconds = rem % 60;
-  const tail: string[] = [];
-  if (hours > 0) tail.push(`${hours}h`);
-  if (minutes > 0) tail.push(`${minutes}m`);
-  if (seconds > 0) tail.push(`${seconds}s`);
-  return tail.length > 0 ? `Expires in ${days}d ${tail.join(" ")}` : `Expires in ${days}d`;
+  if (totalSeconds < 5) return t("shellRest.expiresInMoment");
+  return t("shellRest.expiresIn", { duration: formatCountdown(totalSeconds) });
 }
