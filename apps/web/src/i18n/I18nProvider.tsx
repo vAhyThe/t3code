@@ -1,8 +1,6 @@
 import { createTranslator, type Translate, type UiLocale } from "@t3tools/client-runtime/i18n";
-import type { ClientSettings } from "@t3tools/contracts";
-import { type ReactNode, useLayoutEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
-import { useClientSettings, useClientSettingsHydrated } from "../hooks/useSettings";
 import { createUiLocaleStore, uiSystemLanguages } from "./uiLocaleStore";
 
 function browserStorage(): Storage | null {
@@ -13,7 +11,12 @@ function browserStorage(): Storage | null {
   }
 }
 
-const localeStore = createUiLocaleStore({
+/**
+ * Kept free of settings imports so any component can use the translator
+ * without pulling the settings and environment state graph into its module
+ * (and its tests). The settings sync lives in I18nSettingsSync.
+ */
+export const localeStore = createUiLocaleStore({
   storage: browserStorage(),
   systemLanguages:
     typeof window === "undefined"
@@ -26,19 +29,6 @@ function applyDocumentLanguage() {
 }
 applyDocumentLanguage();
 localeStore.subscribe(applyDocumentLanguage);
-
-const selectInterfaceLanguage = (settings: ClientSettings) => settings.interfaceLanguage;
-
-/** Follows the interfaceLanguage client setting once settings hydrate. */
-export function I18nProvider({ children }: { readonly children: ReactNode }) {
-  const hydrated = useClientSettingsHydrated();
-  const preference = useClientSettings(selectInterfaceLanguage);
-  // Layout effect so a language change re-renders before paint.
-  useLayoutEffect(() => {
-    localeStore.sync({ hydrated, preference });
-  }, [hydrated, preference]);
-  return children;
-}
 
 export function useUiLocale(): UiLocale {
   return useSyncExternalStore(localeStore.subscribe, localeStore.getLocale, localeStore.getLocale);

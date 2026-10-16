@@ -3,7 +3,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { BrowserProfileReporter } from "./browser/BrowserProfileReporter";
 import { ElectronBrowserHost } from "./browser/ElectronBrowserHost";
 import { QuitHoldOverlay } from "./components/QuitHoldOverlay";
-import { I18nProvider } from "./i18n/I18nProvider";
+import { I18nSettingsSync } from "./i18n/I18nSettingsSync";
 import { AppAtomRegistryProvider } from "./rpc/atomRegistry";
 import type { AppRouter } from "./router";
 
@@ -14,13 +14,13 @@ import type { AppRouter } from "./router";
  */
 export function AppRoot({ router }: { readonly router: AppRouter }) {
   return (
-    <I18nProvider>
+    <I18nSettingsSync>
       <AppAtomRegistryProvider>
         <RouterProvider router={router} />
         <ElectronBrowserHost />
         <BrowserProfileReporter />
         <QuitHoldOverlay />
       </AppAtomRegistryProvider>
-    </I18nProvider>
+    </I18nSettingsSync>
   );
 }

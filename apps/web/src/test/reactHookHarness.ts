@@ -23,6 +23,7 @@ import type { Dispatch, SetStateAction } from "react";
  *     useMemo: reactHookHarness.useMemo,
  *     useRef: reactHookHarness.useRef,
  *     useState: reactHookHarness.useState,
+ *     useSyncExternalStore: reactHookHarness.useSyncExternalStore,
  *   };
  * });
  * vi.mock("react/compiler-runtime", async () => {
@@ -68,6 +69,13 @@ function createReactHookHarness() {
         slots[index] = { current: initialValue };
       }
       return slots[index] as { current: T };
+    },
+    useSyncExternalStore<T>(
+      _subscribe: (listener: () => void) => () => void,
+      getSnapshot: () => T,
+    ): T {
+      nextIndex();
+      return getSnapshot();
     },
     useState<T>(initialValue: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
       const index = nextIndex();
