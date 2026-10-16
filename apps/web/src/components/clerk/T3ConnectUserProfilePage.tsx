@@ -1,3 +1,4 @@
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
 import {
@@ -26,17 +27,17 @@ import {
 
 const linkedAtFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
-function linkedAtLabel(value: string): string {
+function linkedAtLabel(value: string, t: Translate): string {
   const linkedAt = new Date(value);
   return Number.isNaN(linkedAt.getTime())
-    ? "Link date unavailable"
-    : `Linked ${linkedAtFormatter.format(linkedAt)}`;
+    ? t("shellDevice.clerkLinkDateUnavailable")
+    : t("shellDevice.clerkLinkedAt", { date: linkedAtFormatter.format(linkedAt) });
 }
 
-function endpointLabel(environment: RelayClientEnvironmentRecord): string {
+function endpointLabel(environment: RelayClientEnvironmentRecord, t: Translate): string {
   return environment.endpoint.providerKind === "cloudflare_tunnel"
-    ? "Managed tunnel"
-    : "Activity publishing only";
+    ? t("shellDevice.clerkManagedTunnel")
+    : t("shellDevice.clerkActivityOnly");
 }
 
 export function T3ConnectEnvironmentRow(props: {
@@ -57,7 +58,7 @@ export function T3ConnectEnvironmentRow(props: {
               {environment.label}
             </h3>
             <p className="mt-1 text-xs leading-4.5 text-muted-foreground">
-              {linkedAtLabel(environment.linkedAt)} · {endpointLabel(environment)}
+              {linkedAtLabel(environment.linkedAt, t)} · {endpointLabel(environment, t)}
             </p>
           </div>
           <CollapsibleTrigger
@@ -161,7 +162,10 @@ export function T3ConnectUserProfilePage() {
     if (isAtomCommandInterrupted(result)) return;
 
     const cause = squashAtomCommandFailure(result);
-    const message = cause instanceof Error ? cause.message : "Could not deregister the server.";
+    const message =
+      cause instanceof Error
+        ? cause.message
+        : currentTranslator()("shellDevice.clerkDeregisterFallback");
     const traceId = findErrorTraceId(cause);
     console.error("[t3-connect] Could not deregister environment", {
       environmentId: environment.environmentId,
@@ -176,7 +180,7 @@ export function T3ConnectUserProfilePage() {
       data: traceId
         ? {
             secondaryActionProps: {
-              children: "Copy trace ID",
+              children: currentTranslator()("shellDevice.copyTraceId"),
               onClick: () => void navigator.clipboard?.writeText(traceId),
             },
           }

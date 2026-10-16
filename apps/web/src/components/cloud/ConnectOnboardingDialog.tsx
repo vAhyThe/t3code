@@ -1,3 +1,4 @@
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { useAuth } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
@@ -251,7 +252,7 @@ function ConfiguredConnectOnboardingDialog() {
         >
           {steps.length > 1 ? (
             <WizardSteps
-              steps={steps.map((id) => STEP_LABELS[id])}
+              steps={steps.map((id) => t(STEP_LABELS[id]))}
               currentStep={steps.indexOf(step)}
               isStepDisabled={() => isApplying}
               onStepChange={(index) => {
@@ -330,9 +331,9 @@ function ConfiguredConnectOnboardingDialog() {
   );
 }
 
-const STEP_LABELS: Record<OnboardingStep, string> = {
-  publish: "Publish",
-  devices: "Connect devices",
+const STEP_LABELS: Record<OnboardingStep, MessageKey> = {
+  publish: "shellDevice.connectStepPublish",
+  devices: "shellDevice.connectStepDevices",
 };
 
 function PublishStep({

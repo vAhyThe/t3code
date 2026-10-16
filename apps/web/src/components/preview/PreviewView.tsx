@@ -108,8 +108,9 @@ interface Props {
 function previewProfileName(
   profiles: ReadonlyArray<{ readonly id: string; readonly name: string }>,
   profileId: string,
+  removedLabel: string,
 ): string {
-  return profiles.find((profile) => profile.id === profileId)?.name ?? "Removed profile";
+  return profiles.find((profile) => profile.id === profileId)?.name ?? removedLabel;
 }
 
 const localApi = typeof window === "undefined" ? null : ensureLocalApi();
@@ -249,7 +250,11 @@ export function PreviewView({
   // Passing the snapshot's raw `undefined` through would reach the IPC layer
   // as "every profile".
   const activeProfileId = snapshot?.profileId ?? DEFAULT_BROWSER_PROFILE_ID;
-  const activeProfileName = previewProfileName(browserDefaults.profiles, activeProfileId);
+  const activeProfileName = previewProfileName(
+    browserDefaults.profiles,
+    activeProfileId,
+    t("shellDevice.previewRemovedProfile"),
+  );
   const panelRect = useBrowserSurfaceStore((state) =>
     runtimeTabId ? (state.byTabId[runtimeTabId]?.rect ?? null) : null,
   );
@@ -464,7 +469,9 @@ export function PreviewView({
     snapshot,
   );
   const moveLabel =
-    moveTarget === "server" ? `Open in ${environmentLabel}'s browser` : "Open on this computer";
+    moveTarget === "server"
+      ? t("shellDevice.previewOpenInEnvironmentBrowser", { environment: environmentLabel })
+      : t("shellDevice.previewOpenOnThisComputer");
   const handleMoveTab = useCallback(async () => {
     if (!moveTarget || !tabId || !snapshot) return;
     const result = await openPreviewSession({
@@ -640,7 +647,7 @@ export function PreviewView({
                     secondaryActionProps: {
                       children: pathCopied
                         ? currentTranslator()("shellDevice.previewCopied")
-                        : "Copy path",
+                        : currentTranslator()("shellDevice.previewCopyPath"),
                       disabled: pathCopied,
                       onClick: copyPath,
                     },
@@ -657,7 +664,7 @@ export function PreviewView({
                 actionProps: revealAction,
                 data: {
                   secondaryActionProps: {
-                    children: "Copy path",
+                    children: currentTranslator()("shellDevice.previewCopyPath"),
                     onClick: copyPath,
                   },
                   secondaryActionVariant: "outline",
@@ -728,7 +735,7 @@ export function PreviewView({
                       props: {
                         children: pathCopied
                           ? currentTranslator()("shellDevice.previewCopied")
-                          : "Copy path",
+                          : currentTranslator()("shellDevice.previewCopyPath"),
                         disabled: pathCopied,
                         onClick: copyPath,
                       },
@@ -747,7 +754,7 @@ export function PreviewView({
             if (!navigator.clipboard?.writeText) {
               updateScreenshotToast(
                 "error",
-                "Unable to copy screenshot path",
+                currentTranslator()("shellDevice.previewUnableCopyScreenshotPath"),
                 currentTranslator()("shellDevice.previewClipboardUnavailable"),
               );
               return;
@@ -765,7 +772,7 @@ export function PreviewView({
               (error) => {
                 updateScreenshotToast(
                   "error",
-                  "Unable to copy screenshot path",
+                  currentTranslator()("shellDevice.previewUnableCopyScreenshotPath"),
                   error instanceof Error
                     ? error.message
                     : currentTranslator()("shellDevice.previewErrorOccurred"),
@@ -787,7 +794,7 @@ export function PreviewView({
               (error) => {
                 updateScreenshotToast(
                   "error",
-                  "Unable to copy screenshot",
+                  currentTranslator()("shellDevice.previewUnableCopyScreenshot"),
                   error instanceof Error
                     ? error.message
                     : currentTranslator()("shellDevice.previewErrorOccurred"),
@@ -809,7 +816,7 @@ export function PreviewView({
                   {
                     id: "copy-path",
                     props: {
-                      children: "Copy path",
+                      children: currentTranslator()("shellDevice.previewCopyPath"),
                       onClick: copyPath,
                     },
                   },

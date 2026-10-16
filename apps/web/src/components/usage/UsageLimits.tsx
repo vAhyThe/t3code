@@ -1,3 +1,5 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { useT } from "~/i18n/I18nProvider";
 import {
@@ -210,11 +212,11 @@ export function LimitWindows({
   );
 }
 
-const OUTCOME_TEXT: Record<ProviderConsumeResetCreditOutcome, string> = {
-  reset: "Reset applied. Your windows have cleared.",
-  nothingToReset: "Nothing to reset right now.",
-  noCredit: "No reset credit left.",
-  alreadyRedeemed: "That credit was already redeemed.",
+const OUTCOME_KEY: Record<ProviderConsumeResetCreditOutcome, MessageKey> = {
+  reset: "shellDevice.usageOutcomeReset",
+  nothingToReset: "shellDevice.usageOutcomeNothingToReset",
+  noCredit: "shellDevice.usageOutcomeNoCredit",
+  alreadyRedeemed: "shellDevice.usageOutcomeAlreadyRedeemed",
 };
 
 /** Everything a redeem needs: where to send it and what to say afterwards. */
@@ -236,13 +238,13 @@ export function useResetCredit(
     const result = await consume({ environmentId, input });
     setBusy(false);
     if (result._tag === "Success") {
-      setStatus(result.value.warning ?? OUTCOME_TEXT[result.value.outcome]);
+      setStatus(result.value.warning ?? currentTranslator()(OUTCOME_KEY[result.value.outcome]));
       return;
     }
     setStatus(
       "error" in result.cause && result.cause.error instanceof Error
         ? result.cause.error.message
-        : "Could not use the reset credit.",
+        : currentTranslator()("shellDevice.usageCouldNotUseCredit"),
     );
   };
 
@@ -291,6 +293,7 @@ export function ResetCreditDialog({
 
 /** `2 reset credits banked · next expires in 27d 23h`, or the short form for a popover. */
 export function resetCreditsSummary(
+  t: Translate,
   credits: ServerProviderResetCredits,
   now: number,
   compact = false,
@@ -298,7 +301,7 @@ export function resetCreditsSummary(
   const expiresIn = credits.nextExpiresAt
     ? formatDuration(Date.parse(credits.nextExpiresAt) - now)
     : null;
-  if (credits.availableCount === 0) return "No reset credits banked";
+  if (credits.availableCount === 0) return t("shellDevice.usageNoResetCredits");
   if (compact)
     return `${credits.availableCount} banked${expiresIn ? ` · expires in ${expiresIn}` : ""}`;
   return `${credits.availableCount} ${credits.availableCount === 1 ? "reset credit" : "reset credits"} banked${
@@ -326,7 +329,7 @@ export function ResetCredits({
   if (credits.availableCount === 0 && status === null) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-      <span className="tabular-nums">{resetCreditsSummary(credits, now)}</span>
+      <span className="tabular-nums">{resetCreditsSummary(t, credits, now)}</span>
       {credits.availableCount > 0 ? (
         <Button
           size="xs"

@@ -191,7 +191,7 @@ export function CloudEnvironmentConnectRows({
       data: traceId
         ? {
             secondaryActionProps: {
-              children: "Copy trace ID",
+              children: currentTranslator()("shellDevice.copyTraceId"),
               onClick: () => void navigator.clipboard?.writeText(traceId),
             },
           }
@@ -297,7 +297,7 @@ export function CloudEnvironmentConnectRows({
     // A failed or offline discovery is not "no environments" — misreporting it
     // as empty would read as the user's devices having disappeared.
     const discoveryProblem = environmentsState.offline
-      ? "You appear to be offline."
+      ? t("shellDevice.cloudEnvOfflineHint")
       : (Option.getOrNull(environmentsState.error)?.message ?? null);
     if (discoveryProblem !== null && !environmentsState.refreshing) {
       return (
@@ -367,8 +367,8 @@ export function CloudEnvironmentConnectRows({
             ? "bg-warning"
             : "bg-muted-foreground/35";
     const notAdded = savedWithoutRelay.has(environment.environmentId)
-      ? "Saved without T3 Connect"
-      : "Not added";
+      ? t("shellDevice.cloudEnvSavedWithoutT3")
+      : t("shellDevice.cloudEnvNotAdded");
     const statusText =
       unsupported && !savedEnvironment
         ? `T3 Connect · ${notAdded} · Client not supported`
@@ -453,12 +453,13 @@ export function CloudEnvironmentConnectRows({
                       : savedConnection
                         ? savedConnection.statusText
                         : availability === "online"
-                          ? "Relay online"
+                          ? t("shellDevice.cloudEnvRelayOnline")
                           : availability === "offline"
-                            ? "Relay offline"
+                            ? t("shellDevice.cloudEnvRelayOffline")
                             : availability === "checking"
-                              ? "Checking relay status"
-                              : (Option.getOrNull(error)?.message ?? "Relay status unavailable")
+                              ? t("shellDevice.cloudEnvRelayChecking")
+                              : (Option.getOrNull(error)?.message ??
+                                t("shellDevice.cloudEnvRelayUnavailable"))
                 }
               />
               <EnvironmentMachineIcon

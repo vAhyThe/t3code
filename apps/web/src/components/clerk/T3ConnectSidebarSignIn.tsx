@@ -8,7 +8,6 @@ import { T3_CONNECT_ACCOUNT_PAGES } from "./T3ConnectAccountPages";
 import { useT3ConnectAuthPrompt } from "./useT3ConnectAuthPrompt";
 
 export function T3ConnectSidebarSignIn() {
-  const t = useT();
   if (!hasCloudPublicConfig()) return null;
 
   return <ConfiguredT3ConnectSidebarSignIn />;

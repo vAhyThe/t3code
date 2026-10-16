@@ -46,7 +46,7 @@ export class BrowserSettingsReadError extends Data.TaggedError("BrowserSettingsR
   readonly cause: unknown;
 }> {
   override get message(): string {
-    return "Saved browser settings could not be loaded.";
+    return currentTranslator()("shellDevice.browserSettingsNotLoaded");
   }
 }
 
@@ -158,7 +158,7 @@ export async function openFileInPreview<AssetError, PreviewError>(input: {
   const assetUrl = resolveAssetUrl(input.httpBaseUrl, assetResult.value.relativeUrl);
   if (assetUrl === null) {
     return AsyncResult.failure(
-      Cause.die(new Error("The environment returned an invalid asset URL.")),
+      Cause.die(new Error(currentTranslator()("shellDevice.browserInvalidAssetUrl"))),
     );
   }
   return openUrlInPreview({

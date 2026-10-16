@@ -197,9 +197,9 @@ function SegmentPopover({
         {account.email ? (
           <RedactedSensitiveText
             value={account.email}
-            ariaLabel="Toggle account email visibility"
-            revealTooltip="Click to reveal email"
-            hideTooltip="Click to hide email"
+            ariaLabel={t("shellDevice.usageToggleEmailAria")}
+            revealTooltip={t("shellDevice.usageRevealEmail")}
+            hideTooltip={t("shellDevice.usageHideEmail")}
             className="w-fit"
           />
         ) : null}
@@ -235,7 +235,7 @@ function SegmentPopover({
       {credits && redeem ? (
         <div className="border-t border-border/60 pt-2.5 text-muted-foreground">
           <span className="flex items-center gap-3">
-            <span className="tabular-nums">{resetCreditsSummary(credits, now, true)}</span>
+            <span className="tabular-nums">{resetCreditsSummary(t, credits, now, true)}</span>
             <Button
               size="xs"
               variant="outline"
@@ -453,7 +453,6 @@ function RedeemableSegmentPopup({
   readonly redeemAt: NonNullable<LimitAccount["redeem"]>;
   readonly closePopover: () => void;
 }) {
-  const t = useT();
   const redeem = useResetCredit(redeemAt.environmentId, redeemAt.input);
   return (
     <>

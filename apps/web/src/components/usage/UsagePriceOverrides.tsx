@@ -26,7 +26,8 @@ import { Label } from "../ui/label";
 import { Menu, MenuCheckboxItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Tooltip, TooltipTrigger, TooltipPopup } from "../ui/tooltip";
-import { useT } from "~/i18n/I18nProvider";
+import type { Translate } from "@t3tools/client-runtime/i18n";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { USAGE_PRICE_FIELDS } from "./usagePriceForm";
 import {
   isEmptyUsagePriceDraft,
@@ -68,15 +69,15 @@ const priceTargetsAtom = Atom.make((get): readonly UsagePriceTarget[] =>
           : null,
       unavailable:
         environment.connection.phase !== "connected"
-          ? "Offline"
+          ? currentTranslator()("shellDevice.usagePriceOffline")
           : settings === null
-            ? "Prices not loaded"
+            ? currentTranslator()("shellDevice.usagePriceNotLoaded")
             : environment.serverConfig?.environment.capabilities.usagePriceOverrides !== true
-              ? "Update server to edit prices"
+              ? currentTranslator()("shellDevice.usagePriceUpdateServer")
               : access === "pending"
-                ? "Checking permissions…"
+                ? currentTranslator()("shellDevice.usagePriceCheckingPermissions")
                 : access === "denied"
-                  ? "Read-only access"
+                  ? currentTranslator()("shellDevice.usagePriceReadOnly")
                   : null,
     };
   }),
@@ -98,6 +99,13 @@ type SaveAttempt = {
  * Edits custom model prices and mappings. A mapped model's usage counts as its
  * target model. `initialModel` opens with a new row for that model.
  */
+/** The table's own markers stay English for comparisons; only the shown text is translated. */
+function placeholderText(placeholder: string, t: Translate): string {
+  if (placeholder === "Mixed") return t("shellDevice.usagePriceMixed");
+  if (placeholder === "Unavailable") return t("shellDevice.usagePriceUnavailable");
+  return placeholder;
+}
+
 export function UsagePriceOverrides({
   usage,
   initialSelectedEnvironmentIds,
@@ -171,13 +179,13 @@ export function UsagePriceOverrides({
   const errors = usagePriceTableErrors(selected, stagedDrafts);
   for (const draft of stagedDrafts) {
     if (!draft.isNew) continue;
-    if (draft.model.trim() === "") errors.set(draft.id, "Enter a model ID.");
+    if (draft.model.trim() === "") errors.set(draft.id, t("shellDevice.usagePriceEnterModelId"));
     else if (
       attempt === null &&
       (customModels.includes(draft.model.trim()) ||
         drafts.some((other) => other.id !== draft.id && other.model.trim() === draft.model.trim()))
     )
-      errors.set(draft.id, "This model already has a row. Edit its prices there.");
+      errors.set(draft.id, t("shellDevice.usagePriceModelExists"));
   }
   const failedDestinations =
     attempt?.destinations.filter(
@@ -187,7 +195,8 @@ export function UsagePriceOverrides({
   const hasChanges = stagedDrafts.length > 0;
   const destinationLabel =
     selected.length === 1 ? selected[0]!.label : `${selected.length} environments`;
-  const selectionLabel = selectedIds === null ? "All environments" : destinationLabel;
+  const selectionLabel =
+    selectedIds === null ? t("shellDevice.usageAllEnvironments") : destinationLabel;
   const discard = () => {
     setDrafts([]);
     setAttempt(null);
@@ -239,7 +248,12 @@ export function UsagePriceOverrides({
       (destination) =>
         environments.find(
           (environment) => environment.environmentId === destination.environmentId,
-        ) ?? { ...destination, prices: null, aliases: null, unavailable: "Environment removed" },
+        ) ?? {
+          ...destination,
+          prices: null,
+          aliases: null,
+          unavailable: currentTranslator()("shellDevice.usagePriceEnvironmentRemoved"),
+        },
     );
     const changes = new Map(
       targets.map((target) => [target.environmentId, usagePriceTableChanges(target, edits)]),
@@ -465,7 +479,7 @@ export function UsagePriceOverrides({
                                   placeholder={
                                     row.isNew
                                       ? t("shellDevice.usagePriceOptional")
-                                      : aliasCell.placeholder
+                                      : placeholderText(aliasCell.placeholder, t)
                                   }
                                   autoComplete="off"
                                   spellCheck={false}
@@ -498,7 +512,7 @@ export function UsagePriceOverrides({
                                           ? field.optional
                                             ? t("shellDevice.usagePriceInputRate")
                                             : "0.00"
-                                          : cell.placeholder
+                                          : placeholderText(cell.placeholder, t)
                                       }
                                       autoComplete="off"
                                       disabled={locked}

@@ -604,7 +604,11 @@ function PairingForm({
     }
     if (isAtomCommandInterrupted(result)) return;
     const cause = squashAtomCommandFailure(result);
-    setErrorMessage(cause instanceof Error ? cause.message : "Pairing failed.");
+    setErrorMessage(
+      cause instanceof Error
+        ? cause.message
+        : currentTranslator()("shellDevice.onboardingPairingFailed"),
+    );
   };
 
   return (
@@ -720,7 +724,7 @@ function AgentsStep({
               environmentId={environmentId}
               machineLabel={
                 environments.find((environment) => environment.environmentId === environmentId)
-                  ?.label ?? "Computer"
+                  ?.label ?? t("shellDevice.onboardingComputerFallback")
               }
             />
           ))}
@@ -924,7 +928,7 @@ function OnboardingCodexSetup({
   readonly onAutoStartConsumed: () => void;
 }) {
   const canOperateTerminal = useEnvironmentScope(environmentId, AuthTerminalOperateScope);
-  const update = useAtomCommand(serverEnvironment.updateSettings, "Codex setup settings");
+  const update = useAtomCommand(serverEnvironment.updateSettings, "Codex setup settings"); // i18n-ignore: internal command label
   const instanceId =
     createdAccount?.instanceId ??
     provider?.instanceId ??
@@ -1003,7 +1007,10 @@ function AgentCard({
   const t = useT();
   const meta = providerClients.get(ProviderDriverKind.make(driver));
   const displayName =
-    provider?.displayName || (driver === "claudeAgent" ? "Claude Code" : (meta?.label ?? driver));
+    provider?.displayName ||
+    (driver === "claudeAgent"
+      ? t("shellDevice.onboardingBrandClaudeCode")
+      : (meta?.label ?? driver));
   const summary = getProviderSummary(provider);
   const providerState = getOnboardingProviderState(provider);
 
@@ -1218,7 +1225,7 @@ function AgentInstallTerminal({
             threadRef={threadRef}
             threadId={AGENT_ONBOARDING_THREAD_ID}
             terminalId={terminalId}
-            terminalLabel={`Install ${driver}`}
+            terminalLabel={t("shellDevice.onboardingInstallDriver", { driver })}
             cwd={cwd}
             providerInstanceId={providerInstanceId}
             advancedTypography={advancedTypography}
@@ -1470,13 +1477,17 @@ function ImportStep({
     importedThreadCountRef.current = importedThreadCount;
     if (importedProjectsCount < selection.length) {
       if (importedThreadCount > 0 && skippedThreadCount > 0) {
-        importWarningRef.current = `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}. ${skippedThreadCount} ${skippedThreadCount === 1 ? "thread" : "threads"} could not be imported.`;
+        importWarningRef.current = `${currentTranslator()("shellDevice.onboardingImportedThreads", { count: importedThreadCount })}. ${currentTranslator()("shellDevice.onboardingSkippedThreads", { count: skippedThreadCount })}`;
       } else if (skippedThreadCount > 0) {
-        importWarningRef.current = `${skippedThreadCount} ${skippedThreadCount === 1 ? "thread could" : "threads could"} not be imported.`;
+        importWarningRef.current = currentTranslator()("shellDevice.onboardingSkippedThreads", {
+          count: skippedThreadCount,
+        });
       } else if (importedThreadCount > 0) {
-        importWarningRef.current = `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}. Some thread history could not be imported.`;
+        importWarningRef.current = `${currentTranslator()("shellDevice.onboardingImportedThreads", { count: importedThreadCount })}. ${currentTranslator()("shellDevice.onboardingSomeThreadHistoryNotImported")}`;
       } else {
-        importWarningRef.current = "Could not import thread history.";
+        importWarningRef.current = currentTranslator()(
+          "shellDevice.onboardingThreadHistoryNotImported",
+        );
       }
     }
     finishAfterImport();
@@ -1541,7 +1552,7 @@ function ImportStep({
             );
             const label =
               environments.find((environment) => environment.environmentId === scan.environmentId)
-                ?.label ?? "Computer";
+                ?.label ?? t("shellDevice.onboardingComputerFallback");
             return (
               <fieldset
                 key={scan.environmentId}
