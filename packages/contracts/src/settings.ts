@@ -52,6 +52,10 @@ export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"])
 export type TimestampFormat = typeof TimestampFormat.Type;
 const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = "locale";
 
+export const InterfaceLanguage = Schema.Literals(["system", "en", "cs"]);
+export type InterfaceLanguage = typeof InterfaceLanguage.Type;
+const DEFAULT_INTERFACE_LANGUAGE: InterfaceLanguage = "system";
+
 export const DiffLayout = Schema.Literals(["stacked", "split"]);
 export type DiffLayout = typeof DiffLayout.Type;
 const DEFAULT_DIFF_LAYOUT: DiffLayout = "stacked";
@@ -496,6 +500,12 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   timestampFormat: TimestampFormat.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_TIMESTAMP_FORMAT)),
+  ),
+  // A language from another build must not fail the whole client settings
+  // decode, or a downgrade would reset every other preference.
+  interfaceLanguage: InterfaceLanguage.pipe(
+    Schema.catchDecoding(() => Effect.succeedSome(DEFAULT_INTERFACE_LANGUAGE)),
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_INTERFACE_LANGUAGE)),
   ),
   snapShotEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   snapShotIncludeAccessibility: Schema.Boolean.pipe(
@@ -1767,6 +1777,7 @@ export const ClientSettingsPatch = Schema.Struct({
   sidebarThreadSortOrder: Schema.optionalKey(SidebarThreadSortOrder),
   sidebarThreadPreviewCount: Schema.optionalKey(SidebarThreadPreviewCount),
   timestampFormat: Schema.optionalKey(TimestampFormat),
+  interfaceLanguage: Schema.optionalKey(InterfaceLanguage),
   snapShotEnabled: Schema.optionalKey(Schema.Boolean),
   snapShotIncludeAccessibility: Schema.optionalKey(Schema.Boolean),
   snapShotShortcut: Schema.optionalKey(SnapShotShortcut),

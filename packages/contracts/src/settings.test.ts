@@ -162,6 +162,30 @@ describe("ClientSettings rich text composer", () => {
   });
 });
 
+describe("ClientSettings interface language", () => {
+  it("decodes a missing interfaceLanguage as system", () => {
+    expect(decodeClientSettings({}).interfaceLanguage).toBe("system");
+  });
+
+  it("decodes an unknown interfaceLanguage such as ja as system and keeps the other client settings", () => {
+    const settings = decodeClientSettings({
+      interfaceLanguage: "ja",
+      diffColorScheme: "blue-orange",
+    });
+    expect(settings.interfaceLanguage).toBe("system");
+    expect(settings.diffColorScheme).toBe("blue-orange");
+  });
+
+  it("accepts interfaceLanguage in ClientSettingsPatch", () => {
+    expect(decodeClientSettingsPatch({ interfaceLanguage: "cs" })).toEqual({
+      interfaceLanguage: "cs",
+    });
+    expect(encodeClientSettings(decodeClientSettings({ interfaceLanguage: "cs" }))).toMatchObject({
+      interfaceLanguage: "cs",
+    });
+  });
+});
+
 describe("ServerSettings default permissions", () => {
   it("keeps full access for settings saved before a default was configured", () => {
     expect(decodeServerSettings({}).defaultRuntimeMode).toBe("full-access");
