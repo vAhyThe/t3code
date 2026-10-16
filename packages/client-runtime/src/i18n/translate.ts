@@ -45,12 +45,16 @@ export function createCatalogTranslator(
           : undefined;
       text = form ?? message.other;
     }
-    if (!params) return text;
-    return text.replace(PARAMETER, (slot, name: string) => {
-      const value = params[name];
-      return value === undefined ? slot : String(value);
-    });
+    return params ? interpolate(text, params) : text;
   };
+}
+
+/** Fills `{name}` slots; a slot without a matching parameter stays as written. */
+export function interpolate(text: string, params: MessageParams): string {
+  return text.replace(PARAMETER, (slot, name: string) => {
+    const value = params[name];
+    return value === undefined ? slot : String(value);
+  });
 }
 
 const translators = new Map<UiLocale, Translate>();
