@@ -61,6 +61,7 @@ import * as Scope from "effect/Scope";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import * as DesktopRendererHistory from "../telemetry/DesktopRendererHistory.ts";
 import { MENU_ACTION_CHANNEL, PREVIEW_PICTURE_IN_PICTURE_FRAME_CHANNEL } from "../ipc/channels.ts";
 import * as DesktopBrowserHost from "./DesktopBrowserHost.ts";
@@ -184,7 +185,7 @@ const buildPreviewPictureInPictureDataUrl = (): string => {
     </style>
   </head>
   <body>
-    <img id="preview-frame" alt="Live browser preview">
+    <img id="preview-frame" alt="${currentDesktopTranslator()("desktop.livePreviewAlt")}">
     <script>
       const frame = document.getElementById("preview-frame");
       window.previewPictureInPicture.onFrame((next) => {
@@ -2863,6 +2864,7 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
           },
           () => wc.getTitle().trim(),
         );
+        const t = currentDesktopTranslator();
         const pictureInPictureWindow = yield* attempt(
           {
             operation: "pictureInPicture.create",
@@ -2875,7 +2877,10 @@ const makeNativeOperations = Effect.fn("PreviewManager.makeOperations")(function
               height: PICTURE_IN_PICTURE_INITIAL_HEIGHT,
               minWidth: PICTURE_IN_PICTURE_MIN_WIDTH,
               minHeight: PICTURE_IN_PICTURE_MIN_HEIGHT,
-              title: title.length > 0 ? `Preview · ${title}` : "Browser preview",
+              title:
+                title.length > 0
+                  ? t("desktop.previewWindowTitle", { title })
+                  : t("desktop.previewWindowUntitled"),
               show: false,
               alwaysOnTop: true,
               autoHideMenuBar: true,

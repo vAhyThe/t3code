@@ -6,6 +6,7 @@ import { Message, sessionBus, type MessageBus, type MessageLike } from "dbus-nex
 import * as Schema from "effect/Schema";
 import type { DesktopCaptureExtensionState } from "@t3tools/contracts";
 
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import { GNOME_CAPTURE_FILES, GNOME_CAPTURE_UUID } from "./gnomeCaptureBundle.ts";
 export { isGnomeCaptureSession } from "./linuxCaptureSession.ts";
 
@@ -172,53 +173,52 @@ export class GnomeCaptureSetup {
       if (!bundled["shell-version"].includes(major))
         return {
           status: "unsupported",
-          message: `The bundled extension supports GNOME ${bundled["shell-version"].join(", ")}. This session runs GNOME ${major}.`,
+          message: currentDesktopTranslator()("desktop.gnomeUnsupportedVersion", {
+            versions: bundled["shell-version"].join(", "),
+            major,
+          }),
         };
       if (!info.state && !installed)
         return {
           status: "not-installed",
-          message:
-            "Install the bundled extension to capture the active window without a picker. No download or administrator password is needed.",
+          message: currentDesktopTranslator()("desktop.gnomeNotInstalled"),
         };
       if (installed && (!info.state || (info.version && installed.version > info.version.value)))
         return {
           status: "restart-required",
-          message:
-            "Installed. Save your work, sign out of GNOME and sign back in, then return here to enable the extension. Restarting T3 Code alone is not enough.",
+          message: currentDesktopTranslator()("desktop.gnomeRestartRequired"),
         };
       if ((installed?.version ?? info.version?.value ?? 0) < bundled.version)
         return {
           status: "update-required",
-          message:
-            "A newer extension is bundled with this app. Install it, then sign out and back in to load the update.",
+          message: currentDesktopTranslator()("desktop.gnomeUpdateRequired"),
         };
       if (!properties.UserExtensionsEnabled.value)
         return {
           status: "extensions-disabled",
-          message:
-            "GNOME has disabled user extensions. Turn on Extensions in the GNOME Extensions app, then check again. T3 Code will not enable your other extensions for you.",
+          message: currentDesktopTranslator()("desktop.gnomeExtensionsDisabled"),
         };
       if (info.state?.value === 1)
         return {
           status: "enabled",
-          message: "The T3 Code extension is running. Active-window snapshots are available.",
+          message: currentDesktopTranslator()("desktop.gnomeEnabled"),
         };
       if (info.state?.value === 3 || info.state?.value === 4)
         return {
           status: "error",
-          message:
-            info.error?.value ||
-            "GNOME could not load the extension. Check GNOME Extensions for details, or sign out and back in.",
+          message: info.error?.value || currentDesktopTranslator()("desktop.gnomeLoadFailed"),
         };
       return {
         status: "disabled",
-        message:
-          "Enable the T3 Code extension to allow active-window snapshots. You can disable it here at any time.",
+        message: currentDesktopTranslator()("desktop.gnomeDisabled"),
       };
     } catch (error) {
       return {
         status: "error",
-        message: error instanceof Error ? error.message : "Could not check GNOME extension setup.",
+        message:
+          error instanceof Error
+            ? error.message
+            : currentDesktopTranslator()("desktop.gnomeCheckFailed"),
       };
     }
   }

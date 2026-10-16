@@ -24,6 +24,6 @@ async function capture() {
 void capture().catch((error: unknown) =>
   process.send?.({
     type: "error",
-    message: error instanceof Error ? error.message : "Windows window capture failed.",
+    message: error instanceof Error ? error.message : "Windows window capture failed.", // i18n-ignore: worker process has no catalog, the parent process is the only place that shows it
   } satisfies RegionSnapShotResult),
 );

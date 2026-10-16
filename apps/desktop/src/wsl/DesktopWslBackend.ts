@@ -30,6 +30,7 @@ import * as Semaphore from "effect/Semaphore";
 
 import * as NetService from "@t3tools/shared/Net";
 
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import * as DesktopObservability from "../app/DesktopObservability.ts";
 import * as DesktopBackendConfiguration from "../backend/DesktopBackendConfiguration.ts";
 import * as DesktopBackendPool from "../backend/DesktopBackendPool.ts";
@@ -87,7 +88,10 @@ const scanForWslPort = Effect.fn("desktop.wslBackend.scanForWslPort")(function* 
     }
   }
   return yield* new NetService.NetError({
-    message: `No loopback port available for WSL backend between ${startPort} and ${MAX_TCP_PORT}.`,
+    message: currentDesktopTranslator()("desktop.wslNoLoopbackPort", {
+      startPort,
+      maxPort: MAX_TCP_PORT,
+    }),
   });
 });
 

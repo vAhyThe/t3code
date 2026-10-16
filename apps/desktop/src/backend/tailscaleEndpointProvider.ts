@@ -12,13 +12,14 @@ import * as Option from "effect/Option";
 import * as HttpClient from "effect/http/HttpClient";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
+import { createTranslator, type Translate } from "@t3tools/client-runtime/i18n";
 import type { NetworkInterfaces } from "./DesktopNetworkInterfaces.ts";
 
 export { parseTailscaleMagicDnsName } from "@t3tools/tailscale";
 
 const TAILSCALE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
   id: "tailscale",
-  label: "Tailscale",
+  label: "Tailscale", // i18n-ignore: brand name, the same word in Czech
   kind: "private-network",
   isAddon: true,
 };
@@ -26,6 +27,7 @@ const TAILSCALE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
 function resolveTailscaleIpAdvertisedEndpoints(input: {
   readonly port: number;
   readonly networkInterfaces: NetworkInterfaces;
+  readonly translate: Translate;
 }): readonly AdvertisedEndpoint[] {
   const seen = new Set<string>();
   const endpoints: AdvertisedEndpoint[] = [];
@@ -45,11 +47,11 @@ function resolveTailscaleIpAdvertisedEndpoints(input: {
           provider: TAILSCALE_ENDPOINT_PROVIDER,
           source: "desktop-addon",
           id: `tailscale-ip:http://${address.address}:${input.port}`,
-          label: "Tailscale IP",
+          label: input.translate("desktop.tailscaleIpLabel"),
           httpBaseUrl: `http://${address.address}:${input.port}`,
           reachability: "private-network",
           status: "available",
-          description: "Reachable from devices on the same Tailnet.",
+          description: input.translate("desktop.tailscaleIpDescription"),
         }),
       );
     }
@@ -64,6 +66,7 @@ const resolveTailscaleMagicDnsAdvertisedEndpoint = Effect.fn(
   readonly dnsName: string | null;
   readonly serveEnabled: boolean;
   readonly servePort?: number;
+  readonly translate: Translate;
   readonly probe?: (baseUrl: string) => Effect.Effect<boolean, never, HttpClient.HttpClient>;
 }): Effect.fn.Return<Option.Option<AdvertisedEndpoint>, never, HttpClient.HttpClient> {
   if (!input.dnsName) {
@@ -86,14 +89,14 @@ const resolveTailscaleMagicDnsAdvertisedEndpoint = Effect.fn(
       provider: TAILSCALE_ENDPOINT_PROVIDER,
       source: "desktop-addon",
       id: `tailscale-magicdns:${httpBaseUrl}`,
-      label: "Tailscale HTTPS",
+      label: input.translate("desktop.tailscaleHttpsLabel"),
       httpBaseUrl,
       reachability: "private-network",
       hostedHttpsCompatibility: isReachable ? "compatible" : "requires-configuration",
       status: isReachable ? "available" : "unavailable",
       description: isReachable
-        ? "HTTPS endpoint served by Tailscale Serve."
-        : "MagicDNS hostname. Configure Tailscale Serve for HTTPS access.",
+        ? input.translate("desktop.tailscaleHttpsDescription")
+        : input.translate("desktop.tailscaleMagicDnsDescription"),
     }),
   );
 });
@@ -111,12 +114,15 @@ export const resolveTailscaleAdvertisedEndpoints = Effect.fn("resolveTailscaleAd
       ChildProcessSpawner.ChildProcessSpawner
     >;
     readonly probe?: (baseUrl: string) => Effect.Effect<boolean, never, HttpClient.HttpClient>;
+    /** Defaults to English, for callers without a user locale such as tests. */
+    readonly translate?: Translate;
   }): Effect.fn.Return<
     readonly AdvertisedEndpoint[],
     never,
     ChildProcessSpawner.ChildProcessSpawner | HttpClient.HttpClient
   > {
-    const ipEndpoints = resolveTailscaleIpAdvertisedEndpoints(input);
+    const translate = input.translate ?? createTranslator("en");
+    const ipEndpoints = resolveTailscaleIpAdvertisedEndpoints({ ...input, translate });
     const readDnsName =
       input.readMagicDnsName ??
       readTailscaleStatus.pipe(
@@ -133,6 +139,7 @@ export const resolveTailscaleAdvertisedEndpoints = Effect.fn("resolveTailscaleAd
           : null;
     const magicDnsEndpoint = yield* resolveTailscaleMagicDnsAdvertisedEndpoint({
       dnsName,
+      translate,
       serveEnabled: input.serveEnabled === true,
       ...(input.servePort === undefined ? {} : { servePort: input.servePort }),
       ...(input.probe === undefined ? {} : { probe: input.probe }),

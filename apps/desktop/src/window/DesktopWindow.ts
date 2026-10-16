@@ -30,6 +30,7 @@ import * as PreviewManager from "../preview/Manager.ts";
 import * as PreviewPasskeys from "../preview/Passkeys.ts";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as DesktopRendererHistory from "../telemetry/DesktopRendererHistory.ts";
 import { makeQuitShortcutHandler } from "./QuitHold.ts";
@@ -563,6 +564,7 @@ export const make = Effect.gen(function* () {
         // the host renderer when the user right-clicks inside a browser guest.
         contents.focus();
 
+        const t = currentDesktopTranslator();
         const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
 
         if (params.misspelledWord) {
@@ -575,7 +577,7 @@ export const make = Effect.gen(function* () {
             });
           }
           if (params.dictionarySuggestions.length === 0) {
-            menuTemplate.push({ label: "No suggestions", enabled: false });
+            menuTemplate.push({ label: t("desktop.contextMenuNoSuggestions"), enabled: false });
           }
           menuTemplate.push({ type: "separator" });
         }
@@ -583,7 +585,7 @@ export const make = Effect.gen(function* () {
         if (Option.isSome(ElectronShell.parseSafeExternalUrl(params.linkURL))) {
           menuTemplate.push(
             {
-              label: "Copy Link",
+              label: t("desktop.contextMenuCopyLink"),
               click: () => {
                 void runPromise(electronShell.copyText(params.linkURL));
               },
@@ -594,7 +596,7 @@ export const make = Effect.gen(function* () {
 
         if (params.mediaType === "image") {
           menuTemplate.push({
-            label: "Copy Image",
+            label: t("desktop.contextMenuCopyImage"),
             click: () => {
               void runPromise(
                 Effect.tryPromise(() => copyContextMenuImage(contents, params)).pipe(

@@ -480,7 +480,7 @@ const makeBackendOutputLogShape = (
         const writeFailure = Effect.fn("desktop.observability.backendOutput.writeFailure")(
           function* (session: BackendOutputSession, details: string) {
             yield* writeBackendChildLogRecord(logFile, {
-              message: "backend child process failure output start",
+              message: "backend child process failure output start", // i18n-ignore: log record, not shown in the UI
               level: "ERROR",
               annotations: {
                 component: "desktop-backend-child",
@@ -492,7 +492,7 @@ const makeBackendOutputLogShape = (
             });
             for (const output of session.chunks) {
               yield* writeBackendChildLogRecord(logFile, {
-                message: "backend child process output",
+                message: "backend child process output", // i18n-ignore: log record, not shown in the UI
                 level: output.streamName === "stderr" ? "ERROR" : "INFO",
                 annotations: {
                   component: "desktop-backend-child",
@@ -504,7 +504,7 @@ const makeBackendOutputLogShape = (
               });
             }
             yield* writeBackendChildLogRecord(logFile, {
-              message: "backend child process failure output end",
+              message: "backend child process failure output end", // i18n-ignore: log record, not shown in the UI
               level: "ERROR",
               annotations: {
                 component: "desktop-backend-child",

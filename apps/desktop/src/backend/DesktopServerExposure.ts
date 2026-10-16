@@ -24,6 +24,8 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopNetworkInterfaces from "./DesktopNetworkInterfaces.ts";
+import type { Translate } from "@t3tools/client-runtime/i18n";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import { resolveTailscaleAdvertisedEndpoints } from "./tailscaleEndpointProvider.ts";
 
 const TAILSCALE_STATUS_CACHE_TTL = Duration.seconds(60);
@@ -44,21 +46,22 @@ interface DesktopAdvertisedEndpointInput {
   readonly port: number;
   readonly exposure: ResolvedDesktopServerExposure;
   readonly customHttpsEndpointUrls?: readonly string[];
+  readonly translate: Translate;
 }
 
 const DESKTOP_CORE_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
   id: "desktop-core",
-  label: "Desktop",
+  label: "Desktop", // i18n-ignore: product name, the same word in Czech
   kind: "core",
   isAddon: false,
 };
 
-const DESKTOP_MANUAL_ENDPOINT_PROVIDER: AdvertisedEndpointProvider = {
+const desktopManualEndpointProvider = (translate: Translate): AdvertisedEndpointProvider => ({
   id: "manual",
-  label: "Manual",
+  label: translate("desktop.exposureManualProvider"),
   kind: "manual",
   isAddon: false,
-};
+});
 
 const normalizeOptionalHost = (value: string | undefined): string | undefined => {
   const normalized = value?.trim();
@@ -147,10 +150,11 @@ const createDesktopEndpoint = (
 
 const createManualEndpoint = (
   input: Omit<CreateAdvertisedEndpointInput, "provider" | "source">,
+  translate: Translate,
 ): AdvertisedEndpoint =>
   createAdvertisedEndpoint({
     ...input,
-    provider: DESKTOP_MANUAL_ENDPOINT_PROVIDER,
+    provider: desktopManualEndpointProvider(translate),
     source: "user",
   });
 
@@ -160,11 +164,11 @@ const resolveDesktopCoreAdvertisedEndpoints = (
   const endpoints: AdvertisedEndpoint[] = [
     createDesktopEndpoint({
       id: `desktop-loopback:${input.port}`,
-      label: "This machine",
+      label: input.translate("desktop.exposureThisMachine"),
       httpBaseUrl: input.exposure.localHttpUrl,
       reachability: "loopback",
       status: "available",
-      description: "Loopback endpoint for this desktop app.",
+      description: input.translate("desktop.exposureLoopbackDescription"),
     }),
   ];
 
@@ -172,12 +176,12 @@ const resolveDesktopCoreAdvertisedEndpoints = (
     endpoints.push(
       createDesktopEndpoint({
         id: `desktop-lan:${input.exposure.endpointUrl}`,
-        label: "Local network",
+        label: input.translate("desktop.exposureLocalNetwork"),
         httpBaseUrl: input.exposure.endpointUrl,
         reachability: "lan",
         status: "available",
         isDefault: true,
-        description: "Reachable from devices on the same network.",
+        description: input.translate("desktop.exposureLocalNetworkDescription"),
       }),
     );
   }
@@ -186,17 +190,24 @@ const resolveDesktopCoreAdvertisedEndpoints = (
     try {
       const isHttpsEndpoint = isHttpsEndpointUrl(customEndpointUrl);
       endpoints.push(
-        createManualEndpoint({
-          id: `manual:${customEndpointUrl}`,
-          label: isHttpsEndpoint ? "Custom HTTPS" : "Custom endpoint",
-          httpBaseUrl: customEndpointUrl,
-          reachability: "public",
-          ...(isHttpsEndpoint ? ({ hostedHttpsCompatibility: "compatible" } as const) : {}),
-          status: "unknown",
-          description: isHttpsEndpoint
-            ? "User-configured HTTPS endpoint for this desktop backend."
-            : "User-configured endpoint for this desktop backend.",
-        }),
+        createManualEndpoint(
+          {
+            id: `manual:${customEndpointUrl}`,
+            label: input.translate(
+              isHttpsEndpoint ? "desktop.exposureCustomHttps" : "desktop.exposureCustomEndpoint",
+            ),
+            httpBaseUrl: customEndpointUrl,
+            reachability: "public",
+            ...(isHttpsEndpoint ? ({ hostedHttpsCompatibility: "compatible" } as const) : {}),
+            status: "unknown",
+            description: input.translate(
+              isHttpsEndpoint
+                ? "desktop.exposureCustomHttpsDescription"
+                : "desktop.exposureCustomEndpointDescription",
+            ),
+          },
+          input.translate,
+        ),
       );
     } catch {
       // Ignore malformed user-configured endpoints without dropping valid endpoints.
@@ -536,12 +547,14 @@ export const make = Effect.gen(function* () {
   );
 
   const getAdvertisedEndpoints = Effect.gen(function* () {
+    const translate = currentDesktopTranslator();
     const state = yield* Ref.get(stateRef);
     const currentNetworkInterfaces = yield* readNetworkInterfaces;
     const coreEndpoints = resolveDesktopCoreAdvertisedEndpoints({
       port: state.port,
       exposure: toResolvedExposure(state),
       customHttpsEndpointUrls: config.desktopHttpsEndpointUrls,
+      translate,
     });
 
     // Don't spawn the Tailscale CLI when the user hasn't opted into any
@@ -556,6 +569,7 @@ export const make = Effect.gen(function* () {
       serveEnabled: state.tailscaleServeEnabled,
       servePort: state.tailscaleServePort,
       networkInterfaces: currentNetworkInterfaces,
+      translate,
       readMagicDnsName: cachedReadMagicDnsName,
     }).pipe(
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, childProcessSpawner),

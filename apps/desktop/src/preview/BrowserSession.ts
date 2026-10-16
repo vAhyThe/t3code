@@ -10,6 +10,7 @@ import * as Schema from "effect/Schema";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 
 import * as ElectronDialog from "../electron/ElectronDialog.ts";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 
 const PREVIEW_PARTITION_PREFIX = "persist:t3code-preview-";
 /**
@@ -241,16 +242,19 @@ export const make = Effect.gen(function* BrowserSessionMake() {
       });
     const shownUrl =
       url.length > MAX_PROMPT_URL_LENGTH ? `${url.slice(0, MAX_PROMPT_URL_LENGTH)}…` : url;
+    const t = currentDesktopTranslator();
     runFork(
       electronDialog
         .showMessageBox(
           {
             type: "question",
-            buttons: ["Open", "Cancel"],
+            buttons: [t("desktop.browserOpenLinkButton"), t("common.cancel")],
             defaultId: 0,
             cancelId: 1,
-            message: `Open this ${new URL(url).protocol.slice(0, -1)} link?`,
-            detail: `A page in the browser wants to open another application:\n\n${shownUrl}`,
+            message: t("desktop.browserOpenLinkTitle", {
+              protocol: new URL(url).protocol.slice(0, -1),
+            }),
+            detail: t("desktop.browserOpenLinkDetail", { url: shownUrl }),
           },
           previewHostWindow(requester),
         )

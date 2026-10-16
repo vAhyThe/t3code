@@ -6,6 +6,7 @@ import * as NodePath from "node:path";
 import * as NodeURL from "node:url";
 import * as Schema from "effect/Schema";
 import type { DesktopCaptureHelperState } from "@t3tools/contracts";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import type { LinuxWindowSnapshot } from "./LinuxSnapShot.ts";
 import { readPortalPng } from "./linuxCaptureSession.ts";
 import { startNativeCaptureFeedback } from "./NativeCaptureFeedback.ts";
@@ -91,28 +92,27 @@ export class HyprlandCaptureSetup {
       if (!installed)
         return {
           status: "not-installed",
-          message: "Install the bundled helper to capture the window you're using.",
+          message: currentDesktopTranslator()("desktop.hyprlandNotInstalled"),
         };
       const bundle = await regularFile(this.paths.bundle);
-      if (!bundle)
-        throw new Error(
-          "The Hyprland capture helper is missing from this build. Update or reinstall T3 Code.",
-        );
+      if (!bundle) throw new Error(currentDesktopTranslator()("desktop.hyprlandHelperMissing"));
       if (!installed.equals(bundle))
         return {
           status: "update-required",
-          message: "Update the bundled capture helper to continue.",
+          message: currentDesktopTranslator()("desktop.captureHelperUpdateRequired"),
         };
       return {
         status: "ready",
-        message:
-          "Helper ready. Hyprland may ask for screen-sharing permission on your first capture.",
+        message: currentDesktopTranslator()("desktop.hyprlandReady"),
         ...decodeCapabilities(await run(hyprlandCaptureExecutable(this.paths), ["check"])),
       };
     } catch (error) {
       return {
         status: "error",
-        message: error instanceof Error ? error.message : "Couldn't check Hyprland capture access.",
+        message:
+          error instanceof Error
+            ? error.message
+            : currentDesktopTranslator()("desktop.hyprlandCheckFailed"),
       };
     }
   }

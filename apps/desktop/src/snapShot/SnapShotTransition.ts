@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import type * as Fiber from "effect/Fiber";
 
 import * as Electron from "electron";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 
 const MIN_DURATION_MS = 280;
 const MAX_DURATION_MS = 680;
@@ -114,7 +115,7 @@ function createWindow(
     resizable: false,
     show: false,
     skipTaskbar: true,
-    title: "T3 Code Snapshot Animation",
+    title: "T3 Code Snapshot Animation", // i18n-ignore: internal window title of a transparent animation window, never shown
     transparent: true,
     webPreferences: {
       backgroundThrottling: false,
@@ -163,7 +164,7 @@ const applyDetails=value=>{
   if(!value)return;
   details.dataset.ready="";
   document.getElementById("app").textContent=value.appName;
-  document.getElementById("title").textContent=value.windowTitle||"Captured window";
+  document.getElementById("title").textContent=value.windowTitle||"${currentDesktopTranslator()("desktop.snapShotCapturedWindow")}";
   document.getElementById("fallback").textContent=value.appName.slice(0,1);
   if(value.appIconDataUrl){
     const icon=document.getElementById("icon");icon.src=value.appIconDataUrl;icon.style.display="block";document.getElementById("fallback").style.display="none";

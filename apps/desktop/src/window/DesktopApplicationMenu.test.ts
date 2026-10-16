@@ -1,8 +1,11 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
+import { ClientSettingsSchema } from "@t3tools/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
+import * as Schema from "effect/Schema";
 
 import type * as Electron from "electron";
 
@@ -12,8 +15,11 @@ import * as ElectronMenu from "../electron/ElectronMenu.ts";
 import * as DesktopApplicationMenu from "./DesktopApplicationMenu.ts";
 import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
+import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopWindow from "./DesktopWindow.ts";
+
+const decodeClientSettings = Schema.decodeEffect(ClientSettingsSchema);
 
 const environmentInput = {
   dirname: "/repo/apps/desktop/dist-electron",
@@ -106,6 +112,7 @@ const configureMenu = (
   selectedAction: Deferred.Deferred<string>,
   applicationMenuTemplate: Deferred.Deferred<readonly Electron.MenuItemConstructorOptions[]>,
   environment: Partial<DesktopEnvironment.MakeDesktopEnvironmentInput> = {},
+  clientSettingsLayer: Layer.Layer<DesktopClientSettings.DesktopClientSettings> = DesktopClientSettings.layerTest(),
 ) =>
   Effect.gen(function* () {
     const menu = yield* DesktopApplicationMenu.DesktopApplicationMenu;
@@ -118,6 +125,7 @@ const configureMenu = (
         Layer.provideMerge(layerDesktopUpdates),
         Layer.provideMerge(layerElectronDialog),
         Layer.provideMerge(layerElectronApp),
+        Layer.provideMerge(clientSettingsLayer),
         Layer.provideMerge(
           DesktopEnvironment.layer({ ...environmentInput, ...environment }).pipe(
             Layer.provide(Layer.mergeAll(NodeServices.layer, DesktopConfig.layerTest({}))),
@@ -305,6 +313,37 @@ describe("DesktopApplicationMenu", () => {
 
       reload.click({} as Electron.MenuItem, {} as Electron.BrowserWindow, {} as KeyboardEvent);
       assert.equal(yield* Deferred.await(selectedAction), "main-reload");
+    }),
+  );
+  it.effect("rebuilds the menu in the interface language saved after startup", () =>
+    Effect.gen(function* () {
+      const selectedAction = yield* Deferred.make<string>();
+      const englishTemplate =
+        yield* Deferred.make<readonly Electron.MenuItemConstructorOptions[]>();
+      const czechTemplate = yield* Deferred.make<readonly Electron.MenuItemConstructorOptions[]>();
+      const defaultSettings = yield* decodeClientSettings({});
+      const stored = { current: defaultSettings };
+      const settingsLayer = Layer.succeed(DesktopClientSettings.DesktopClientSettings, {
+        get: Effect.sync(() => Option.some(stored.current)),
+        set: (next) =>
+          Effect.sync(() => {
+            stored.current = next;
+          }),
+      } satisfies DesktopClientSettings.DesktopClientSettings["Service"]);
+
+      yield* configureMenu(selectedAction, englishTemplate, {}, settingsLayer);
+      const englishFileMenu = (yield* Deferred.await(englishTemplate)).find(
+        (item) => item.label === "File",
+      );
+      assert.isDefined(englishFileMenu);
+
+      // Same effect as a settings save from the renderer, which then rebuilds the menu.
+      stored.current = { ...defaultSettings, interfaceLanguage: "cs" };
+      yield* configureMenu(selectedAction, czechTemplate, {}, settingsLayer);
+
+      const template = yield* Deferred.await(czechTemplate);
+      assert.isDefined(template.find((item) => item.label === "Soubor"));
+      assert.isUndefined(template.find((item) => item.label === "File"));
     }),
   );
 });

@@ -8,6 +8,7 @@ import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import { PASSKEY_CREATE_CHANNEL, PASSKEY_GET_CHANNEL } from "./GuestProtocol.ts";
 import type { PasskeyBackend, PasskeyCeremonyContext } from "./PasskeyBackend.ts";
 import { macPasskeyBackend } from "./PasskeyBackendMac.ts";
@@ -71,7 +72,7 @@ const notAllowed: PasskeyCeremonyResult = { success: false, error: "NotAllowedEr
 const accountLabel = (account: Electron.WebAuthnAccount) =>
   account.displayName && account.name && account.displayName !== account.name
     ? `${account.displayName} (${account.name})`
-    : (account.name ?? account.displayName ?? "Unnamed passkey");
+    : (account.name ?? account.displayName ?? currentDesktopTranslator()("desktop.passkeyUnnamed"));
 
 const ownerWindow = (frame: WebFrameMain | null) => {
   const contents = frame ? electronWebContents.fromFrame(frame) : undefined;
@@ -80,14 +81,15 @@ const ownerWindow = (frame: WebFrameMain | null) => {
 };
 
 const chooseAccount = async (details: Electron.SelectWebauthnAccountDetails) => {
+  const t = currentDesktopTranslator();
   const [onlyAccount] = details.accounts;
   // The Touch ID prompt that follows already asks the user to confirm.
   if (details.accounts.length === 1) return onlyAccount?.credentialId;
   const options: Electron.MessageBoxOptions = {
     type: "none",
-    message: "Choose a passkey",
+    message: t("desktop.passkeyChooseTitle"),
     detail: details.relyingPartyId,
-    buttons: [...details.accounts.map(accountLabel), "Cancel"],
+    buttons: [...details.accounts.map(accountLabel), t("common.cancel")],
     cancelId: details.accounts.length,
     defaultId: 0,
     noLink: true,

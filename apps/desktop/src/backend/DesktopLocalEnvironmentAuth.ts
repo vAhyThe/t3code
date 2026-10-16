@@ -104,7 +104,7 @@ export const make = Effect.gen(function* () {
           httpBaseUrl: config.httpBaseUrl.href,
           credential,
           clientMetadata: {
-            label: "T3 Code Desktop",
+            label: "T3 Code Desktop", // i18n-ignore: sent to the server as the client label, not shown in the UI
             deviceType: "desktop",
           },
         }).pipe(

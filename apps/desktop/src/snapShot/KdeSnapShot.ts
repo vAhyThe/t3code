@@ -8,6 +8,7 @@ import * as NodeURL from "node:url";
 import * as Schema from "effect/Schema";
 import type { DesktopCaptureHelperState } from "@t3tools/contracts";
 
+import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import { escapeDesktopEntryExecArgument } from "../app/DesktopLinuxUrlHandler.ts";
 import type { LinuxWindowSnapshot } from "./LinuxSnapShot.ts";
 import { readPortalPng } from "./linuxCaptureSession.ts";
@@ -109,30 +110,32 @@ export class KdeCaptureSetup {
       if (!installed || !entry)
         return {
           status: "not-installed",
-          message:
-            "Install the bundled helper to capture the window you're using without a picker.",
+          message: currentDesktopTranslator()("desktop.kdeNotInstalled"),
         };
       const bundle = await regularFile(this.paths.bundle);
       if (!bundle)
         return {
           status: "error",
-          message: "The capture helper is missing from this build. Update or reinstall T3 Code.",
+          message: currentDesktopTranslator()("desktop.kdeHelperMissing"),
         };
       if (!installed.equals(bundle) || entry.toString() !== kdeCaptureDesktopEntry(executable))
         return {
           status: "update-required",
-          message: "Update the bundled capture helper to continue.",
+          message: currentDesktopTranslator()("desktop.captureHelperUpdateRequired"),
         };
       const capabilities = decodeCapabilities(await run(executable, ["check"]));
       return {
         status: "ready",
-        message: "KDE capture access is ready. Next, choose your shortcut.",
+        message: currentDesktopTranslator()("desktop.kdeReady"),
         feedbackAvailable: capabilities.feedbackAvailable ?? false,
       };
     } catch (error) {
       return {
         status: "error",
-        message: error instanceof Error ? error.message : "Couldn't check KDE capture access.",
+        message:
+          error instanceof Error
+            ? error.message
+            : currentDesktopTranslator()("desktop.kdeCheckFailed"),
       };
     }
   }
@@ -160,10 +163,7 @@ export class KdeCaptureSetup {
       });
     } else {
       const bundle = await regularFile(this.paths.bundle);
-      if (!bundle)
-        throw new Error(
-          "The capture helper is missing from this build. Update or reinstall T3 Code.",
-        );
+      if (!bundle) throw new Error(currentDesktopTranslator()("desktop.kdeHelperMissing"));
       await NodeFSP.mkdir(directory, { recursive: true });
       await NodeFSP.mkdir(NodePath.dirname(desktop), { recursive: true });
       const staging = await NodeFSP.mkdtemp(NodePath.join(directory, ".install-"));
