@@ -1,4 +1,4 @@
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator, useT } from "../../i18n/I18nProvider";
 import { useScopedSettingsWriteAllowed } from "./useScopedSettings";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import { EnvironmentId, type T3ProjectFileScript } from "@t3tools/contracts";
@@ -128,7 +128,10 @@ export function ProjectActionsSettings() {
         setRequest({
           scriptId: null,
           initial: payload,
-          error: error instanceof Error ? error.message : t("settingsB.projectActionsImportFailed"),
+          error:
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("settingsB.projectActionsImportFailed"),
         });
       }
     },
