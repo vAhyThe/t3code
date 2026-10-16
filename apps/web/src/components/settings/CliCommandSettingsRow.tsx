@@ -5,12 +5,14 @@ import { Button } from "../ui/button";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { SettingsRow } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
+import { useT } from "../../i18n/I18nProvider";
 
 /**
  * Settings → `t3` command: puts the desktop app's bundled CLI on PATH, or takes
  * it off again. Hidden where the desktop build has no launcher to install.
  */
 export function CliCommandSettingsRow() {
+  const t = useT();
   const bridge = typeof window === "undefined" ? undefined : window.desktopBridge?.cliCommand;
   const [state, setState] = useState<DesktopCliCommandState | null>(null);
   const [pending, setPending] = useState(false);
@@ -39,25 +41,29 @@ export function CliCommandSettingsRow() {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: action === "install" ? "Could not install t3" : "Could not remove t3",
-              description: error instanceof Error ? error.message : "Something went wrong.",
+              title:
+                action === "install"
+                  ? t("settingsA.cliCommandInstallFailed")
+                  : t("settingsA.cliCommandRemoveFailed"),
+              description:
+                error instanceof Error ? error.message : t("settingsA.cliCommandFallbackError"),
             }),
           );
         })
         .finally(() => setPending(false));
     },
-    [bridge, pending],
+    [bridge, pending, t],
   );
 
   if (!bridge || !state?.supported) return null;
   const installed = state.installedPath !== null;
   const description = state.shadowedBy
-    ? `Another t3 at ${state.shadowedBy} runs first in a new terminal. Remove it to use T3 Code's.`
+    ? t("settingsA.cliCommandShadowed", { path: state.shadowedBy })
     : !installed
-      ? "Run T3 Code's CLI as `t3` from any terminal."
+      ? t("settingsA.cliCommandNotInstalled")
       : state.onPath
-        ? `Installed at ${state.installedPath}. Open a new terminal to use it.`
-        : `Installed at ${state.installedPath}, which is not on your PATH yet. Add its folder to your PATH to run \`t3\`.`;
+        ? t("settingsA.cliCommandInstalled", { path: state.installedPath ?? "" })
+        : t("settingsA.cliCommandNotOnPath", { path: state.installedPath ?? "" });
 
   return (
     <SettingsRow
@@ -70,7 +76,7 @@ export function CliCommandSettingsRow() {
           disabled={pending}
           onClick={() => change(installed ? "uninstall" : "install")}
         >
-          {installed ? "Remove" : "Install"}
+          {installed ? t("settingsA.cliCommandRemove") : t("settingsA.cliCommandInstall")}
         </Button>
       }
     />

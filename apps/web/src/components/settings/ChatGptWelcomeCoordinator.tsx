@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { ChatGptUsageButton } from "./ChatGptUsageButton";
+import { useT } from "../../i18n/I18nProvider";
 
 const STORAGE_KEY = "t3:chatgpt-sharing-welcome:v1";
 function readAcknowledgedProfiles(): string[] {
@@ -28,6 +29,7 @@ function readAcknowledgedProfiles(): string[] {
 
 /** Read the verified environment snapshot, never the browser callback acknowledgment. */
 export function ChatGptWelcomeCoordinator() {
+  const t = useT();
   const presentations = useAtomValue(environmentPresentations.presentationsAtom);
   const [acknowledged, setAcknowledged] = useState(readAcknowledgedProfiles);
   const profiles = [...presentations].flatMap(([environmentId, presentation]) =>
@@ -64,18 +66,18 @@ export function ChatGptWelcomeCoordinator() {
       <DialogPopup>
         <DialogHeader>
           <OpenAI className="mb-2 size-8" aria-hidden="true" />
-          <DialogTitle>Your ChatGPT plan is connected</DialogTitle>
-          <DialogDescription>
-            Eligible usage in T3 Code uses your ChatGPT plan. Manage your shared usage and any
-            credit settings in ChatGPT.
-          </DialogDescription>
+          <DialogTitle>{t("settingsA.chatGptWelcomeTitle")}</DialogTitle>
+          <DialogDescription>{t("settingsA.chatGptWelcomeDescription")}</DialogDescription>
           <p className="text-xs text-muted-foreground">
-            {next?.providerName} on {next?.environmentLabel}
+            {t("settingsA.chatGptWelcomeSource", {
+              provider: next?.providerName ?? "",
+              environment: next?.environmentLabel ?? "",
+            })}
           </p>
         </DialogHeader>
         <DialogFooter>
           <ChatGptUsageButton />
-          <Button onClick={dismiss}>Continue</Button>
+          <Button onClick={dismiss}>{t("common.continue")}</Button>
         </DialogFooter>
       </DialogPopup>
     </Dialog>
