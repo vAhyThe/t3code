@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
+import { createTranslator } from "@t3tools/client-runtime/i18n";
 import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
 import type { Project, Thread } from "../types";
 import { makeThreadFixture } from "../test-fixtures";
@@ -14,9 +15,11 @@ import {
   filterCommandPaletteGroups,
   findHighlightedCommandPaletteItem,
   reduceCommandPaletteUiState,
+  settingsSearchItemTerms,
   type CommandPaletteActionItem,
   type CommandPaletteGroup,
 } from "./CommandPalette.logic";
+import { SETTINGS_SEARCH_ITEMS } from "./settings/settingsSearch";
 
 describe("linked pull request thread navigation", () => {
   it("keeps archived relations searchable and routes them through the PR environment", async () => {
@@ -892,5 +895,29 @@ describe("virtualized command palette rows", () => {
     expect(findHighlightedCommandPaletteItem(groups, "thread-b")?.value).toBe("thread-b");
     expect(findHighlightedCommandPaletteItem(groups, "offline")).toBeNull();
     expect(findHighlightedCommandPaletteItem(groups, null)).toBeNull();
+  });
+});
+
+describe("settings results in a translated interface", () => {
+  const keybindings = SETTINGS_SEARCH_ITEMS.find((item) => item.id === "keybindings")!;
+  const item: CommandPaletteActionItem = {
+    kind: "action",
+    value: "setting:keybindings",
+    searchTerms: settingsSearchItemTerms(keybindings, createTranslator("cs")),
+    title: "Klávesové zkratky",
+    icon: null,
+    run: async () => {},
+  };
+
+  it.each(["zkratky", "keybindings"])("finds the same setting by %s in Czech", (query) => {
+    const groups = filterCommandPaletteGroups({
+      activeGroups: [],
+      query,
+      isInSubmenu: false,
+      projectSearchItems: [],
+      settingsSearchItems: [item],
+      threadSearchItems: [],
+    });
+    expect(groups.flatMap((group) => group.items)).toEqual([item]);
   });
 });

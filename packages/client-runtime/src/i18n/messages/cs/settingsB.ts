@@ -1,3 +1,5 @@
 import type { CzechNamespace } from "../en/index.ts";
 
-export const settingsB = {} satisfies CzechNamespace<"settingsB">;
+export const settingsB = {
+  keybindings: "Klávesové zkratky",
+} satisfies CzechNamespace<"settingsB">;

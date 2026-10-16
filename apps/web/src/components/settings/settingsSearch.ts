@@ -4,8 +4,10 @@ import { isMacPlatform, isWindowsPlatform, normalizeSearchText } from "~/lib/uti
 import { STATIC_KEYBINDING_COMMANDS, type KeybindingCommand } from "@t3tools/contracts";
 import type { EnvironmentId } from "@t3tools/contracts";
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import { createTranslator, type MessageKey, type Translate } from "@t3tools/client-runtime/i18n";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { DEFAULT_KEYBINDINGS } from "@t3tools/shared/keybindings";
+import { searchLabels } from "~/i18n/searchLabels";
 import { commandLabel } from "./KeybindingsSettings.logic";
 import {
   validateSettingsScopeSearch,
@@ -44,6 +46,8 @@ export type SettingsSearchScope =
 export interface SettingsSearchItem {
   readonly id: string;
   readonly title: string;
+  /** Catalog key of the title once it is translated; `title` stays the English source. */
+  readonly titleKey?: MessageKey;
   readonly to: SettingsPath;
   readonly targetId?: string;
   /** Descriptions, option labels, and aliases people may remember instead of the title. */
@@ -401,6 +405,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "interface-language",
     title: "Language",
+    titleKey: "settingsA.language",
     to: "/settings/general",
     searchTerms: ["interface locale translation english czech cestina jazyk"],
   },
@@ -622,6 +627,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "keybindings",
     title: "Keybindings",
+    titleKey: "settingsB.keybindings",
     to: "/settings/keybindings",
     searchTerms: ["keyboard shortcuts hotkeys commands bindings json"],
   },
@@ -1165,9 +1171,24 @@ export function filterAvailableSettingsSearchItems(
   );
 }
 
+const ENGLISH = createTranslator("en");
+
+/** Titles a search matches: the shown one first, then its English source. */
+export function settingsSearchTitles(item: SettingsSearchItem, t: Translate): readonly string[] {
+  return item.titleKey ? searchLabels(t, item.titleKey) : [item.title];
+}
+
+function rankTitle(title: string, normalizedQuery: string, queryTokens: readonly string[]) {
+  if (title === normalizedQuery) return 5;
+  if (title.startsWith(normalizedQuery)) return 4;
+  if (title.includes(normalizedQuery)) return 3;
+  return queryTokens.every((token) => title.includes(token)) ? 2 : 0;
+}
+
 export function searchSettings(
   query: string,
   items: ReadonlyArray<SettingsSearchItem> = SETTINGS_SEARCH_ITEMS,
+  t: Translate = ENGLISH,
 ): ReadonlyArray<SettingsSearchItem> {
   const normalizedQuery = normalizeSearchText(query);
   if (normalizedQuery.length === 0) return [];
@@ -1181,27 +1202,19 @@ export function searchSettings(
       if (item.macOnly && !isMacPlatform(platform)) return [];
       if (item.windowsOnly && !isWindowsPlatform(platform)) return [];
 
-      const title = normalizeSearchText(item.title);
+      const titles = settingsSearchTitles(item, t).map(normalizeSearchText);
       const fields = [
-        title,
+        ...titles,
         normalizeSearchText(SETTINGS_SECTION_LABELS[item.to]),
         ...(item.searchTerms ?? []).map(normalizeSearchText),
       ];
       if (!queryTokens.every((token) => fields.some((field) => field.includes(token)))) return [];
 
       const exactPhraseField = fields.findIndex((field) => field.includes(normalizedQuery));
-      const rank =
-        title === normalizedQuery
-          ? 5
-          : title.startsWith(normalizedQuery)
-            ? 4
-            : title.includes(normalizedQuery)
-              ? 3
-              : queryTokens.every((token) => title.includes(token))
-                ? 2
-                : exactPhraseField >= 0
-                  ? 1
-                  : 0;
+      const rank = Math.max(
+        ...titles.map((title) => rankTitle(title, normalizedQuery, queryTokens)),
+        exactPhraseField >= 0 ? 1 : 0,
+      );
       return [{ item, index, rank }];
     })
     .toSorted(

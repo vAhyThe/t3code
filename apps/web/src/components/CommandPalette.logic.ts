@@ -7,6 +7,7 @@ import {
   THREAD_JUMP_KEYBINDING_COMMANDS,
 } from "@t3tools/contracts";
 import { filterFilesystemBrowseEntries } from "@t3tools/client-runtime/state/filesystem";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import type { SidebarThreadSortOrder } from "@t3tools/contracts/settings";
 import * as Arr from "effect/Array";
 import * as Result from "effect/Result";
@@ -15,6 +16,11 @@ import { getThreadSortTimestamp, sortThreads } from "../lib/threadSort";
 import { normalizeSearchText } from "../lib/utils";
 import { formatRelativeTimeLabel } from "../timestampFormat";
 import { type Project, type SidebarThreadSummary, type Thread } from "../types";
+import {
+  SETTINGS_SECTION_LABELS,
+  settingsSearchTitles,
+  type SettingsSearchItem,
+} from "./settings/settingsSearch";
 
 export const RECENT_THREAD_LIMIT = 12;
 export const ITEM_ICON_CLASS = "size-4 text-icon-muted";
@@ -436,6 +442,15 @@ function rankCommandPaletteItemMatch(
   }
 
   return 0;
+}
+
+/** Palette search terms for a settings result, matching its translated and English title. */
+export function settingsSearchItemTerms(item: SettingsSearchItem, t: Translate): string[] {
+  return [
+    ...settingsSearchTitles(item, t),
+    SETTINGS_SECTION_LABELS[item.to],
+    ...(item.searchTerms ?? []),
+  ];
 }
 
 export function filterCommandPaletteGroups(input: {

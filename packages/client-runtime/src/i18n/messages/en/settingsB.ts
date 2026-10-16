@@ -1,3 +1,5 @@
 import type { CatalogNamespace } from "../types.ts";
 
-export const settingsB = {} as const satisfies CatalogNamespace;
+export const settingsB = {
+  keybindings: "Keybindings",
+} as const satisfies CatalogNamespace;

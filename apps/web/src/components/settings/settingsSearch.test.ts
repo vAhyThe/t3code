@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
+import { createTranslator } from "@t3tools/client-runtime/i18n";
 import { EnvironmentId } from "@t3tools/contracts";
 
 import {
@@ -10,6 +11,7 @@ import {
   searchableSetting,
   searchSettings,
   SETTINGS_SEARCH_ITEMS,
+  settingsSearchTitles,
   type SettingsSearchItem,
 } from "./settingsSearch";
 
@@ -584,5 +586,18 @@ describe("settings sidebar scope", () => {
     expect(isSettingsOverviewVisible({ machine: "remote" })).toBe(false);
     expect(isSettingsOverviewVisible({ project: "project" })).toBe(true);
     expect(isSettingsOverviewVisible({ project: "project", checkout: "checkout" })).toBe(true);
+  });
+});
+
+describe("searchSettings with a translated interface", () => {
+  const czech = createTranslator("cs");
+
+  it.each(["zkratky", "keybindings"])("finds Keybindings by %s in Czech", (query) => {
+    expect(searchSettings(query, SETTINGS_SEARCH_ITEMS, czech)[0]?.id).toBe("keybindings");
+  });
+
+  it("shows the translated title first", () => {
+    const item = SETTINGS_SEARCH_ITEMS.find((candidate) => candidate.id === "keybindings")!;
+    expect(settingsSearchTitles(item, czech)).toEqual(["Klávesové zkratky", "Keybindings"]);
   });
 });
