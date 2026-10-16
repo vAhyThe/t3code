@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
 
 import { BROWSER_DEVICE_TOOLBAR_HEIGHT, resizeFreeformViewport } from "./browserViewportLayout";
@@ -29,10 +30,6 @@ import { commitViewportAndAspectRatio } from "./browserDeviceToolbarState";
 import { ScreenRotationIcon } from "./ScreenRotationIcon";
 
 const RESPONSIVE_VALUE = "responsive";
-const SELECT_ITEMS = [
-  { value: RESPONSIVE_VALUE, label: "Responsive" },
-  ...PREVIEW_VIEWPORT_PRESETS.map((preset) => ({ value: preset.id, label: preset.label })),
-];
 
 interface Props {
   readonly setting: Exclude<PreviewViewportSetting, { readonly _tag: "fill" }>;
@@ -49,6 +46,11 @@ export function BrowserDeviceToolbar({
   onAspectRatioChange,
   onChange,
 }: Props) {
+  const t = useT();
+  const selectItems = [
+    { value: RESPONSIVE_VALUE, label: t("shellDevice.browserResponsive") },
+    ...PREVIEW_VIEWPORT_PRESETS.map((preset) => ({ value: preset.id, label: preset.label })),
+  ];
   const [pending, setPending] = useState(false);
   const [customSize, setCustomSize] = useState<{
     readonly width: string;
@@ -157,7 +159,7 @@ export function BrowserDeviceToolbar({
       className="sticky left-0 top-0 z-50 flex items-center gap-0.5 overflow-x-auto border-b border-border/70 bg-background/95 px-1.5 shadow-xs backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       style={{ width, height: BROWSER_DEVICE_TOOLBAR_HEIGHT }}
       role="toolbar"
-      aria-label="Browser device toolbar"
+      aria-label={t("shellDevice.browserDeviceToolbar")}
       data-browser-device-toolbar
       onBlur={(event) => {
         const nextTarget = event.relatedTarget;
@@ -176,28 +178,28 @@ export function BrowserDeviceToolbar({
     >
       {width >= 560 ? (
         <span className="mr-0.5 shrink-0 text-2xs font-medium text-muted-foreground">
-          Dimensions
+          {t("shellDevice.browserDimensions")}
         </span>
       ) : null}
       <Select
         modal={false}
         value={selectedValue}
         onValueChange={selectViewport}
-        items={SELECT_ITEMS}
+        items={selectItems}
         disabled={pending}
       >
         <SelectTrigger
           variant="ghost"
           size="xs"
           className={cn("shrink-0 justify-between", width >= 440 ? "w-36" : "w-24")}
-          aria-label="Browser device preset"
+          aria-label={t("shellDevice.browserDevicePreset")}
         >
           <SelectValue />
         </SelectTrigger>
         <SelectPopup align="start" alignItemWithTrigger={false}>
-          <SelectItem value={RESPONSIVE_VALUE}>Responsive</SelectItem>
+          <SelectItem value={RESPONSIVE_VALUE}>{t("shellDevice.browserResponsive")}</SelectItem>
           <SelectGroup>
-            <SelectGroupLabel>Standard</SelectGroupLabel>
+            <SelectGroupLabel>{t("shellDevice.browserStandard")}</SelectGroupLabel>
             {PREVIEW_VIEWPORT_PRESETS.map((preset) => (
               <SelectItem key={preset.id} value={preset.id}>
                 <span className="flex w-full items-center justify-between gap-5">
@@ -214,7 +216,7 @@ export function BrowserDeviceToolbar({
 
       <form
         className="m-0 flex min-w-0 shrink-0 items-center gap-0.5 border-0 p-0"
-        aria-label="Viewport dimensions"
+        aria-label={t("shellDevice.browserViewportDimensions")}
         onSubmit={(event) => {
           event.preventDefault();
           applyCustomSize();
@@ -240,7 +242,7 @@ export function BrowserDeviceToolbar({
             )
           }
           onChange={(event) => updateCustomDimension("width", event.target.value)}
-          aria-label="Viewport width"
+          aria-label={t("shellDevice.browserViewportWidth")}
           aria-invalid={!customValid}
           className={width >= 360 ? "w-14" : "w-13"}
         />
@@ -265,7 +267,7 @@ export function BrowserDeviceToolbar({
             )
           }
           onChange={(event) => updateCustomDimension("height", event.target.value)}
-          aria-label="Viewport height"
+          aria-label={t("shellDevice.browserViewportHeight")}
           aria-invalid={!customValid}
           className={width >= 360 ? "w-14" : "w-13"}
         />
@@ -279,7 +281,9 @@ export function BrowserDeviceToolbar({
               size="icon-xs"
               type="button"
               aria-label={
-                aspectRatio === null ? "Lock viewport aspect ratio" : "Unlock viewport aspect ratio"
+                aspectRatio === null
+                  ? t("shellDevice.browserLockViewportAspectRatio")
+                  : t("shellDevice.browserUnlockViewportAspectRatio")
               }
               aria-pressed={aspectRatio !== null}
               disabled={pending || !customValid}
@@ -295,14 +299,16 @@ export function BrowserDeviceToolbar({
           )}
         </TooltipTrigger>
         <TooltipPopup side="top">
-          {aspectRatio === null ? "Lock aspect ratio" : "Unlock aspect ratio"}
+          {aspectRatio === null
+            ? t("shellDevice.browserLockAspectRatio")
+            : t("shellDevice.browserUnlockAspectRatio")}
         </TooltipPopup>
       </Tooltip>
       <Button
         variant="ghost"
         size="icon-xs"
         type="button"
-        aria-label="Rotate viewport"
+        aria-label={t("shellDevice.browserRotateViewport")}
         disabled={pending}
         onClick={rotate}
       >
@@ -314,7 +320,7 @@ export function BrowserDeviceToolbar({
           variant="ghost"
           size="icon-xs"
           type="button"
-          aria-label="Close device toolbar"
+          aria-label={t("shellDevice.browserCloseDeviceToolbar")}
           disabled={pending}
           onClick={() => {
             apply({ _tag: "fill" }, null);

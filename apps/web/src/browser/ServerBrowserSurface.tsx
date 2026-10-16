@@ -39,6 +39,7 @@ import { CommandBlock } from "~/components/CommandBlock";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { toastManager } from "~/components/ui/toast";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
 import { refreshPreviewStreamAccess, usePreviewStreamAccess } from "~/state/previewStream";
 import { observeResize } from "~/lib/observeResize";
@@ -110,11 +111,12 @@ async function copyPageText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
+    const t = currentTranslator();
     const id = toastManager.add({
       type: "info",
-      title: "The page copied text",
+      title: t("shellDevice.browserPageCopiedText"),
       actionProps: {
-        children: "Copy",
+        children: t("shellDevice.browserCopy"),
         onClick: () => {
           toastManager.close(id);
           void navigator.clipboard.writeText(text).catch(() => undefined);
@@ -126,11 +128,12 @@ async function copyPageText(text: string) {
 
 /** The download happens on the environment; this hands the finished file to this device. */
 function offerDownload(download: PreviewStreamDownload) {
+  const t = currentTranslator();
   const id = toastManager.add({
     type: "info",
-    title: `Downloaded ${download.fileName}`,
+    title: t("shellDevice.browserDownloadedFile", { name: download.fileName }),
     actionProps: {
-      children: "Save",
+      children: t("shellDevice.browserSave"),
       onClick: () => {
         toastManager.close(id);
         const anchor = document.createElement("a");
@@ -186,6 +189,7 @@ export function ServerBrowserSurface(props: {
   const [promptText, setPromptText] = useState("");
   const [fileChooser, setFileChooser] = useState<PreviewStreamFileChooser | null>(null);
   const [agentCursor, setAgentCursor] = useState<AgentCursorPlacement | null>(null);
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const answerFileChooser = (files: ReadonlyArray<File>) => {
     const chooser = fileChooser;
@@ -194,7 +198,7 @@ export function ServerBrowserSurface(props: {
     void uploadPreviewStreamFiles(chooser, files).catch((cause: unknown) =>
       toastManager.add({
         type: "error",
-        title: "Could not send the files to the page",
+        title: t("shellDevice.browserFilesNotSent"),
         description: cause instanceof Error ? cause.message : undefined,
       }),
     );
@@ -758,7 +762,9 @@ export function ServerBrowserSurface(props: {
               send({ type: control.controller === "you" ? "releaseControl" : "takeControl" })
             }
           >
-            {control.controller === "you" ? "Release control" : "Take control"}
+            {control.controller === "you"
+              ? t("shellDevice.browserReleaseControl")
+              : t("shellDevice.browserTakeControl")}
           </Button>
         ) : null}
       </div>
@@ -784,8 +790,8 @@ export function ServerBrowserSurface(props: {
           scrolls the surface; 16px keeps iOS from zooming the app on focus. */}
         <textarea
           ref={inputRef}
-          aria-label="Browser page"
-          aria-description="Press Shift+Escape to leave the browser page."
+          aria-label={t("shellDevice.browserPageLabel")}
+          aria-description={t("shellDevice.browserPageLeaveHint")}
           autoCapitalize="off"
           autoComplete="off"
           autoCorrect="off"
@@ -816,10 +822,12 @@ export function ServerBrowserSurface(props: {
           <div
             className="absolute inset-x-2 top-2 z-10 flex flex-col gap-2 rounded-lg border border-border bg-background p-3 shadow-lg"
             role="dialog"
-            aria-label="Choose files for the page"
+            aria-label={t("shellDevice.browserChooseFilesForPage")}
           >
             <p className="text-sm">
-              The page asks for {fileChooser.multiple ? "files" : "a file"}.
+              {fileChooser.multiple
+                ? t("shellDevice.browserPageAsksForFiles")
+                : t("shellDevice.browserPageAsksForFile")}
             </p>
             <input
               ref={fileInputRef}
@@ -835,10 +843,12 @@ export function ServerBrowserSurface(props: {
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => answerFileChooser([])}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-                Choose {fileChooser.multiple ? "files" : "file"}
+                {fileChooser.multiple
+                  ? t("shellDevice.browserChooseFiles")
+                  : t("shellDevice.browserChooseFile")}
               </Button>
             </div>
           </div>
@@ -847,14 +857,14 @@ export function ServerBrowserSurface(props: {
           <div
             className="absolute inset-x-2 top-2 z-10 flex flex-col gap-2 rounded-lg border border-border bg-background p-3 shadow-lg"
             role="dialog"
-            aria-label="Browser dialog"
+            aria-label={t("shellDevice.browserDialog")}
           >
             <p className="break-words text-sm">{control.dialog.message}</p>
             {control.controller === "you" ? (
               <>
                 {control.dialog.type === "prompt" ? (
                   <Input
-                    aria-label="Dialog response"
+                    aria-label={t("shellDevice.browserDialogResponse")}
                     value={promptText}
                     onChange={(event) => setPromptText(event.target.value)}
                   />
@@ -865,7 +875,7 @@ export function ServerBrowserSurface(props: {
                     size="sm"
                     onClick={() => send({ type: "dialog", accept: false })}
                   >
-                    Dismiss
+                    {t("shellDevice.browserDismiss")}
                   </Button>
                   <Button
                     size="sm"
@@ -877,12 +887,14 @@ export function ServerBrowserSurface(props: {
                       })
                     }
                   >
-                    Accept
+                    {t("shellDevice.browserAccept")}
                   </Button>
                 </div>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">Take control to respond.</p>
+              <p className="text-xs text-muted-foreground">
+                {t("shellDevice.browserTakeControlToRespond")}
+              </p>
             )}
           </div>
         ) : null}
@@ -894,7 +906,7 @@ export function ServerBrowserSurface(props: {
           </p>
           <CommandBlock command={hostSetup.command} className="w-full max-w-md text-left" />
           <Button variant="outline" size="sm" onClick={() => setHostSetup(null)}>
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       ) : null}
@@ -902,7 +914,7 @@ export function ServerBrowserSurface(props: {
         // The page can be invisible beneath an empty or unreachable state; reconnect must remain reachable.
         <div className="visible absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-background p-3 text-center">
           <p role="alert" className="text-xs text-muted-foreground">
-            Browser connection was refused.
+            {t("shellDevice.browserConnectionRefused")}
           </p>
           <Button
             variant="outline"
@@ -913,7 +925,7 @@ export function ServerBrowserSurface(props: {
               refreshPreviewStreamAccess(environmentId);
             }}
           >
-            Reconnect
+            {t("shellDevice.browserReconnect")}
           </Button>
         </div>
       ) : null}

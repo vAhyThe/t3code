@@ -17,6 +17,7 @@ import { AsyncResult } from "effect/reactivity";
 
 import { resolveAssetUrl } from "~/assets/assetUrls";
 import { isPreviewAvailableFor, previewRuntimeFor } from "~/browser/previewRuntime";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import {
   applyPreviewServerSnapshot,
   readThreadPreviewState,
@@ -134,7 +135,7 @@ export async function openFileInPreview<AssetError, PreviewError>(input: {
     return AsyncResult.failure(
       Cause.fail(
         new BrowserPreviewUnavailableError({
-          message: "The integrated browser is unavailable in this runtime.",
+          message: currentTranslator()("shellDevice.browserUnavailableInRuntime"),
         }),
       ),
     );

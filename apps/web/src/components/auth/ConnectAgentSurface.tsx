@@ -14,6 +14,8 @@ import * as Schema from "effect/Schema";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { PrimaryEnvironmentHttpClient } from "~/environments/primary/httpClient";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { Trans } from "~/i18n/Trans";
 import { runPrimaryHttp } from "~/lib/runtime";
 import { cn } from "~/lib/utils";
 import { runtimeModeConfig } from "../chat/runtimeModeConfig";
@@ -26,13 +28,9 @@ import { AuthSurfaceShell } from "./AuthSurfaceShell";
 
 const accessConfig: Record<
   AuthMcpClientAccess,
-  { readonly label: string; readonly description: string; readonly icon: LucideIcon }
+  { readonly label?: string; readonly description?: string; readonly icon: LucideIcon }
 > = {
-  "read-only": {
-    label: "Read only",
-    description: "Read projects and threads. Cannot start, message or change anything.",
-    icon: EyeIcon,
-  },
+  "read-only": { icon: EyeIcon },
   ...runtimeModeConfig,
 };
 
@@ -46,7 +44,6 @@ type Loaded =
   | { readonly status: "invalid"; readonly message: string }
   | { readonly status: "ready"; readonly details: AuthMcpApprovalDetails };
 
-const UNREACHABLE = "Could not reach this environment. Try again.";
 const isApprovalError = Schema.is(AuthMcpApprovalError);
 
 type Answer<A> =
@@ -76,11 +73,16 @@ function runApproval<A>(
       Effect.catch((error) =>
         Effect.succeed<Answer<A>>({
           kind: "error",
-          message: isApprovalError(error) ? error.message : UNREACHABLE,
+          message: isApprovalError(error)
+            ? error.message
+            : currentTranslator()("shellDevice.authUnreachable"),
         }),
       ),
     ),
-  ).catch((): Answer<A> => ({ kind: "error", message: UNREACHABLE }));
+  ).catch((): Answer<A> => ({
+    kind: "error",
+    message: currentTranslator()("shellDevice.authUnreachable"),
+  }));
 }
 
 function readAuthorizationRequest(): AuthMcpAuthorizationRequest {
@@ -102,6 +104,7 @@ function oneClickApproves(details: AuthMcpApprovalDetails, access: AuthMcpClient
 }
 
 export function ConnectAgentSurface() {
+  const t = useT();
   const [authorization] = useState(readAuthorizationRequest);
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [access, setAccess] = useState<AuthMcpClientAccess>("read-only");
@@ -150,7 +153,11 @@ export function ConnectAgentSurface() {
         return;
       }
       setPending(null);
-      setErrorMessage(answer.kind === "error" ? answer.message : "The sign-in could not continue.");
+      setErrorMessage(
+        answer.kind === "error"
+          ? answer.message
+          : currentTranslator()("shellDevice.authSignInNotContinued"),
+      );
     },
     [access, authorization, loaded, pairingCode],
   );
@@ -159,8 +166,8 @@ export function ConnectAgentSurface() {
     return (
       <AuthSurfaceShell>
         <ConnectAgentHeading
-          title="Checking the sign-in request"
-          description="One moment while this environment verifies the agent's request."
+          title={t("shellDevice.authCheckingRequest")}
+          description={t("shellDevice.authCheckingRequestDescription")}
         />
         <Spinner className="mt-6" size="lg" tone="muted" />
       </AuthSurfaceShell>
@@ -170,10 +177,11 @@ export function ConnectAgentSurface() {
   if (loaded.status === "invalid") {
     return (
       <AuthSurfaceShell>
-        <ConnectAgentHeading title="This sign-in cannot continue" description={loaded.message} />
-        <p className="mt-4 text-sm text-muted-foreground">
-          Close this page and start the sign-in again from your agent.
-        </p>
+        <ConnectAgentHeading
+          title={t("shellDevice.authSignInCannotContinue")}
+          description={loaded.message}
+        />
+        <p className="mt-4 text-sm text-muted-foreground">{t("shellDevice.authCloseAndRestart")}</p>
       </AuthSurfaceShell>
     );
   }
@@ -185,26 +193,28 @@ export function ConnectAgentSurface() {
   return (
     <AuthSurfaceShell>
       <ConnectAgentHeading
-        title={`Connect ${details.clientName}`}
+        title={t("shellDevice.authConnectClient", { name: details.clientName })}
         description={
-          <>
-            This agent wants to use the threads in every project on{" "}
-            <span className="font-medium text-foreground">{details.environmentHost}</span>.
-          </>
+          <Trans
+            k="shellDevice.authAgentWantsThreads"
+            params={{ host: details.environmentHost }}
+            components={{
+              host: (children) => <span className="font-medium text-foreground">{children}</span>,
+            }}
+          />
         }
       />
       <p className="mt-2 text-xs text-muted-foreground">
         {redirectsToThisComputer(details.redirectHost) ? (
-          <>
-            The name is chosen by the agent. Approval returns to {details.redirectHost} on the
-            computer that opened this page. Only approve a sign-in you just started.
-          </>
+          t("shellDevice.authRedirectLocal", { host: details.redirectHost })
         ) : (
-          <>
-            The name is chosen by the agent. Approval gives access to whoever runs{" "}
-            <span className="font-medium text-foreground">{details.redirectHost}</span>. Only
-            approve a sign-in you just started there.
-          </>
+          <Trans
+            k="shellDevice.authRedirectRemote"
+            params={{ host: details.redirectHost }}
+            components={{
+              host: (children) => <span className="font-medium text-foreground">{children}</span>,
+            }}
+          />
         )}
       </p>
 
@@ -217,7 +227,7 @@ export function ConnectAgentSurface() {
       >
         <div className="space-y-2">
           <span id="connect-agent-access-label" className="text-sm font-medium">
-            What it may do
+            {t("shellDevice.authAccessLabel")}
           </span>
           <RadioGroup
             aria-labelledby="connect-agent-access-label"
@@ -228,16 +238,13 @@ export function ConnectAgentSurface() {
               <AccessOption key={option} access={option} selected={option === access} />
             ))}
           </RadioGroup>
-          <p className="text-xs text-muted-foreground">
-            Beyond read only, it can start, message and stop threads, and none of them can run with
-            more than the mode you pick.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("shellDevice.authAccessNote")}</p>
         </div>
 
         {oneClick ? null : (
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="connect-agent-pairing-code">
-              Pairing code
+              {t("shellDevice.authPairingCodeLabel")}
             </label>
             <Input
               id="connect-agent-pairing-code"
@@ -247,13 +254,15 @@ export function ConnectAgentSurface() {
               disabled={pending !== null}
               nativeInput
               onChange={(event) => setPairingCode(event.currentTarget.value)}
-              placeholder="Paste a one-time pairing code"
+              placeholder={t("shellDevice.authPairingCodePlaceholder")}
               spellCheck={false}
               value={pairingCode}
             />
             <p className="text-xs text-muted-foreground">
-              Create one in Settings → Connections, or run <code>t3 auth pairing create</code> on
-              this machine.
+              <Trans
+                k="shellDevice.authPairingCodeHelp"
+                components={{ code: (children) => <code>{children}</code> }}
+              />
             </p>
           </div>
         )}
@@ -266,7 +275,7 @@ export function ConnectAgentSurface() {
 
         <div className="flex flex-wrap gap-2">
           <Button disabled={!canApprove} type="submit">
-            {pending === "approve" ? "Approving…" : "Approve"}
+            {pending === "approve" ? t("shellDevice.authApproving") : t("shellDevice.authApprove")}
           </Button>
           <Button
             disabled={pending !== null}
@@ -274,7 +283,7 @@ export function ConnectAgentSurface() {
             type="button"
             variant="outline"
           >
-            {pending === "deny" ? "Denying…" : "Deny"}
+            {pending === "deny" ? t("shellDevice.authDenying") : t("shellDevice.authDeny")}
           </Button>
         </div>
       </form>
@@ -289,9 +298,12 @@ function ConnectAgentHeading({
   readonly title: string;
   readonly description: ReactNode;
 }) {
+  const t = useT();
   return (
     <>
-      <p className="text-3xs font-semibold tracking-widest text-primary uppercase">Agent sign-in</p>
+      <p className="text-3xs font-semibold tracking-widest text-primary uppercase">
+        {t("shellDevice.authAgentSignIn")}
+      </p>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
     </>
@@ -305,7 +317,10 @@ function AccessOption({
   readonly access: AuthMcpClientAccess;
   readonly selected: boolean;
 }) {
-  const { label, description, icon: Icon } = accessConfig[access];
+  const t = useT();
+  const { label: configLabel, description: configDescription, icon: Icon } = accessConfig[access];
+  const label = configLabel ?? t("shellDevice.authAccessReadOnly");
+  const description = configDescription ?? t("shellDevice.authAccessReadOnlyDescription");
   return (
     <RadioPrimitive.Root
       value={access}

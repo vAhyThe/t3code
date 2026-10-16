@@ -1,4 +1,5 @@
 import { DeviceHostUpdates } from "./DeviceHostUpdates";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import type {
   DevicePlatform,
   DeviceServiceState,
@@ -8,6 +9,7 @@ import type {
 import { Smartphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useT } from "~/i18n/I18nProvider";
 import { usePreviewMiniPlayerStore } from "~/previewMiniPlayerStore";
 import { useRightPanelStore, type RightPanelSurface } from "~/rightPanelStore";
 import { Button } from "~/components/ui/button";
@@ -24,8 +26,10 @@ import { DeviceSetup } from "./DeviceSetup";
 import { DeviceWorkspace } from "./DeviceWorkspace";
 import { PreviewPanelShell, type PreviewPanelMode } from "../preview/PreviewPanelShell";
 
-const platformLabel = (platform: DevicePlatform) =>
-  platform === "ios" ? "iOS Simulators" : "Android Emulators";
+const platformLabel = (platform: DevicePlatform, t: Translate) =>
+  platform === "ios"
+    ? t("shellDevice.deviceIosSimulators")
+    : t("shellDevice.deviceAndroidEmulators");
 
 const deviceKey = (device: Pick<DeviceSummary, "hostId" | "id">) =>
   `${device.hostId}\u0000${device.id}`;
@@ -38,6 +42,7 @@ export function DevicePanel(props: {
   readonly visible: boolean;
   readonly onDismissSetup: () => void;
 }) {
+  const t = useT();
   const { environmentId, threadId } = props.threadRef;
   const { state, loaded } = useDeviceState(environmentId);
   const list = useAtomCommand(deviceEnvironment.list, { reportFailure: false });
@@ -178,7 +183,9 @@ export function DevicePanel(props: {
       <DeviceHostUpdates state={state} environmentId={environmentId} />
       {bootingDevices.length > 0 ? (
         <div role="status" className="border-b px-3 py-2 text-xs text-muted-foreground">
-          Starting {bootingDevices.map((device) => device.name).join(", ")}… This can take a minute.
+          {t("shellDevice.deviceStartingNames", {
+            names: bootingDevices.map((device) => device.name).join(", "),
+          })}
         </div>
       ) : null}
       {operationError ? (
@@ -190,7 +197,7 @@ export function DevicePanel(props: {
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label="Dismiss device error"
+            aria-label={t("shellDevice.deviceDismissError")}
             onClick={() => setOperationError(null)}
           >
             <X className="size-3" />
@@ -204,7 +211,8 @@ export function DevicePanel(props: {
             environmentId={environmentId}
             device={activeDevice}
             hostLabel={
-              state.hosts.find((host) => host.id === activeDevice.hostId)?.label ?? "Device host"
+              state.hosts.find((host) => host.id === activeDevice.hostId)?.label ??
+              t("shellDevice.deviceHostFallback")
             }
             hostDiagnostics={state.hostStatusDetail}
             visible={props.visible}
@@ -214,21 +222,21 @@ export function DevicePanel(props: {
           />
         ) : pendingDevice || hostBusy || !loaded ? (
           <DeviceLoadingView
-            name={pendingDevice?.name ?? "Devices"}
+            name={pendingDevice?.name ?? t("shellDevice.devicesFallbackName")}
             description={
               pendingDevice
-                ? `${state.hosts.find((host) => host.id === pendingDevice.hostId)?.label ?? "Device host"} · ${pendingDevice.version}`
+                ? `${state.hosts.find((host) => host.id === pendingDevice.hostId)?.label ?? t("shellDevice.deviceHostFallback")} · ${pendingDevice.version}`
                 : ""
             }
             stage="opening"
             message={
               pendingDevice
                 ? pendingDevice.booted
-                  ? "Opening device…"
-                  : "Starting device…"
+                  ? t("shellDevice.deviceOpening")
+                  : t("shellDevice.deviceStarting")
                 : state.hostStatus === "installing"
-                  ? (state.hostStatusDetail ?? "Installing device support…")
-                  : "Finding devices…"
+                  ? (state.hostStatusDetail ?? t("shellDevice.deviceInstallingSupport"))
+                  : t("shellDevice.deviceFinding")
             }
           />
         ) : (
@@ -244,8 +252,8 @@ export function DevicePanel(props: {
                   <Smartphone className="size-6 opacity-60" />
                   <p className="max-w-sm">
                     {state.hostStatus === "failed"
-                      ? (state.hostStatusDetail ?? "The device hub failed to start.")
-                      : "No simulators or emulators were found on this environment."}
+                      ? (state.hostStatusDetail ?? t("shellDevice.deviceHubFailedToStart"))
+                      : t("shellDevice.deviceNoSimulators")}
                   </p>
                 </>
               ) : null}
@@ -255,7 +263,7 @@ export function DevicePanel(props: {
                     <section key={group.platform} className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Smartphone className="size-4 shrink-0" />
-                        <h3 className="font-medium">{platformLabel(group.platform)}</h3>
+                        <h3 className="font-medium">{platformLabel(group.platform, t)}</h3>
                       </div>
                       <DiscoveryList>
                         {group.devices.map((device) => (
@@ -267,16 +275,22 @@ export function DevicePanel(props: {
                               </span>
                             }
                             title={device.name}
-                            description={`${state.hosts.find((host) => host.id === device.hostId)?.label} · ${device.version} · ${device.booted ? "Running" : "Stopped"}`}
+                            description={`${state.hosts.find((host) => host.id === device.hostId)?.label} · ${device.version} · ${device.booted ? t("shellDevice.deviceRunning") : t("shellDevice.deviceStopped")}`}
                             disabled={pendingDeviceKey !== null}
-                            aria-label={`${device.booted ? "Open" : "Start"} ${device.name}`}
+                            aria-label={
+                              device.booted
+                                ? t("shellDevice.deviceOpenNamed", { name: device.name })
+                                : t("shellDevice.deviceStartNamed", { name: device.name })
+                            }
                             onClick={() => void selectDevice(deviceKey(device))}
                             action={
                               pendingDeviceKey === deviceKey(device) ? (
                                 <Spinner size="xs" />
                               ) : (
                                 <span className="text-xs text-muted-foreground">
-                                  {device.booted ? "Open" : "Start"}
+                                  {device.booted
+                                    ? t("shellDevice.deviceOpen")
+                                    : t("shellDevice.deviceStart")}
                                 </span>
                               )
                             }
@@ -290,10 +304,7 @@ export function DevicePanel(props: {
               {hostReady &&
               !state.devices.some((device) => device.platform === "android") &&
               !unavailablePlatforms.some((platform) => platform.platform === "android") ? (
-                <p className="max-w-sm text-xs">
-                  No Android virtual devices found. Create one in Android Studio's Device Manager,
-                  then refresh.
-                </p>
+                <p className="max-w-sm text-xs">{t("shellDevice.deviceNoAndroid")}</p>
               ) : null}
               {loaded && !hostBusy ? (
                 <Button
@@ -302,7 +313,7 @@ export function DevicePanel(props: {
                   size="sm"
                   onClick={() => void list({ environmentId, input: {} })}
                 >
-                  Refresh devices
+                  {t("shellDevice.deviceRefreshDevices")}
                 </Button>
               ) : null}
             </div>

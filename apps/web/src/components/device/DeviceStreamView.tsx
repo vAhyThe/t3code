@@ -22,6 +22,7 @@ import {
   type DeviceStreamClient,
   type DeviceStreamStatus,
 } from "@t3tools/client-runtime/device/stream";
+import { useT } from "~/i18n/I18nProvider";
 import { observeResize } from "~/lib/observeResize";
 
 const AX_POLL_INTERVAL_MS = 2_000;
@@ -307,15 +308,16 @@ export function DeviceStreamView(props: {
     return { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) };
   };
 
+  const t = useT();
   const phoneUnavailableReason =
     isDuo && !screen?.supportsHingeAngle
-      ? "iPhone Duo 3D requires Device Hub 0.11.0 or newer"
+      ? t("shellDevice.deviceDuo3dRequiresHub")
       : phoneUnavailable
-        ? "3D is unavailable on this browser"
+        ? t("shellDevice.device3dUnavailableBrowser")
         : mjpegUrl
-          ? "3D requires the H.264 stream"
+          ? t("shellDevice.device3dRequiresH264")
           : props.axOverlay
-            ? "Turn off accessibility frames to use 3D"
+            ? t("shellDevice.device3dTurnOffAxFrames")
             : null;
 
   const keyboardSource = deviceKeyboard(props.platform, props.deviceName ?? "");
@@ -395,7 +397,11 @@ export function DeviceStreamView(props: {
         )}
         tabIndex={0}
         role="application"
-        aria-label={`${props.platform === "ios" ? "iOS Simulator" : "Android Emulator"} screen`}
+        aria-label={
+          props.platform === "ios"
+            ? t("shellDevice.deviceIosSimulatorScreen")
+            : t("shellDevice.deviceAndroidEmulatorScreen")
+        }
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
           if (event.metaKey && !["r", "R"].includes(event.key)) return;
@@ -510,7 +516,7 @@ export function DeviceStreamView(props: {
               size="xs"
               aria-pressed={!!showPhone}
               disabled={!!phoneUnavailableReason}
-              title={phoneUnavailableReason ?? "Show 3D phone"}
+              title={phoneUnavailableReason ?? t("shellDevice.deviceShow3dPhone")}
               onClick={() => setPresentation("phone")}
             >
               3D
@@ -542,10 +548,14 @@ export function DeviceStreamView(props: {
         {status !== "streaming" && !(retainingFrame && showPhone) ? (
           <div className="absolute inset-0">
             <DeviceLoadingView
-              name={props.deviceName ?? "Device"}
+              name={props.deviceName ?? t("shellDevice.deviceFallbackName")}
               description={props.deviceDescription ?? ""}
               stage="stream"
-              message={status === "error" ? (detail ?? "Stream failed.") : "Connecting video…"}
+              message={
+                status === "error"
+                  ? (detail ?? t("shellDevice.deviceStreamFailed"))
+                  : t("shellDevice.deviceConnectingVideo")
+              }
               error={status === "error"}
             >
               {status === "error" ? (
