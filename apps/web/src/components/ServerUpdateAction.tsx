@@ -29,7 +29,7 @@ import { manualServerUpdateCommand } from "~/versionSkew";
 import { Button } from "./ui/button";
 import { toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 // The wire "installing" stage is a sub-second launcher handoff, so the UI
 // folds it into the download phase; everything after the handoff is the
@@ -46,7 +46,9 @@ export function serverUpdateStageLabel(stage: ServerUpdateStage): string {
 }
 
 function updateFailureMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Server update failed.";
+  return error instanceof Error
+    ? error.message
+    : currentTranslator()("shellRest.serverUpdateFailedGeneric");
 }
 
 export interface ServerUpdateTarget {
@@ -135,7 +137,7 @@ export function useServerUpdate() {
 /** Updates eligible machines independently; manual paths remain in the machine list. */
 export function ServerUpdatesAction({
   targets,
-  label = "Update all",
+  label = currentTranslator()("shellRest.updateAllButton"),
   variant = "outline",
   size = "xs",
   className,
@@ -162,7 +164,9 @@ export function ServerUpdatesAction({
       if (desktopTargets.length > 0) {
         const confirmed =
           (await requestConfirmDialog(
-            `Update the T3 Code desktop apps on ${desktopTargets.map((target) => target.serverLabel).join(", ")}? They will close and relaunch on those machines.`,
+            currentTranslator()("shellRest.updateDesktopAppsConfirm", {
+              servers: desktopTargets.map((target) => target.serverLabel).join(", "),
+            }),
           )) ?? true;
         if (!confirmed) return;
       }
@@ -241,7 +245,7 @@ export function ServerUpdateAction({
   className,
   appearance = "button",
 }: Omit<ServerUpdateTarget, "continueThreadsAfterServerUpdate"> & UpdateButtonProps) {
-  const t = useT();
+  const t = currentTranslator();
   const isDesktopAppUpdate = selfUpdate === "desktop-managed";
   const sessionStateAtom = environmentSession.sessionStateAtom(environmentId);
   const canUpdate = canUpdateServer(useAtomValue(sessionStateAtom));
@@ -287,7 +291,7 @@ export function ServerUpdateAction({
       // remote machine installs without asking anyone there.
       const confirmed =
         (await requestConfirmDialog(
-          `Update the T3 Code desktop app that runs the ${serverLabel}? It will close and relaunch on that machine.`,
+          currentTranslator()("shellRest.updateDesktopAppThatRunsConfirm", { server: serverLabel }),
         )) ?? true;
       if (!confirmed) {
         return;

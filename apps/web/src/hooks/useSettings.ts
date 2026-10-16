@@ -588,8 +588,9 @@ export function usePrimarySettings<T = UnifiedSettings>(
   return useMergedSettings(settings, selector);
 }
 
-export const PRIMARY_SETTINGS_UNAVAILABLE_MESSAGE =
-  "This setting is saved on a server, and the hosted app is not anchored to one. Change it from the desktop app or from the server's own address.";
+export const PRIMARY_SETTINGS_UNAVAILABLE_MESSAGE = currentTranslator()(
+  "shellRest.settingSavedOnServer",
+);
 
 /**
  * Whether primary-scoped server settings have a server to live on. The
@@ -746,9 +747,11 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
           if (writes.length === 0) {
             warnUnsaved(
               deniedLabels.length > 0
-                ? `This connection lacks permission to change settings on ${deniedLabels.join(", ")}.`
+                ? currentTranslator()("shellRest.lacksPermissionOnEnvironments", {
+                    environments: deniedLabels.join(", "),
+                  })
                 : targets.size > 0
-                  ? "Update older servers to save this setting."
+                  ? currentTranslator()("shellRest.updateOlderServersToSave")
                   : undefined,
             );
           } else {
@@ -764,7 +767,13 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
                 if (result._tag !== "Failure" || isAtomCommandInterrupted(result)) return [];
                 const error = squashAtomCommandFailure(result);
                 return [
-                  `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
+                  currentTranslator()("shellRest.couldNotSaveOnEnvironment", {
+                    label: label,
+                    error:
+                      error instanceof Error
+                        ? error.message
+                        : currentTranslator()("shellRest.saveFailedRetry"),
+                  }),
                 ];
               });
               if (failures.length === 0) return;
@@ -779,7 +788,13 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
                     : currentTranslator()("shellRest.settingNotSaved"),
                 description: [
                   ...failures,
-                  ...(saved.length > 0 ? [`Saved on ${saved.join(", ")}.`] : []),
+                  ...(saved.length > 0
+                    ? [
+                        currentTranslator()("shellRest.savedOnEnvironments", {
+                          environments: saved.join(", "),
+                        }),
+                      ]
+                    : []),
                 ].join("\n"),
               });
             });

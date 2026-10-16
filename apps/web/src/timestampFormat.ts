@@ -1,6 +1,6 @@
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 
-import { currentTranslator, localeStore } from "./i18n/I18nProvider";
+import { currentTranslator, localeStore } from "~/i18n/I18nProvider";
 
 function getTimestampFormatOptions(
   timestampFormat: TimestampFormat,
@@ -190,7 +190,7 @@ export function formatDayAwareTimestamp(
   const dayDiff = Math.round((startOfToday - startOfMessageDay) / 86_400_000);
 
   if (dayDiff <= 0) return time;
-  if (dayDiff === 1) return `yesterday at ${time}`;
+  if (dayDiff === 1) return currentTranslator()("shellRest.yesterdayAt", { time: time });
   const dateFormatter =
     date.getFullYear() === now.getFullYear() ? numericDateFormatter : numericDateWithYearFormatter;
   return `${dateFormatter.format(date)} ${time}`;
@@ -217,7 +217,7 @@ export function formatUpcomingTimestamp(
 
   if (dayDiff < 0) return formatDayAwareTimestamp(isoDate, timestampFormat, nowMs);
   if (dayDiff === 0) return time;
-  if (dayDiff === 1) return `tomorrow at ${time}`;
+  if (dayDiff === 1) return currentTranslator()("shellRest.tomorrowAt", { time: time });
   const dateFormatter =
     date.getFullYear() === now.getFullYear() ? numericDateFormatter : numericDateWithYearFormatter;
   return `${dateFormatter.format(date)} ${time}`;

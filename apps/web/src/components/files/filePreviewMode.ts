@@ -1,5 +1,6 @@
 import type { AssetResource, ProjectReadFileError, ScopedThreadRef } from "@t3tools/contracts";
 import { isAbsolutePath, workspaceRelativeFilePath } from "@t3tools/shared/path";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 /** Resolve workspace links before choosing between the explorer and a file preview. */
 export function resolveFilePreviewPath(path: string | null, cwd: string): string | null {
@@ -13,18 +14,18 @@ export const isMarkdownPreviewFile = (path: string): boolean => /\.(?:md|mdx)$/i
 export function filePreviewReadErrorMessage(error: ProjectReadFileError): string {
   switch (error.failure) {
     case "path_not_file":
-      return "The path is a directory or special file, not a regular file.";
+      return currentTranslator()("shellRest.filePathNotFile");
     case "binary_file":
-      return "The file is binary and cannot be displayed as text.";
+      return currentTranslator()("shellRest.fileBinaryNotText");
     case "workspace_path_outside_root":
-      return "The requested path is outside the workspace.";
+      return currentTranslator()("shellRest.filePathOutsideWorkspace");
     case "resolved_path_outside_root":
-      return "The path resolves to a location outside the workspace.";
+      return currentTranslator()("shellRest.filePathResolvesOutsideWorkspace");
     case "operation_failed":
       // A realpath failure can mean a missing path, permissions, or another I/O error.
       return error.operation === "realpath-workspace-root"
-        ? "The workspace folder could not be accessed."
-        : "The file could not be accessed or read. It may be missing or inaccessible.";
+        ? currentTranslator()("shellRest.workspaceFolderNotAccessible")
+        : currentTranslator()("shellRest.fileNotAccessible");
     default:
       return error.message;
   }

@@ -34,6 +34,7 @@ import { environmentThreadDetails } from "../state/threads";
 
 import type { Thread, TurnDiffSummary } from "../types";
 import { makeThreadFixture, makeThreadProjectionFixture } from "../test-fixtures";
+import { localeStore } from "../i18n/I18nProvider";
 import {
   agentControlledBrowserCloseConfirmation,
   ENVIRONMENT_RECONNECT_WARNING_GRACE_MS,
@@ -964,6 +965,18 @@ describe("artifact template composer insertion", () => {
     const prompt = "Create a document using this $artifact-template-hello-world about…";
 
     expect(codexArtifactTemplatePromptToAppend(prompt, helloWorldTemplate)).toBeNull();
+  });
+
+  it("keeps the agent prompt in English while the UI is Czech", () => {
+    const englishPrompt = codexArtifactTemplatePromptToAppend("", helloWorldTemplate);
+    expect(englishPrompt).not.toBeNull();
+
+    localeStore.sync({ hydrated: true, preference: "cs" });
+    try {
+      expect(codexArtifactTemplatePromptToAppend("", helloWorldTemplate)).toBe(englishPrompt);
+    } finally {
+      localeStore.sync({ hydrated: true, preference: "en" });
+    }
   });
 });
 

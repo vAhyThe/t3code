@@ -173,7 +173,7 @@ export function PullRequestThreadDialog({
           setPrepareErrorMessage(
             error instanceof Error
               ? error.message
-              : `Failed to prepare ${terminology.singular} thread.`,
+              : t("shellRest.failedToPrepareThread", { terminology: terminology.singular }),
           );
         }
         return;
@@ -192,6 +192,7 @@ export function PullRequestThreadDialog({
       parsedReference,
       preparePullRequestThreadAction,
       resolvedPullRequest,
+      t,
       terminology.singular,
       threadId,
     ],
@@ -200,9 +201,9 @@ export function PullRequestThreadDialog({
   const validationMessage = !referenceDirty
     ? null
     : reference.trim().length === 0
-      ? `Paste a ${terminology.singular} URL, checkout command, or enter 123 / #123.`
+      ? t("shellRest.pasteRefHint", { terminology: terminology.singular })
       : parsedReference === null
-        ? `Use a ${terminology.singular} URL, checkout command, 123, or #123.`
+        ? t("shellRest.useRefHint", { terminology: terminology.singular })
         : null;
   const errorMessage =
     validationMessage ??
@@ -212,7 +213,7 @@ export function PullRequestThreadDialog({
       : preparePullRequestThreadAction.error instanceof Error
         ? preparePullRequestThreadAction.error.message
         : preparePullRequestThreadAction.error
-          ? `Failed to prepare ${terminology.singular} thread.`
+          ? t("shellRest.failedToPrepareThread", { terminology: terminology.singular })
           : null);
 
   return (

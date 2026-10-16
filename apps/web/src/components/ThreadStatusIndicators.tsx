@@ -17,7 +17,7 @@ import {
 import { Atom } from "effect/reactivity";
 import { FolderGit2Icon, TerminalIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
-import { currentTranslator, useT } from "../i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { useEnvironment, usePrimaryEnvironmentId } from "../state/environments";
 import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
@@ -813,7 +813,7 @@ export function ThreadTerminalStatusButton({
   const label =
     terminalIds.length === 1
       ? "1 terminal process running. Open terminal"
-      : `${terminalIds.length} terminal processes running. Open terminal`;
+      : currentTranslator()("shellRest.terminalProcessesRunning", { count: terminalIds.length });
   return (
     <Tooltip>
       <TooltipTrigger

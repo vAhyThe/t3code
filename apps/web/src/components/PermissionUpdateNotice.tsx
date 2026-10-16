@@ -54,7 +54,7 @@ function EnvironmentPermissionNotice({
       timeout: 0,
       onClose: persistDismissal,
       actionProps: {
-        children: "Open Connections",
+        children: currentTranslator()("shellRest.openConnections"),
         onClick: () => {
           dismiss();
           void navigate({ to: "/settings/connections" });

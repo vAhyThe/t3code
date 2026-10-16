@@ -66,7 +66,7 @@ export function NightlyMobileBetaNotice() {
       timeout: 0,
       onClose: dismissNotice,
       actionProps: {
-        children: "Get the beta app",
+        children: currentTranslator()("shellRest.getBetaApp"),
         onClick: () => {
           toastManager.close(toastId);
           void navigate({ to: "/settings/general", hash: ROW_ID });
@@ -134,8 +134,7 @@ export function NightlyMobileBetaRow() {
             <PopoverTrigger render={<Button size="sm" variant="outline" />}>
               <AndroidIcon />
 
-              {"Android"}
-              {/* i18n-ignore: platform name */}
+              {t("shellRest.androidPlatformName")}
             </PopoverTrigger>
             <PopoverPopup align="end">
               <div className="flex flex-col gap-3">

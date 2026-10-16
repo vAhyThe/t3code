@@ -2,7 +2,7 @@ import type { Translate } from "@t3tools/client-runtime/i18n";
 import { CheckIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-import { useT } from "../../i18n/I18nProvider";
+import { currentTranslator } from "../../i18n/I18nProvider";
 import { cn } from "../../lib/utils";
 import { AnimatedHeight } from "../AnimatedHeight";
 import { DialogPopup, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog";
@@ -100,7 +100,7 @@ export function WizardSteps({
   readonly isStepDisabled?: (step: number) => boolean;
   readonly onStepChange?: (step: number) => void;
 }) {
-  const t = useT();
+  const t = currentTranslator();
   const Step = onStepChange ? "button" : "div";
   return (
     <ol

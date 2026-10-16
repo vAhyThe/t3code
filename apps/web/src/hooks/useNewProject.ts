@@ -21,7 +21,7 @@ import { currentTranslator } from "~/i18n/I18nProvider";
 function errorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim().length > 0
     ? error.message
-    : "An error occurred.";
+    : currentTranslator()("shellRest.genericError");
 }
 
 /**

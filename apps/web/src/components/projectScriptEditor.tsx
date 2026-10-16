@@ -276,24 +276,24 @@ export function ProjectScriptEditorDialog({
     event.preventDefault();
     if (!request || pendingSubmissionRef.current !== null) return;
     if (!readEnvironmentScope(environmentId, editScope)) {
-      setValidationError("This connection cannot change project actions.");
+      setValidationError(currentTranslator()("shellRest.connectionCannotChangeProjectActions"));
       return;
     }
     const changesKeybinding =
       (keybinding.trim() || null) !== (request.initial.keybinding?.trim() || null);
     const canChangeKeybinding = readEnvironmentScope(environmentId, AuthSettingsWriteScope);
     if (changesKeybinding && !canChangeKeybinding) {
-      setValidationError("This connection cannot change keyboard shortcuts.");
+      setValidationError(currentTranslator()("shellRest.connectionCannotChangeShortcuts"));
       return;
     }
     const trimmedName = name.trim();
     const trimmedCommand = command.trim();
     if (trimmedName.length === 0) {
-      setValidationError("Name is required.");
+      setValidationError(currentTranslator()("shellRest.nameRequired"));
       return;
     }
     if (trimmedCommand.length === 0) {
-      setValidationError("Command is required.");
+      setValidationError(currentTranslator()("shellRest.commandRequired"));
       return;
     }
 
@@ -325,7 +325,11 @@ export function ProjectScriptEditorDialog({
         autoOpenPreview: trimmedPreviewUrl.length > 0 ? autoOpenPreview : false,
       } satisfies NewProjectScriptInput;
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : "Failed to save action.");
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("shellRest.failedToSaveAction"),
+      );
       return;
     }
 
@@ -339,7 +343,11 @@ export function ProjectScriptEditorDialog({
         if (result._tag === "Failure") {
           if (!isAtomCommandInterrupted(result)) {
             const error = squashAtomCommandFailure(result);
-            setValidationError(error instanceof Error ? error.message : "Failed to save action.");
+            setValidationError(
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellRest.failedToSaveAction"),
+            );
           }
         } else {
           close();
@@ -347,7 +355,11 @@ export function ProjectScriptEditorDialog({
       }
     } catch (error) {
       if (pendingSubmissionRef.current === submission) {
-        setValidationError(error instanceof Error ? error.message : "Failed to save action.");
+        setValidationError(
+          error instanceof Error
+            ? error.message
+            : currentTranslator()("shellRest.failedToSaveAction"),
+        );
       }
     }
     if (pendingSubmissionRef.current === submission) {
@@ -547,7 +559,9 @@ export function ProjectScriptEditorDialog({
               onClick={() => {
                 if (!request?.scriptId) return;
                 if (!readEnvironmentScope(environmentId, editScope)) {
-                  setValidationError("This connection cannot change project actions.");
+                  setValidationError(
+                    currentTranslator()("shellRest.connectionCannotChangeProjectActions"),
+                  );
                   return;
                 }
                 setDeleteConfirmOpen(false);

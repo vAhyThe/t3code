@@ -250,7 +250,7 @@ export function ProviderUpdatePrimaryNotification() {
               addProviderUpdateToast({
                 view: getProviderUpdateRejectedToastView(
                   providerCount,
-                  "This connection cannot manage provider accounts.",
+                  t("shellRest.connectionCannotManageProviders"),
                 ),
                 openSettings: openProviderSettings,
               });

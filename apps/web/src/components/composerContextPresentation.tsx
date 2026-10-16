@@ -47,7 +47,7 @@ import {
   PullRequestChip,
   UnresolvedChip,
 } from "./contextChipParts";
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 /**
  * Draft-side payload behind a context reference chip. Each kind keeps its existing draft
@@ -236,7 +236,11 @@ function FileContextChip(props: {
       error={props.upload?.status === "failed"}
       unresolved={needsReattach}
       suffix={suffix}
-      accessibleLabel={`${isVideo && !needsReattach ? "Preview video" : "File"} attachment, ${props.record.name}, ${size}`}
+      accessibleLabel={t("shellRest.attachmentLabel", {
+        kind: isVideo && !needsReattach ? t("shellRest.previewVideoKind") : t("shellRest.fileKind"),
+        name: props.record.name,
+        size: size,
+      })}
       onOpen={
         !needsReattach
           ? () =>
@@ -318,7 +322,7 @@ function ComposerPreviewAnnotationDetails({
       {screenshotUrl ? (
         <img
           src={screenshotUrl}
-          alt="Annotated preview crop"
+          alt={t("shellRest.annotatedPreviewCrop")}
           className="max-h-64 w-full border-border/70 border-b bg-muted object-contain"
         />
       ) : (
@@ -403,7 +407,11 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={isPullRequest ? <PullRequestGlyph.pullRequest /> : <MessageCircleIcon />}
             label={reviewCommentContextLabel(entry.record)}
-            kindLabel={isPullRequest ? pullRequestContextKindLabel(entry.record) : "Review comment"}
+            kindLabel={
+              isPullRequest
+                ? pullRequestContextKindLabel(entry.record)
+                : currentTranslator()("shellRest.reviewCommentKind")
+            }
             details={<ComposerReviewCommentDetails comment={entry.record} />}
             detailsMode={definition.capabilities.details}
             kind={isPullRequest ? PULL_REQUEST_CHIP_KINDS[pullRequestState] : "review-comment"}
@@ -419,7 +427,7 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
           <ContextChip
             icon={<MousePointerClickIcon />}
             label={previewAnnotationContextLabel(entry.record)}
-            kindLabel="Preview annotation"
+            kindLabel={currentTranslator()("shellRest.previewAnnotationKind")}
             details={
               <ComposerPreviewAnnotationDetails
                 annotation={entry.record}

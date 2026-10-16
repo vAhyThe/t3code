@@ -8,6 +8,7 @@ import {
   type ProviderInstanceEntry,
 } from "../../providerInstances";
 import { getTriggerDisplayModelName, type ModelEsque } from "./providerIconUtils";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 // Used when the provider did not report its cache TTL: Claude's 1h cache plus slack.
 const CLAUDE_RESUME_COMPACTION_FALLBACK_MS = 70 * 60_000;
@@ -106,11 +107,13 @@ export function formatContextWindowCompactionMessage(
   autoCompactThreshold?: number | null,
 ): string {
   if (typeof autoCompactThreshold === "number" && autoCompactThreshold > 0) {
-    return `Compacts automatically at ${autoCompactThreshold.toLocaleString("en-US")} tokens.`;
+    return currentTranslator()("shellRest.compactsAutomaticallyAtTokens", {
+      tokens: autoCompactThreshold.toLocaleString("en-US"),
+    });
   }
   return modelDisplayName
-    ? `Context for ${modelDisplayName} compacts automatically when needed.`
-    : "Context compacts automatically when needed.";
+    ? currentTranslator()("shellRest.contextForModelCompacts", { model: modelDisplayName })
+    : currentTranslator()("shellRest.contextCompactsWhenNeeded");
 }
 
 /**

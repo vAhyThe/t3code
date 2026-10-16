@@ -135,8 +135,11 @@ function getProviderFailedUpdateTitle(
   const providerName = PROVIDER_DISPLAY_NAMES[provider.driver] ?? provider.driver;
   const attemptedVersion = provider.versionAdvisory?.latestVersion;
   return attemptedVersion
-    ? `${providerName} ${formatVersion(attemptedVersion)} update failed`
-    : `${providerName} update failed`;
+    ? currentTranslator()("shellRest.providerNameVersionUpdateFailed", {
+        name: providerName,
+        version: formatVersion(attemptedVersion),
+      })
+    : currentTranslator()("shellRest.providerNameUpdateFailed", { name: providerName });
 }
 
 export function isProviderUpdateCandidate(
@@ -448,7 +451,9 @@ export function firstFailedProviderUpdateMessage(
     return null;
   }
   const error = squashAtomCommandFailure(failed);
-  return error instanceof Error ? error.message : "Provider update failed.";
+  return error instanceof Error
+    ? error.message
+    : currentTranslator()("shellRest.providerUpdateFailedPeriod");
 }
 
 function getUpdateFinishedAt(provider: ServerProvider): string | null {
@@ -635,7 +640,9 @@ function getFailedProviderUpdateDescription(providers: ReadonlyArray<ServerProvi
       return provider.updateState.message;
     }
   }
-  return `${formatProviderList(providers)} failed to update. Check provider settings for details.`;
+  return currentTranslator()("shellRest.providersFailedToUpdate", {
+    providers: formatProviderList(providers),
+  });
 }
 
 // ===========================================================================
@@ -684,7 +691,9 @@ export function firstRejectedProviderUpdateMessage(
   if (!rejected) {
     return null;
   }
-  return rejected.reason instanceof Error ? rejected.reason.message : "Provider update failed.";
+  return rejected.reason instanceof Error
+    ? rejected.reason.message
+    : currentTranslator()("shellRest.providerUpdateFailedPeriod");
 }
 
 /**

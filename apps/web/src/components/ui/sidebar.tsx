@@ -21,7 +21,7 @@ import { useIsMobile } from "~/hooks/useMediaQuery";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
 import { resolveSidebarState, type ResponsiveSidebarState } from "./sidebarState";
 import * as Schema from "effect/Schema";
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -394,8 +394,12 @@ function SidebarRail({
   const resolvedResizable = sidebarInstance?.resizable ?? null;
   const latestResizable = React.useRef(resolvedResizable);
   const canResize = resolvedResizable !== null && open;
-  const railLabel = canResize ? "Resize Sidebar" : "Toggle Sidebar";
-  const railTitle = canResize ? "Drag to resize sidebar" : "Toggle Sidebar";
+  const railLabel = canResize
+    ? currentTranslator()("shellRest.resizeSidebar")
+    : currentTranslator()("shellRest.toggleSidebar");
+  const railTitle = canResize
+    ? currentTranslator()("shellRest.dragToResizeSidebar")
+    : currentTranslator()("shellRest.toggleSidebar");
   const resize = useResizeDrag<HTMLButtonElement>((event) => {
     if (!resolvedResizable || !open) return null;
     const rail = event.currentTarget;

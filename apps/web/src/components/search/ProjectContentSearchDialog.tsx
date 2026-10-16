@@ -90,8 +90,8 @@ function EmptyContentSearchDialog() {
     <CommandPaletteContent
       aria-label={t("shellRest.searchProjectContentsLabel")}
       escapeLabel="Back"
-      footerActionLabel="Open file"
-      inputProps={{ disabled: true, placeholder: "Search project contents…" }}
+      footerActionLabel={t("shellRest.openFileLabel")}
+      inputProps={{ disabled: true, placeholder: t("shellRest.searchProjectContentsPlaceholder") }}
       mode="none"
       panelSize="fill"
       testId="project-content-search"
@@ -174,7 +174,7 @@ function OpenContentSearchDialog(props: {
     <CommandPaletteContent
       aria-label={t("shellRest.searchFileContentsIn", { project: target.projectName })}
       escapeLabel="Back"
-      footerActionLabel="Open file"
+      footerActionLabel={t("shellRest.openFileLabel")}
       inputAccessory={
         <div className="absolute inset-e-2.5 top-1/2 flex shrink-0 -translate-y-1/2 items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
           <SearchOptionButton
@@ -183,8 +183,7 @@ function OpenContentSearchDialog(props: {
             label={t("shellRest.matchCase")}
             onClick={() => setCaseSensitive((current) => !current)}
           >
-            {"Aa"}
-            {/* i18n-ignore: visual glyph on the button, not a word */}
+            {t("shellRest.matchCaseGlyph")}
           </SearchOptionButton>
           <SearchOptionButton
             active={wholeWord}
@@ -207,7 +206,9 @@ function OpenContentSearchDialog(props: {
       inputProps={{
         className: "pe-30",
         disabled: !search.canReadFiles,
-        placeholder: `Search in ${target.projectName}`,
+        placeholder: currentTranslator()("shellRest.searchInProject", {
+          project: target.projectName,
+        }),
         onKeyDown: (event) => {
           if (event.key === "ArrowDown" && matches.length > 0) {
             event.preventDefault();
@@ -248,7 +249,10 @@ function OpenContentSearchDialog(props: {
           ) : search.invalidRegex ? (
             <span className="text-destructive">{t("shellRest.invalidRegularExpression")}</span>
           ) : (
-            `${matches.length.toLocaleString()}${search.truncated ? "+" : ""} results in ${fileCount.toLocaleString()} files`
+            currentTranslator()("shellRest.resultsInFiles", {
+              count: `${matches.length.toLocaleString()}${search.truncated ? "+" : ""}`,
+              files: fileCount.toLocaleString(),
+            })
           )}
         </div>
       ) : null}

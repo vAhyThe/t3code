@@ -6,7 +6,7 @@ import {
   getDesktopUpdateReleaseUrl,
 } from "./desktopUpdate.logic";
 import { toastManager } from "./ui/toast";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 type DesktopUpdateShell = Pick<DesktopBridge, "openExternal">;
 
@@ -32,7 +32,6 @@ function ReleaseNotesLink({
   shell: DesktopUpdateShell;
   releaseUrl: string;
 }) {
-  const t = useT();
   return (
     <button
       className="ml-2 inline cursor-pointer text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
@@ -41,7 +40,7 @@ function ReleaseNotesLink({
       }}
       type="button"
     >
-      {t("shellRest.readMore")}
+      {currentTranslator()("shellRest.readMore")}
       <ArrowRightIcon
         aria-hidden
         className="ml-1 inline size-3 -rotate-45 align-[-0.125em]"

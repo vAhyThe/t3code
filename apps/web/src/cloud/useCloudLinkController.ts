@@ -99,7 +99,7 @@ export function useCloudLinkController() {
       data: traceId
         ? {
             secondaryActionProps: {
-              children: "Copy trace ID",
+              children: currentTranslator()("shellRest.copyTraceId"),
               onClick: () => void navigator.clipboard?.writeText(traceId),
             },
           }
@@ -123,7 +123,7 @@ export function useCloudLinkController() {
     setOperationError(null);
     const target = primaryCloudLinkState.target;
     if (!target) {
-      reportUpdateFailure(new Error("Local environment is not ready yet."));
+      reportUpdateFailure(new Error(currentTranslator()("shellRest.localEnvironmentNotReady")));
       return false;
     }
     const environmentId = EnvironmentId.make(target.environmentId);

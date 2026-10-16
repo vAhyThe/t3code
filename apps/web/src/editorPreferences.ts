@@ -29,7 +29,7 @@ export class PreferredEditorEnvironmentRequiredError extends Schema.TaggedError<
   },
 ) {
   override get message(): string {
-    return `Cannot open ${this.targetPath} because no environment is selected.`;
+    return currentTranslator()("shellRest.cannotOpenNoEnvironment", { path: this.targetPath });
   }
 }
 
@@ -42,7 +42,10 @@ export class PreferredEditorUnavailableError extends Schema.TaggedError<Preferre
   },
 ) {
   override get message(): string {
-    return `No available editor can open ${this.targetPath} in environment ${this.environmentId}.`;
+    return currentTranslator()("shellRest.noEditorCanOpen", {
+      path: this.targetPath,
+      environment: this.environmentId,
+    });
   }
 }
 

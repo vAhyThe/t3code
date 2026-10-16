@@ -368,9 +368,9 @@ export function BranchToolbarBranchSelector({
   const [isBranchActionPending, startBranchActionTransition] = useTransition();
   const totalBranchCount = branchRefState.data?.totalCount ?? 0;
   const branchStatusText = isInitialBranchesLoadPending
-    ? "Loading refs..."
+    ? t("shellRest.loadingRefs")
     : isFetchingNextPage
-      ? "Loading more refs..."
+      ? t("shellRest.loadingMoreRefs")
       : hasNextPage
         ? `Showing ${refs.length} of ${totalBranchCount} refs`
         : null;
@@ -414,7 +414,7 @@ export function BranchToolbarBranchSelector({
         if (action === "copy-branch-name") copyBranchName(branchName);
       });
     },
-    [copyBranchName],
+    [copyBranchName, t],
   );
 
   const runBranchAction = (action: () => Promise<void>) => {
@@ -820,7 +820,7 @@ export function BranchToolbarBranchSelector({
             status={displayedPrStatus}
             project={activeProject}
             label={panelPrLabel}
-            openAriaLabel={prUrl ?? "Open pull request"}
+            openAriaLabel={prUrl ?? t("shellRest.openPullRequest")}
             onOpen={(event) => openPrLink(event, prUrl)}
             onActed={() => branchStatusQuery.refresh()}
           />

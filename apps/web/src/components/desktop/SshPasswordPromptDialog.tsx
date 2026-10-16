@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { Trans } from "~/i18n/Trans";
 
 function describeSshTarget(request: DesktopSshPasswordPromptRequest): string {
@@ -26,7 +26,7 @@ function formatRemainingSeconds(seconds: number): string {
 function getPromptErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "SSH password prompt failed.";
   return message.includes("expired") || message.includes("no longer pending")
-    ? "This SSH password prompt expired. Try connecting again."
+    ? currentTranslator()("shellRest.sshPasswordExpired")
     : message;
 }
 
@@ -104,7 +104,7 @@ function ActiveSshPasswordPrompt({
   const remainingLabel =
     remainingSeconds === null ? null : formatRemainingSeconds(remainingSeconds);
   const visibleResponseError = isExpired
-    ? "This SSH password prompt expired. Try connecting again."
+    ? currentTranslator()("shellRest.sshPasswordExpired")
     : responseError;
 
   const respond = async (nextPassword: string | null) => {
@@ -114,7 +114,7 @@ function ActiveSshPasswordPrompt({
 
     const requestId = request.requestId;
     if (nextPassword !== null && isExpired) {
-      setResponseError("This SSH password prompt expired. Try connecting again.");
+      setResponseError(currentTranslator()("shellRest.sshPasswordExpired"));
       return;
     }
 

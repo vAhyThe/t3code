@@ -56,7 +56,11 @@ function ensureRelayClientAvailable(
     const registry = yield* EnvironmentRegistry.EnvironmentRegistry;
     const status = yield* registry
       .run(environmentId, request(WS_METHODS.cloudGetRelayClientStatus, {}))
-      .pipe(Effect.mapError(relayClientRpcError("Could not check relay client availability.")));
+      .pipe(
+        Effect.mapError(
+          relayClientRpcError(currentTranslator()("shellRest.relayClientAvailabilityFailed")),
+        ),
+      );
     if (status.status === "available") return;
     if (status.status === "unsupported") {
       return yield* new CloudEnvironmentLinkError({
@@ -68,7 +72,7 @@ function ensureRelayClientAvailable(
 
     const confirmed = yield* Effect.tryPromise({
       try: () => requestRelayClientInstallConfirmation(status.version),
-      catch: relayClientRpcError("Could not confirm relay client installation."),
+      catch: relayClientRpcError(currentTranslator()("shellRest.relayClientConfirmFailed")),
     });
     if (!confirmed) {
       return yield* new CloudEnvironmentLinkError({
@@ -85,7 +89,9 @@ function ensureRelayClientAvailable(
       )
       .pipe(
         Stream.runLast,
-        Effect.mapError(relayClientRpcError("Could not install the relay client.")),
+        Effect.mapError(
+          relayClientRpcError(currentTranslator()("shellRest.relayClientInstallFailed")),
+        ),
         Effect.ensuring(Effect.sync(finishRelayClientInstall)),
       );
     if (Option.isNone(installed) || installed.value.type !== "complete") {
@@ -196,7 +202,11 @@ export function readPrimaryCloudLinkState(input: {
     const client = yield* makeEnvironmentHttpApiClient(input.target.httpBaseUrl);
     return yield* client.connect
       .linkState({ headers: {} })
-      .pipe(Effect.mapError(environmentApiError("Could not read environment cloud link state.")));
+      .pipe(
+        Effect.mapError(
+          environmentApiError(currentTranslator()("shellRest.readCloudLinkStateFailed")),
+        ),
+      );
   }).pipe(Effect.provide(PrimaryEnvironmentHttpLayer.layer));
 }
 
@@ -214,7 +224,9 @@ export function updatePrimaryCloudPreferences(input: {
         payload,
       })
       .pipe(
-        Effect.mapError(environmentApiError("Could not update environment cloud preferences.")),
+        Effect.mapError(
+          environmentApiError(currentTranslator()("shellRest.updateCloudPreferencesFailed")),
+        ),
       );
   }).pipe(Effect.provide(PrimaryEnvironmentHttpLayer.layer));
 }
@@ -231,7 +243,9 @@ export function unlinkPrimaryEnvironmentFromCloud(input: {
     const client = yield* makeEnvironmentHttpApiClient(input.target.httpBaseUrl);
     yield* client.connect
       .unlink({ headers: {} })
-      .pipe(Effect.mapError(environmentApiError("Could not unlink the environment from cloud.")));
+      .pipe(
+        Effect.mapError(environmentApiError(currentTranslator()("shellRest.unlinkCloudFailed"))),
+      );
 
     const configuredRelayUrl = relayUrl();
     if (configuredRelayUrl && input.clerkToken) {
@@ -297,7 +311,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
       .pipe(
         Effect.mapError(
           decodedRelayClientError(
-            `${configuredRelayUrl}/v1/client/environment-link-challenges failed`,
+            `${configuredRelayUrl}/v1/client/environment-link-challenges failed`, // i18n-ignore: developer-facing error with endpoint path
           ),
         ),
       );
@@ -315,7 +329,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
           origin: endpointOrigin(input.target.httpBaseUrl),
         },
       })
-      .pipe(Effect.mapError(environmentApiError("Could not obtain environment link proof.")));
+      .pipe(Effect.mapError(environmentApiError(currentTranslator()("shellRest.linkProofFailed"))));
     const link = yield* relayClient
       .linkEnvironment({
         clerkToken: input.clerkToken,
@@ -328,7 +342,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
       })
       .pipe(
         Effect.mapError(
-          decodedRelayClientError(`${configuredRelayUrl}/v1/client/environment-links failed`),
+          decodedRelayClientError(`${configuredRelayUrl}/v1/client/environment-links failed`), // i18n-ignore: developer-facing error with endpoint path
         ),
       );
     yield* ensureLinkedEnvironmentMatches({
@@ -349,6 +363,10 @@ export function linkPrimaryEnvironmentToCloud(input: {
           endpointRuntime: link.endpointRuntime,
         },
       })
-      .pipe(Effect.mapError(environmentApiError("Could not configure environment relay access.")));
+      .pipe(
+        Effect.mapError(
+          environmentApiError(currentTranslator()("shellRest.relayAccessConfigureFailed")),
+        ),
+      );
   }).pipe(Effect.provide(PrimaryEnvironmentHttpLayer.layer));
 }

@@ -88,7 +88,10 @@ export function DesktopWebLinkCoordinator() {
       return null;
     }
     // Reports its own failure.
-    const project = await openScratchProject(environmentId, "Could not open the link");
+    const project = await openScratchProject(
+      environmentId,
+      currentTranslator()("shellRest.couldNotOpenTheLink"),
+    );
     if (!project) return null;
     const opened = await openThread(scopeProjectRef(project.environmentId, project.id));
     if (!opened) {

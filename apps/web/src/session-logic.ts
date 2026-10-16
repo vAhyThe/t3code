@@ -410,9 +410,9 @@ export function providerErrorPresentation(
       : `${item.retry.attempt}/${item.retry.maxAttempts}`;
   const label =
     item.status === "running"
-      ? `Retrying provider (${progress})`
+      ? currentTranslator()("shellRest.providerRetrying", { progress: progress })
       : item.status === "completed"
-        ? `Provider recovered (${progress} retries)`
+        ? currentTranslator()("shellRest.providerRecovered", { progress: progress })
         : item.status === "failed"
           ? currentTranslator()("shellRest.providerErrorAfterRetries", {
               label:
@@ -421,12 +421,12 @@ export function providerErrorPresentation(
                   : currentTranslator()("shellRest.providerErrorLabel"),
               count: progress,
             })
-          : `Provider retry stopped (${progress})`;
+          : currentTranslator()("shellRest.providerRetryStopped", { progress: progress });
   const retryDelay =
     item.status === "running" && item.retry.retryDelayMs !== null && item.retry.retryDelayMs > 0
       ? item.retry.retryDelayMs < 1_000
-        ? ` Retrying in ${item.retry.retryDelayMs}ms.`
-        : ` Retrying in ${(item.retry.retryDelayMs / 1_000).toFixed(1).replace(/\.0$/u, "")}s.`
+        ? ` ${currentTranslator()("shellRest.retryingInMs", { delay: item.retry.retryDelayMs })}`
+        : ` ${currentTranslator()("shellRest.retryingInSeconds", { seconds: (item.retry.retryDelayMs / 1_000).toFixed(1).replace(/\.0$/u, "") })}`
       : "";
   return {
     label,
@@ -486,7 +486,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
             ? currentTranslator()("shellRest.changedFiles", { count: item.changes.length })
             : currentTranslator()("shellRest.changedFile", { name: item.fileName })),
         changedFiles: item.changes?.map((change) => change.path) ?? [item.fileName],
-        toolTitle: title ?? "File change",
+        toolTitle: title ?? currentTranslator()("shellRest.fileChange"),
         toolData: item,
       };
     }
@@ -496,7 +496,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         label:
           title ?? formatSearchToolLabel(item) ?? currentTranslator()("shellRest.searchedFiles"),
         ...(item.pattern ? { detail: item.pattern } : {}),
-        toolTitle: title ?? "File search",
+        toolTitle: title ?? currentTranslator()("shellRest.fileSearch"),
         toolData: item,
       };
     case "web_search":
@@ -504,7 +504,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         ...common,
         label: title ?? currentTranslator()("shellRest.searchedWeb"),
         ...(item.patterns?.length ? { detail: item.patterns.join(", ") } : {}),
-        toolTitle: title ?? "Web search",
+        toolTitle: title ?? currentTranslator()("shellRest.webSearch"),
         toolData: item,
       };
     case "checkpoint":

@@ -134,7 +134,7 @@ function EnvironmentCloneToasts({ environmentId }: { environmentId: EnvironmentI
           actionProps: {
             children: "Cancel",
             onClick: () => {
-              void runCloneAction("Failed to cancel clone", () =>
+              void runCloneAction(currentTranslator()("shellRest.failedToCancelClone"), () =>
                 cancelClone({ environmentId, input: { projectId: clone.projectId } }),
               );
             },
@@ -158,7 +158,7 @@ function EnvironmentCloneToasts({ environmentId }: { environmentId: EnvironmentI
           description: clone.destinationPath,
           timeout: 8_000,
           actionProps: {
-            children: "Open project",
+            children: currentTranslator()("shellRest.openProject"),
             onClick: () => {
               closeToast();
               openProject(clone.projectId);
@@ -191,7 +191,7 @@ function EnvironmentCloneToasts({ environmentId }: { environmentId: EnvironmentI
         actionProps: {
           children: "Retry",
           onClick: () => {
-            void runCloneAction("Failed to retry clone", () =>
+            void runCloneAction(currentTranslator()("shellRest.failedToRetryClone"), () =>
               retryClone({ environmentId, input: { projectId: clone.projectId } }),
             );
           },
@@ -199,7 +199,7 @@ function EnvironmentCloneToasts({ environmentId }: { environmentId: EnvironmentI
         data: {
           ...(cancelled ? { hideCopyButton: true } : {}),
           secondaryActionProps: {
-            children: "Remove project",
+            children: currentTranslator()("shellRest.removeProject"),
             onClick: () => {
               // The server drops the clone with the project, which closes
               // this toast; a failed removal leaves it (and Retry) in place.

@@ -71,7 +71,7 @@ export class ThreadArchiveBlockedError extends Schema.TaggedError<ThreadArchiveB
   },
 ) {
   override get message(): string {
-    return "Cannot archive while the provider is active.";
+    return currentTranslator()("shellRest.cannotArchiveProviderActive");
   }
 }
 
@@ -83,7 +83,7 @@ export class ThreadSettlementUnsupportedError extends Schema.TaggedError<ThreadS
   },
 ) {
   override get message(): string {
-    return "This environment's server does not support settling yet. Update the server to use Settle.";
+    return currentTranslator()("shellRest.serverNoSettleSupport");
   }
 }
 
@@ -95,7 +95,7 @@ export class ThreadSnoozeUnsupportedError extends Schema.TaggedError<ThreadSnooz
   },
 ) {
   override get message(): string {
-    return "This environment's server does not support snoozing yet. Update the server to use Snooze.";
+    return currentTranslator()("shellRest.serverNoSnoozeSupport");
   }
 }
 
@@ -107,7 +107,7 @@ export class ThreadSnoozeBlockedError extends Schema.TaggedError<ThreadSnoozeBlo
   },
 ) {
   override get message(): string {
-    return "This thread is waiting on you. Respond to the pending request before snoozing it.";
+    return currentTranslator()("shellRest.threadWaitingOnYou");
   }
 }
 
@@ -131,7 +131,7 @@ export class ThreadAutoSettleOptOutUnsupportedError extends Schema.TaggedError<T
   },
 ) {
   override get message(): string {
-    return "This environment's server does not support turning auto-settle off per thread yet. Update the server to use it.";
+    return currentTranslator()("shellRest.serverNoAutoSettleOff");
   }
 }
 
@@ -143,7 +143,7 @@ export class ThreadPinningUnsupportedError extends Schema.TaggedError<ThreadPinn
   },
 ) {
   override get message(): string {
-    return "This environment's server does not support pinning yet. Update the server to use Pin.";
+    return currentTranslator()("shellRest.serverNoPinSupport");
   }
 }
 
@@ -155,7 +155,7 @@ export class ThreadPinReorderUnsupportedError extends Schema.TaggedError<ThreadP
   },
 ) {
   override get message(): string {
-    return "This environment's server does not support reordering pinned threads yet. Update the server to reorder pins.";
+    return currentTranslator()("shellRest.serverNoPinReorderSupport");
   }
 }
 
@@ -167,7 +167,7 @@ export class ThreadActiveReorderUnsupportedError extends Schema.TaggedError<Thre
   },
 ) {
   override get message(): string {
-    return "Update this environment's server to reorder active threads.";
+    return currentTranslator()("shellRest.updateServerReorderActive");
   }
 }
 
@@ -184,8 +184,8 @@ export async function requestThreadUnpinConfirmation(input: {
   return settlePromise(() =>
     confirm(
       [
-        `Unpin thread "${input.title}"?`,
-        "This will move the thread out of your pinned section.",
+        currentTranslator()("shellRest.unpinThreadConfirm", { title: input.title }),
+        currentTranslator()("shellRest.unpinThreadDetail"),
       ].join("\n"),
     ),
   );
@@ -415,7 +415,7 @@ export function useThreadActions() {
         claim: action,
         // Undo also brings the reader back when archiving moved them to a draft.
         undo: () => unarchiveThread(threadRef, { navigate: shouldNavigateToDraft }),
-        failureTitle: "Failed to undo archive",
+        failureTitle: currentTranslator()("shellRest.failedToUndoArchive"),
       });
 
       if (shouldNavigateToDraft) {
@@ -618,7 +618,8 @@ export function useThreadActions() {
       if (cleanupFailure) {
         const removalFailed = removeResult._tag === "Failure";
         const error = squashAtomCommandFailure(cleanupFailure);
-        const message = error instanceof Error ? error.message : "An error occurred.";
+        const message =
+          error instanceof Error ? error.message : currentTranslator()("shellRest.genericError");
         console.error("Worktree cleanup failed after thread deletion", {
           threadId: threadRef.threadId,
           projectCwd: threadProject.workspaceRoot,
@@ -762,7 +763,7 @@ export function useThreadActions() {
           action: "Unpinned",
           claim: action,
           undo: () => pinThread(target, orderKey === undefined ? {} : { orderKey }),
-          failureTitle: "Failed to undo unpin",
+          failureTitle: currentTranslator()("shellRest.failedToUndoUnpin"),
         });
       } else {
         action.finish();
@@ -832,7 +833,7 @@ export function useThreadActions() {
           }
           return unsettled;
         },
-        failureTitle: "Failed to undo settle",
+        failureTitle: currentTranslator()("shellRest.failedToUndoSettle"),
       });
       return result;
     },
@@ -974,7 +975,7 @@ export function useThreadActions() {
         action: "Snoozed",
         claim: action,
         undo: () => unsnoozeThread(target),
-        failureTitle: "Failed to wake thread",
+        failureTitle: currentTranslator()("shellRest.failedToWakeThread"),
       });
       return result;
     },
@@ -993,8 +994,8 @@ export function useThreadActions() {
         const confirmationResult = await settlePromise(() =>
           localApi.dialogs.confirm(
             [
-              `Delete thread "${title}"?`,
-              "This permanently clears conversation history for this thread.",
+              currentTranslator()("shellRest.deleteThreadConfirm", { title: title }),
+              currentTranslator()("shellRest.deleteThreadWarning"),
             ].join("\n"),
             { variant: "destructive" },
           ),
