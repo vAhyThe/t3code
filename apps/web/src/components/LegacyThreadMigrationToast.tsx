@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { primaryServerLegacyThreadMigrationAtom } from "../state/server";
 import { toastManager } from "./ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 type MigrationToastId = ReturnType<typeof toastManager.add>;
 
@@ -17,10 +18,11 @@ export function LegacyThreadMigrationToast() {
       }
       toastIdRef.current = toastManager.add({
         type: "loading",
-        title: "Restoring your threads…",
-        description: `Migrating ${migration.totalThreadCount.toLocaleString()} ${
-          migration.totalThreadCount === 1 ? "thread" : "threads"
-        } from the previous version. You can keep working while this finishes.`,
+        title: currentTranslator()("shellRest.restoringThreads"),
+        description: currentTranslator()("shellRest.migratingThreads", {
+          count: migration.totalThreadCount,
+          total: migration.totalThreadCount.toLocaleString(),
+        }),
         timeout: 0,
       });
       return;

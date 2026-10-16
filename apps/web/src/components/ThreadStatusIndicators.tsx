@@ -17,6 +17,7 @@ import {
 import { Atom } from "effect/reactivity";
 import { FolderGit2Icon, TerminalIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
+import { currentTranslator, useT } from "../i18n/I18nProvider";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { useEnvironment, usePrimaryEnvironmentId } from "../state/environments";
 import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
@@ -47,6 +48,7 @@ import { useUiStateStore } from "../uiStateStore";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import {
   pullRequestMatchesSearchQuery,
+  THREAD_STATUS_PILL_LABEL_KEYS,
   resolveThreadLastVisitedAt,
   resolveThreadStatusPill,
   type ThreadStatusPill,
@@ -76,7 +78,7 @@ export interface PrStatusIndicator {
 }
 
 export interface TerminalStatusIndicator {
-  label: "Terminal process running";
+  label: string;
   colorClass: string;
   pulse: boolean;
 }
@@ -188,20 +190,28 @@ export function resolveThreadPullRequestBadgePresentation({
     return {
       Icon: PullRequestGlyph.stack,
       toneClassName: aggregate.toneClassName,
-      label: `Stack of ${badge.layers} pull requests, ${aggregate.label.toLowerCase()}`,
+      label: currentTranslator()("shellRest.threadStatusStackLabel", {
+        count: badge.layers,
+        state: aggregate.label.toLowerCase(),
+      }),
       text: badge.layers,
     };
   }
   if (number === undefined || url === undefined) return null;
 
-  const tooltip = status?.tooltip ?? `PR #${number}, status pending`;
+  const tooltip =
+    status?.tooltip ?? currentTranslator()("shellRest.pendingPullRequestLabel", { number });
   if (badge?.kind === "pull-request" && badge.others > 0) {
     // Unrelated links fold into one state, so a count of merged PRs reads as merged.
     const aggregate = PULL_REQUEST_STATE_PRESENTATION[badge.state];
     return {
       Icon: aggregate.Icon,
       toneClassName: aggregate.toneClassName,
-      label: `${tooltip}, and ${badge.others} more linked; overall ${aggregate.label.toLowerCase()}`,
+      label: currentTranslator()("shellRest.threadStatusLinkedMore", {
+        count: badge.others,
+        tooltip,
+        state: aggregate.label.toLowerCase(),
+      }),
       text: `+${badge.others + 1}`,
     };
   }
@@ -771,7 +781,7 @@ export function terminalStatusFromRunningIds(
     return null;
   }
   return {
-    label: "Terminal process running",
+    label: currentTranslator()("shellRest.terminalProcessRunning"),
     colorClass: "text-teal-600 dark:text-teal-300/90",
     pulse: true,
   };
@@ -878,6 +888,8 @@ export function ThreadStatusLabel({
   status: ThreadStatusPill;
   compact?: boolean;
 }) {
+  const t = useT();
+  const label = t(THREAD_STATUS_PILL_LABEL_KEYS[status.label]);
   if (compact) {
     return (
       <Tooltip>
@@ -885,7 +897,7 @@ export function ThreadStatusLabel({
           render={
             <span
               role="img"
-              aria-label={status.label}
+              aria-label={label}
               className={`inline-flex size-3.5 shrink-0 items-center justify-center ${status.colorClass}`}
             />
           }
@@ -896,7 +908,7 @@ export function ThreadStatusLabel({
             }`}
           />
         </TooltipTrigger>
-        <TooltipPopup side="top">{status.label}</TooltipPopup>
+        <TooltipPopup side="top">{label}</TooltipPopup>
       </Tooltip>
     );
   }
@@ -907,7 +919,7 @@ export function ThreadStatusLabel({
         render={
           <span
             role="img"
-            aria-label={status.label}
+            aria-label={label}
             className={`inline-flex items-center gap-1 text-3xs ${status.colorClass}`}
           />
         }
@@ -917,9 +929,9 @@ export function ThreadStatusLabel({
             status.pulse ? "animate-status-pulse" : ""
           }`}
         />
-        <span className="hidden md:inline">{status.label}</span>
+        <span className="hidden md:inline">{label}</span>
       </TooltipTrigger>
-      <TooltipPopup side="top">{status.label}</TooltipPopup>
+      <TooltipPopup side="top">{label}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -936,6 +948,7 @@ export function ThreadRowLeadingStatus({
   thread: SidebarThreadSummary;
   snapshot?: ThreadChangeRequestSnapshot | undefined;
 }) {
+  const t = useT();
   const { leaseLiveStatus, rowRef } = useSidebarRowSubscriptionLease(false);
   // Observe the containing title even when this thread has no badge yet.
   const statusRef = useCallback(
@@ -1025,7 +1038,7 @@ export function ThreadRowLeadingStatus({
       {pendingLink ? (
         <PullRequestGlyph.pullRequest
           className="size-3 text-muted-foreground"
-          aria-label={`PR #${pendingLink.number}, status pending`}
+          aria-label={t("shellRest.pendingPullRequestLabel", { number: pendingLink.number })}
         />
       ) : null}
       {threadStatus ? <ThreadStatusLabel status={threadStatus} /> : null}
@@ -1039,6 +1052,7 @@ export function ThreadRowLeadingStatus({
  * environment indicator, matching the sidebar's trailing indicators.
  */
 export function ThreadRowTrailingStatus({ thread }: { thread: SidebarThreadSummary }) {
+  const t = useT();
   const runningTerminalIds = useThreadRunningTerminalIds({
     environmentId: thread.environmentId,
     threadId: thread.id,
@@ -1083,7 +1097,7 @@ export function ThreadRowTrailingStatus({ thread }: { thread: SidebarThreadSumma
           <TooltipTrigger
             render={
               <span
-                aria-label={threadEnvironmentLabel ?? "Remote"}
+                aria-label={threadEnvironmentLabel ?? t("shellRest.remoteThreadLabel")}
                 className="inline-flex items-center justify-center"
               />
             }
@@ -1138,6 +1152,7 @@ export function ThreadSearchPullRequestNumber({
   enabled?: boolean;
   settled?: boolean;
 }) {
+  const t = useT();
   const matchedLink = visibleThreadPullRequests(thread.pullRequests).find((pr) =>
     pullRequestMatchesSearchQuery({ pullRequests: [pr] }, query),
   );
@@ -1171,7 +1186,9 @@ export function ThreadSearchPullRequestNumber({
             )
           : (status?.colorClass ?? "text-secondary-label")
       }
-      aria-label={status?.tooltip ?? `Pull request #${reference.number}`}
+      aria-label={
+        status?.tooltip ?? t("shellRest.pullRequestNumberLabel", { number: reference.number })
+      }
     />
   ) : null;
 }

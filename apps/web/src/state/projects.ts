@@ -22,7 +22,7 @@ export const projectEnvironment = createProjectEnvironmentAtoms(connectionAtomRu
  * project atoms consumed by the mobile app.
  */
 export const projectContentSearch = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
-  label: "environment-data:projects:search-contents",
+  label: "environment-data:projects:search-contents", // i18n-ignore: atom query ID
   tag: WS_METHODS.projectsSearchContents,
   staleTimeMs: 5_000,
   idleTtlMs: 60_000,

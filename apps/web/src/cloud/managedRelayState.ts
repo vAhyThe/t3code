@@ -40,7 +40,7 @@ const managedRelayMutationScheduler = createAtomCommandScheduler();
 export const deregisterManagedRelayEnvironmentCommand = createRuntimeCommand(
   managedRelayAtomRuntime,
   {
-    label: "web:managed-relay:deregister-environment",
+    label: "web:managed-relay:deregister-environment", // i18n-ignore: atom command ID
     scheduler: managedRelayMutationScheduler,
     concurrency: {
       mode: "serial",

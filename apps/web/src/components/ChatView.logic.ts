@@ -66,6 +66,7 @@ import {
   resolveSelectableProviderInstanceEntry,
   type ProviderInstanceEntry,
 } from "../providerInstances";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
 export const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
@@ -517,7 +518,7 @@ export function buildLocalDraftThread(
   return presentThreadShell(draftThread.environmentId, {
     id: threadId,
     projectId: draftThread.projectId,
-    title: "New thread",
+    title: "New thread", // i18n-ignore: saved as the thread title
     providerInstanceId: fallbackModelSelection.instanceId,
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
@@ -894,16 +895,16 @@ export function buildExpiredTerminalContextToastCopy(
   variant: "omitted" | "empty",
 ): { title: string; description: string } {
   const count = Math.max(1, Math.floor(expiredTerminalContextCount));
-  const noun = count === 1 ? "Expired terminal context" : "Expired terminal contexts";
+  const t = currentTranslator();
   if (variant === "empty") {
     return {
-      title: `${noun} won't be sent`,
-      description: "Remove it or re-add it to include terminal output.",
+      title: t("shellRest.expiredTerminalContextsNotSent", { count }),
+      description: t("shellRest.expiredTerminalRemoveOrReadd"),
     };
   }
   return {
-    title: `${noun} omitted from message`,
-    description: "Re-add it if you want that terminal output included.",
+    title: t("shellRest.expiredTerminalContextsOmitted", { count }),
+    description: t("shellRest.expiredTerminalReaddIfWanted"),
   };
 }
 
@@ -1069,8 +1070,8 @@ export function getStartedThreadModelChangeBlockReason(input: {
       return null;
     }
     return {
-      title: "Start a new chat to switch providers",
-      description: "This thread does not support switching providers after it has started.",
+      title: currentTranslator()("shellRest.switchProvidersNewChat"),
+      description: currentTranslator()("shellRest.providerSwitchNotSupported"),
     };
   }
   const currentProvider = input.providers.find(
@@ -1086,8 +1087,8 @@ export function getStartedThreadModelChangeBlockReason(input: {
     return null;
   }
   return {
-    title: "Start a new chat to change models",
-    description: "This provider does not allow switching models after a conversation has started.",
+    title: currentTranslator()("shellRest.changeModelsNewChat"),
+    description: currentTranslator()("shellRest.modelSwitchNotSupported"),
   };
 }
 

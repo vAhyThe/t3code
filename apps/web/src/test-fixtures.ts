@@ -32,7 +32,7 @@ export function makeThreadProjectionFixture(): OrchestrationV2ThreadProjection {
     thread: {
       id,
       projectId: ProjectId.make("project-test"),
-      title: "Thread",
+      title: "Thread", // i18n-ignore: test fixture data
       providerInstanceId,
       modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
       runtimeMode: "full-access",
@@ -98,7 +98,7 @@ export function makeThreadFixture(overrides: ThreadFixtureOverrides = {}): Threa
   const shell = presentThreadShell(environmentId, {
     id,
     projectId,
-    title: overrides.title ?? "Thread",
+    title: overrides.title ?? "Thread", // i18n-ignore: test fixture data
     providerInstanceId,
     modelSelection,
     runtimeMode: overrides.runtimeMode ?? "full-access",
