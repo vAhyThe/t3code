@@ -50,6 +50,7 @@ import {
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
 import { shallow } from "zustand/vanilla/shallow";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export { formatDuration } from "@t3tools/shared/orchestrationTiming";
 export {
@@ -398,8 +399,8 @@ export function providerErrorPresentation(
     return {
       label:
         item.failure.class === "usage_limit"
-          ? "Usage limit reached"
-          : item.title?.trim() || "Provider error",
+          ? currentTranslator()("shellRest.usageLimitReached")
+          : item.title?.trim() || currentTranslator()("shellRest.providerErrorLabel"),
       detail: item.failure.message,
     };
   }
@@ -413,7 +414,13 @@ export function providerErrorPresentation(
       : item.status === "completed"
         ? `Provider recovered (${progress} retries)`
         : item.status === "failed"
-          ? `${item.failure.class === "usage_limit" ? "Usage limit reached" : "Provider error"} after ${progress} retries`
+          ? currentTranslator()("shellRest.providerErrorAfterRetries", {
+              label:
+                item.failure.class === "usage_limit"
+                  ? currentTranslator()("shellRest.usageLimitReached")
+                  : currentTranslator()("shellRest.providerErrorLabel"),
+              count: progress,
+            })
           : `Provider retry stopped (${progress})`;
   const retryDelay =
     item.status === "running" && item.retry.retryDelayMs !== null && item.retry.retryDelayMs > 0
@@ -446,7 +453,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "thread_created":
       return {
         ...common,
-        label: "Created thread",
+        label: currentTranslator()("shellRest.createdThread"),
       };
     case "compaction":
       return {
@@ -458,13 +465,13 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "reasoning":
       return {
         ...common,
-        label: title ?? "Thinking",
+        label: title ?? currentTranslator()("shellRest.thinking"),
         ...(item.text ? { detail: item.text } : {}),
       };
     case "command_execution":
       return {
         ...common,
-        label: title ?? "Ran command",
+        label: title ?? currentTranslator()("shellRest.ranCommand"),
         command: item.input,
         rawCommand: item.input,
         toolTitle: title ?? "Command",
@@ -476,8 +483,8 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         label:
           title ??
           (item.changes !== undefined && item.changes.length > 1
-            ? `Changed ${item.changes.length} files`
-            : `Changed ${item.fileName}`),
+            ? currentTranslator()("shellRest.changedFiles", { count: item.changes.length })
+            : currentTranslator()("shellRest.changedFile", { name: item.fileName })),
         changedFiles: item.changes?.map((change) => change.path) ?? [item.fileName],
         toolTitle: title ?? "File change",
         toolData: item,
@@ -486,7 +493,8 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "file_search":
       return {
         ...common,
-        label: title ?? formatSearchToolLabel(item) ?? "Searched files",
+        label:
+          title ?? formatSearchToolLabel(item) ?? currentTranslator()("shellRest.searchedFiles"),
         ...(item.pattern ? { detail: item.pattern } : {}),
         toolTitle: title ?? "File search",
         toolData: item,
@@ -494,7 +502,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "web_search":
       return {
         ...common,
-        label: title ?? "Searched the web",
+        label: title ?? currentTranslator()("shellRest.searchedWeb"),
         ...(item.patterns?.length ? { detail: item.patterns.join(", ") } : {}),
         toolTitle: title ?? "Web search",
         toolData: item,
@@ -502,7 +510,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "checkpoint":
       return {
         ...common,
-        label: title ?? "Checkpoint captured",
+        label: title ?? currentTranslator()("shellRest.checkpointCaptured"),
         changedFiles: item.files.map((file) => file.path),
         toolData: item,
       };
@@ -538,8 +546,10 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
           (classified === "read"
             ? formatReadToolLabel(readPath ?? "")
             : classified === "search"
-              ? (formatSearchToolLabel({ input: item.input }) ?? item.toolName ?? "Tool call")
-              : (item.toolName ?? "Tool call")),
+              ? (formatSearchToolLabel({ input: item.input }) ??
+                item.toolName ??
+                currentTranslator()("shellRest.toolCall"))
+              : (item.toolName ?? currentTranslator()("shellRest.toolCall"))),
         toolTitle: title ?? item.toolName ?? "Tool",
         toolData: { input: item.input, output: item.output },
       };
@@ -547,14 +557,18 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "approval_request":
       return {
         ...common,
-        label: title ?? "Approval requested",
+        label: title ?? currentTranslator()("shellRest.approvalRequested"),
         detail: item.prompt ?? item.requestKind,
         toolData: item,
       };
     case "user_input_request":
       return {
         ...common,
-        label: title ?? (item.questionAnswer ? "Answered questions" : "Input requested"),
+        label:
+          title ??
+          (item.questionAnswer
+            ? currentTranslator()("shellRest.answeredQuestions")
+            : currentTranslator()("shellRest.inputRequested")),
         ...(item.questionAnswer ? { questionAnswer: item.questionAnswer } : {}),
         toolData: item,
       };

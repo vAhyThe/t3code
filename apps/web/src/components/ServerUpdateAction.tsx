@@ -29,6 +29,7 @@ import { manualServerUpdateCommand } from "~/versionSkew";
 import { Button } from "./ui/button";
 import { toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 // The wire "installing" stage is a sub-second launcher handoff, so the UI
 // folds it into the download phase; everything after the handoff is the
@@ -103,11 +104,15 @@ export function useServerUpdate() {
       if (!quiet) {
         toastManager.add({
           type: "success",
-          title: `${serverLabel} updated`,
+          title: currentTranslator()("shellRest.serverUpdated", { server: serverLabel }),
           description:
             selfUpdate === "desktop-managed"
-              ? `Desktop app relaunched on ${result.value.targetVersion}.`
-              : `Reconnected on t3@${result.value.targetVersion}.`,
+              ? currentTranslator()("shellRest.desktopAppRelaunched", {
+                  version: result.value.targetVersion,
+                })
+              : currentTranslator()("shellRest.reconnectedOn", {
+                  version: result.value.targetVersion,
+                }),
         });
       }
       return { status: "updated" };
@@ -116,7 +121,7 @@ export function useServerUpdate() {
       if (!quiet) {
         toastManager.add({
           type: "error",
-          title: `${serverLabel} update failed`,
+          title: currentTranslator()("shellRest.serverUpdateFailed", { server: serverLabel }),
           description: message,
         });
       }
@@ -236,6 +241,7 @@ export function ServerUpdateAction({
   className,
   appearance = "button",
 }: Omit<ServerUpdateTarget, "continueThreadsAfterServerUpdate"> & UpdateButtonProps) {
+  const t = useT();
   const isDesktopAppUpdate = selfUpdate === "desktop-managed";
   const sessionStateAtom = environmentSession.sessionStateAtom(environmentId);
   const canUpdate = canUpdateServer(useAtomValue(sessionStateAtom));
@@ -250,17 +256,19 @@ export function ServerUpdateAction({
       toastManager.add({
         type: "success",
         title:
-          installation?.kind === "npm-global" ? "Update command copied" : "Relaunch command copied",
+          installation?.kind === "npm-global"
+            ? currentTranslator()("shellRest.updateCommandCopied")
+            : currentTranslator()("shellRest.relaunchCommandCopied"),
         description:
           installation?.kind === "npm-global"
-            ? `Run \`${command}\` on ${serverLabel}, then restart t3 with your usual options.`
-            : `Stop t3 on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed t3 command.`,
+            ? currentTranslator()("shellRest.runCommandOnServer", { command, server: serverLabel })
+            : currentTranslator()("shellRest.stopThenRelaunch", { command, server: serverLabel }),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Could not copy update command",
+        title: currentTranslator()("shellRest.couldNotCopyUpdateCommand"),
         description: error.message,
       });
     },
@@ -299,9 +307,7 @@ export function ServerUpdateAction({
 
   if (selfUpdate === "desktop-managed" && !desktopAppUpdate) {
     return (
-      <span className="text-muted-foreground text-xs">
-        Update the desktop app on that machine to update this server.
-      </span>
+      <span className="text-muted-foreground text-xs">{t("shellRest.updateDesktopForServer")}</span>
     );
   }
 
@@ -310,8 +316,8 @@ export function ServerUpdateAction({
   const actionLabel =
     manualCommand !== null
       ? installation?.kind === "npm-global"
-        ? "Copy update command"
-        : "Copy relaunch command"
+        ? t("shellRest.copyUpdateCommand")
+        : t("shellRest.copyRelaunchCommand")
       : label;
   const onClick =
     manualCommand !== null
@@ -327,7 +333,10 @@ export function ServerUpdateAction({
               size="icon-xs"
               variant="ghost-muted"
               className={className}
-              aria-label={`${actionLabel} for ${serverLabel}`}
+              aria-label={t("shellRest.actionForServer", {
+                action: actionLabel,
+                server: serverLabel,
+              })}
               disabled={manualCommand === null && !canUpdate}
               onClick={onClick}
             />
@@ -386,13 +395,15 @@ export function OutdatedServerUpdateAction({
       }
       toastManager.add({
         type: "success",
-        title: `${serverLabel} updated`,
-        description: `Reconnected on t3@${result.value.targetVersion}.`,
+        title: currentTranslator()("shellRest.serverUpdated", { server: serverLabel }),
+        description: currentTranslator()("shellRest.reconnectedOn", {
+          version: result.value.targetVersion,
+        }),
       });
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: `${serverLabel} update failed`,
+        title: currentTranslator()("shellRest.serverUpdateFailed", { server: serverLabel }),
         description: updateFailureMessage(error),
       });
     } finally {

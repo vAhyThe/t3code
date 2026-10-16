@@ -6,6 +6,7 @@ import {
   getDesktopUpdateReleaseUrl,
 } from "./desktopUpdate.logic";
 import { toastManager } from "./ui/toast";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 type DesktopUpdateShell = Pick<DesktopBridge, "openExternal">;
 
@@ -18,7 +19,10 @@ export async function openDesktopUpdateReleaseNotes(
   } catch {
     // Surface rejected IPC calls through the same user-visible fallback.
   }
-  toastManager.add({ type: "error", title: "Unable to open release notes" });
+  toastManager.add({
+    type: "error",
+    title: currentTranslator()("shellRest.unableToOpenReleaseNotes"),
+  });
 }
 
 function ReleaseNotesLink({
@@ -28,6 +32,7 @@ function ReleaseNotesLink({
   shell: DesktopUpdateShell;
   releaseUrl: string;
 }) {
+  const t = useT();
   return (
     <button
       className="ml-2 inline cursor-pointer text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
@@ -36,7 +41,7 @@ function ReleaseNotesLink({
       }}
       type="button"
     >
-      Read more
+      {t("shellRest.readMore")}
       <ArrowRightIcon
         aria-hidden
         className="ml-1 inline size-3 -rotate-45 align-[-0.125em]"
@@ -53,10 +58,10 @@ export function showDesktopUpdateDownloadedToast(
   const releaseUrl = getDesktopUpdateReleaseUrl(getDesktopUpdateDownloadedVersion(state));
   toastManager.add({
     type: "success",
-    title: "Update downloaded",
+    title: currentTranslator()("shellRest.updateDownloaded"),
     description: (
       <>
-        Restart the app from the update button to install it.
+        {currentTranslator()("shellRest.restartToInstallUpdate")}
         {releaseUrl ? <ReleaseNotesLink releaseUrl={releaseUrl} shell={shell} /> : null}
       </>
     ),

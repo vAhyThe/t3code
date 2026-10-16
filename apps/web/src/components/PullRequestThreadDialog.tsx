@@ -33,6 +33,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Spinner } from "./ui/spinner";
+import { useT } from "~/i18n/I18nProvider";
 
 interface PullRequestThreadDialogProps {
   open: boolean;
@@ -53,6 +54,7 @@ export function PullRequestThreadDialog({
   onOpenChange,
   onPrepared,
 }: PullRequestThreadDialogProps) {
+  const t = useT();
   const referenceInputRef = useRef<HTMLInputElement>(null);
   const [reference, setReference] = useState(initialReference ?? "");
   const [referenceDirty, setReferenceDirty] = useState(false);
@@ -226,11 +228,13 @@ export function PullRequestThreadDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <SourceControlIcon className="me-2 size-4" />
-            Checkout {terminology.singular}
+            {t("shellRest.checkoutTerminology", { terminology: terminology.singular })}
           </DialogTitle>
           <DialogDescription>
-            Resolve a {sourceControlPresentation.providerName} {terminology.singular}, then create
-            the draft thread in the main repo or in a dedicated worktree.
+            {t("shellRest.resolveRefDescription", {
+              provider: sourceControlPresentation.providerName,
+              terminology: terminology.singular,
+            })}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -240,7 +244,7 @@ export function PullRequestThreadDialog({
             </span>
             <Input
               ref={referenceInputRef}
-              placeholder={`${terminology.shortLabel} URL, checkout command, or #42`}
+              placeholder={t("shellRest.refInputPlaceholder", { term: terminology.shortLabel })}
               value={reference}
               onChange={(event) => {
                 setReferenceDirty(true);
@@ -281,7 +285,7 @@ export function PullRequestThreadDialog({
           {isResolving ? (
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Spinner size="sm" />
-              Resolving {terminology.singular}...
+              {t("shellRest.resolvingTerminology", { terminology: terminology.singular })}
             </div>
           ) : null}
 
@@ -295,7 +299,7 @@ export function PullRequestThreadDialog({
             onClick={() => onOpenChange(false)}
             disabled={preparePullRequestThreadAction.isPending}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -310,7 +314,7 @@ export function PullRequestThreadDialog({
               preparePullRequestThreadAction.isPending
             }
           >
-            {preparingMode === "local" ? "Preparing local..." : "Local"}
+            {preparingMode === "local" ? t("shellRest.preparingLocal") : t("shellRest.localMode")}
           </Button>
           <Button
             type="button"
@@ -325,7 +329,9 @@ export function PullRequestThreadDialog({
               preparePullRequestThreadAction.isPending
             }
           >
-            {preparingMode === "worktree" ? "Preparing worktree..." : "Worktree"}
+            {preparingMode === "worktree"
+              ? t("shellRest.preparingWorktree")
+              : t("shellRest.worktreeMode")}
           </Button>
         </DialogFooter>
       </DialogPopup>

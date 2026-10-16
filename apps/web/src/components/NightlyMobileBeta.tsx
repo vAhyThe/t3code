@@ -133,7 +133,9 @@ export function NightlyMobileBetaRow() {
           <Popover>
             <PopoverTrigger render={<Button size="sm" variant="outline" />}>
               <AndroidIcon />
-              Android
+
+              {"Android"}
+              {/* i18n-ignore: platform name */}
             </PopoverTrigger>
             <PopoverPopup align="end">
               <div className="flex flex-col gap-3">

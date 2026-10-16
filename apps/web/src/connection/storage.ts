@@ -107,6 +107,7 @@ function persistenceError(
 ) {
   return new Persistence.ConnectionPersistenceError({
     operation,
+    // i18n-ignore: developer-facing persistence error, operation is a machine id
     message: `Could not ${operation.replaceAll("-", " ")}: ${String(cause)}`,
   });
 }

@@ -33,6 +33,7 @@ import {
 } from "../../lib/desktopSnapShot";
 import { readFileAsDataUrl } from "../ChatView.logic";
 import { stackedThreadToast, toastManager } from "../ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 type CaptureTarget = DraftId | ScopedThreadRef;
 
@@ -285,8 +286,8 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot taken, but no project is available",
-                description: "Add a project, then capture the window again.",
+                title: currentTranslator()("shellRest.snapshotTakenNoProject"),
+                description: currentTranslator()("shellRest.addProjectThenCapture"),
               }),
             );
             continue;
@@ -302,10 +303,14 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: `Capture ${item.id}: ${
-                  error instanceof Error ? error.message : "Try the capture again."
-                }`,
+                title: currentTranslator()("shellRest.snapshotFailed"),
+                description: currentTranslator()("shellRest.captureItemFailed", {
+                  id: item.id,
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : currentTranslator()("shellRest.tryCaptureAgain"),
+                }),
               }),
             );
           }
@@ -317,8 +322,11 @@ export function SnapShotCoordinator() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Snapshot failed",
-            description: error instanceof Error ? error.message : "Try the capture again.",
+            title: currentTranslator()("shellRest.snapshotFailed"),
+            description:
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("shellRest.tryCaptureAgain"),
           }),
         );
       })
@@ -376,8 +384,8 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: state.message ?? "Try the capture again.",
+                title: currentTranslator()("shellRest.snapshotFailed"),
+                description: state.message ?? currentTranslator()("shellRest.tryCaptureAgain"),
               }),
             );
           });

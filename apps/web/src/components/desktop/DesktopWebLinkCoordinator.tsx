@@ -18,6 +18,7 @@ import { previewEnvironment } from "../../state/preview";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useAtomQueryRunner } from "../../state/use-atom-query-runner";
 import { stackedThreadToast, toastManager } from "../ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 /**
  * The thread on screen when its browser panel is showing, so a link opens as
@@ -72,7 +73,11 @@ export function DesktopWebLinkCoordinator() {
 
   const reportFailure = (url: string, description = url) =>
     toastManager.add(
-      stackedThreadToast({ type: "error", title: "Could not open the link", description }),
+      stackedThreadToast({
+        type: "error",
+        title: currentTranslator()("shellRest.couldNotOpenTheLink"),
+        description,
+      }),
     );
 
   // The OS hands each link over once, so a thread that could not start says so.

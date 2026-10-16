@@ -3,10 +3,10 @@ import { ChevronDownIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const tones = {
-  muted: { label: "text-sidebar-muted-foreground/60", line: "bg-sidebar-border/60" },
-  info: { label: "text-blue-600 dark:text-blue-400", line: "bg-blue-500/20 dark:bg-blue-400/15" },
-  emphasized: { label: "text-sidebar-foreground/80", line: "bg-sidebar-foreground/25" },
-  accent: { label: "text-primary", line: "bg-primary/50" },
+  muted: { label: "text-sidebar-muted-foreground/60", line: "bg-sidebar-border/60" }, // i18n-ignore: CSS classes
+  info: { label: "text-blue-600 dark:text-blue-400", line: "bg-blue-500/20 dark:bg-blue-400/15" }, // i18n-ignore: CSS classes
+  emphasized: { label: "text-sidebar-foreground/80", line: "bg-sidebar-foreground/25" }, // i18n-ignore: CSS classes
+  accent: { label: "text-primary", line: "bg-primary/50" }, // i18n-ignore: CSS classes
 } as const;
 
 /** Callers own the section state and content; this owns all header geometry. */

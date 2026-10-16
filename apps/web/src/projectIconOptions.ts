@@ -1,4 +1,5 @@
 import { iconNames, type IconName } from "lucide-react/dynamic";
+import { currentTranslator } from "~/i18n/I18nProvider";
 export { PROJECT_ICON_COLORS, projectIconColorClassName } from "./projectIconColors";
 
 const POPULAR_PROJECT_ICONS = [
@@ -29,36 +30,186 @@ const POPULAR_PROJECT_ICONS = [
 ] as const satisfies ReadonlyArray<IconName>;
 
 export const PROJECT_EMOJIS: ReadonlyArray<{ readonly emoji: string; readonly label: string }> = [
-  { emoji: "💻", label: "Computer" },
-  { emoji: "🛠️", label: "Tools" },
-  { emoji: "🚀", label: "Rocket" },
-  { emoji: "🤖", label: "Robot" },
-  { emoji: "✨", label: "Sparkles" },
-  { emoji: "⚡", label: "Lightning" },
-  { emoji: "🌐", label: "Web" },
-  { emoji: "📱", label: "Mobile" },
-  { emoji: "🖥️", label: "Desktop" },
-  { emoji: "⌨️", label: "Keyboard" },
-  { emoji: "⚙️", label: "Gear" },
-  { emoji: "🗄️", label: "Database" },
-  { emoji: "☁️", label: "Cloud" },
-  { emoji: "📦", label: "Package" },
-  { emoji: "📚", label: "Books" },
-  { emoji: "🧪", label: "Test tube" },
-  { emoji: "🔒", label: "Lock" },
-  { emoji: "🎮", label: "Game" },
-  { emoji: "🎵", label: "Music" },
-  { emoji: "🎬", label: "Movie" },
-  { emoji: "🖼️", label: "Picture" },
-  { emoji: "🛍️", label: "Shopping" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "💡", label: "Idea" },
-  { emoji: "🧩", label: "Puzzle" },
-  { emoji: "📊", label: "Chart" },
-  { emoji: "🧠", label: "Brain" },
-  { emoji: "🦄", label: "Unicorn" },
-  { emoji: "🐙", label: "Octopus" },
-  { emoji: "🌱", label: "Seedling" },
+  {
+    emoji: "💻",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelComputer");
+    },
+  },
+  {
+    emoji: "🛠️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelTools");
+    },
+  },
+  {
+    emoji: "🚀",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelRocket");
+    },
+  },
+  {
+    emoji: "🤖",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelRobot");
+    },
+  },
+  {
+    emoji: "✨",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelSparkles");
+    },
+  },
+  {
+    emoji: "⚡",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelLightning");
+    },
+  },
+  {
+    emoji: "🌐",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelWeb");
+    },
+  },
+  {
+    emoji: "📱",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelMobile");
+    },
+  },
+  {
+    emoji: "🖥️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelDesktop");
+    },
+  },
+  {
+    emoji: "⌨️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelKeyboard");
+    },
+  },
+  {
+    emoji: "⚙️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelGear");
+    },
+  },
+  {
+    emoji: "🗄️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelDatabase");
+    },
+  },
+  {
+    emoji: "☁️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelCloud");
+    },
+  },
+  {
+    emoji: "📦",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelPackage");
+    },
+  },
+  {
+    emoji: "📚",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelBooks");
+    },
+  },
+  {
+    emoji: "🧪",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelTestTube");
+    },
+  },
+  {
+    emoji: "🔒",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelLock");
+    },
+  },
+  {
+    emoji: "🎮",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelGame");
+    },
+  },
+  {
+    emoji: "🎵",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelMusic");
+    },
+  },
+  {
+    emoji: "🎬",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelMovie");
+    },
+  },
+  {
+    emoji: "🖼️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelPicture");
+    },
+  },
+  {
+    emoji: "🛍️",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelShopping");
+    },
+  },
+  {
+    emoji: "🔥",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelFire");
+    },
+  },
+  {
+    emoji: "💡",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelIdea");
+    },
+  },
+  {
+    emoji: "🧩",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelPuzzle");
+    },
+  },
+  {
+    emoji: "📊",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelChart");
+    },
+  },
+  {
+    emoji: "🧠",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelBrain");
+    },
+  },
+  {
+    emoji: "🦄",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelUnicorn");
+    },
+  },
+  {
+    emoji: "🐙",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelOctopus");
+    },
+  },
+  {
+    emoji: "🌱",
+    get label() {
+      return currentTranslator()("shellRest.iconLabelSeedling");
+    },
+  },
 ];
 
 export function filterProjectIconNames(query: string): ReadonlyArray<IconName> {

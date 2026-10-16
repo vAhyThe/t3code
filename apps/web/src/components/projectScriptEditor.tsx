@@ -60,14 +60,46 @@ import { Label } from "./ui/label";
 import { Popover, PopoverPopup, PopoverTrigger } from "./ui/popover";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { Trans } from "~/i18n/Trans";
 
 const SCRIPT_ICONS: Array<{ id: ProjectScriptIcon; label: string }> = [
-  { id: "play", label: "Play" },
-  { id: "test", label: "Test" },
-  { id: "lint", label: "Lint" },
-  { id: "configure", label: "Configure" },
-  { id: "build", label: "Build" },
-  { id: "debug", label: "Debug" },
+  {
+    id: "play",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconPlay");
+    },
+  },
+  {
+    id: "test",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconTest");
+    },
+  },
+  {
+    id: "lint",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconLint");
+    },
+  },
+  {
+    id: "configure",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconConfigure");
+    },
+  },
+  {
+    id: "build",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconBuild");
+    },
+  },
+  {
+    id: "debug",
+    get label() {
+      return currentTranslator()("shellRest.scriptIconDebug");
+    },
+  },
 ];
 
 export function ScriptIcon({
@@ -169,6 +201,7 @@ export function ProjectScriptEditorDialog({
   onDelete: (scriptId: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const canEditActions = useEnvironmentScope(environmentId, editScope);
   const canWriteSettings = useEnvironmentScope(environmentId, AuthSettingsWriteScope);
   const formId = React.useId();
@@ -335,16 +368,16 @@ export function ProjectScriptEditorDialog({
       >
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Action" : "Add Action"}</DialogTitle>
-            <DialogDescription>
-              Actions are project-scoped commands you can run from the top bar or keybindings.
-            </DialogDescription>
+            <DialogTitle>
+              {isEditing ? t("shellRest.editAction") : t("shellRest.addAction")}
+            </DialogTitle>
+            <DialogDescription>{t("shellRest.actionsDescription")}</DialogDescription>
           </DialogHeader>
           <DialogPanel>
             <form id={formId} onSubmit={submit}>
               <fieldset className="space-y-4" disabled={isSaving || !canEditActions}>
                 <div className="space-y-1.5">
-                  <Label htmlFor="script-name">Name</Label>
+                  <Label htmlFor="script-name">{t("shellRest.scriptNameLabel")}</Label>
                   <div className="flex items-center gap-2">
                     <Popover onOpenChange={setIconPickerOpen} open={iconPickerOpen}>
                       <PopoverTrigger
@@ -353,7 +386,7 @@ export function ProjectScriptEditorDialog({
                             type="button"
                             variant="outline"
                             className="size-9 shrink-0"
-                            aria-label="Choose icon"
+                            aria-label={t("shellRest.chooseIcon")}
                           />
                         }
                       >
@@ -388,50 +421,50 @@ export function ProjectScriptEditorDialog({
                     <Input
                       id="script-name"
                       autoFocus
-                      placeholder="Test"
+                      placeholder={t("shellRest.scriptNamePlaceholder")}
                       value={name}
                       onChange={(event) => setName(event.target.value)}
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="script-keybinding">Keybinding</Label>
+                  <Label htmlFor="script-keybinding">{t("shellRest.keybindingLabel")}</Label>
                   <Input
                     disabled={!canWriteSettings}
                     id="script-keybinding"
-                    placeholder="Press shortcut"
+                    placeholder={t("shellRest.pressShortcutPlaceholder")}
                     value={keybinding}
                     readOnly
                     onKeyDown={captureKeybinding}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Press a shortcut. Use <code>Backspace</code> to clear. Shortcuts are
-                    environment-wide. Projects using the same action share its shortcut.
+                    <Trans
+                      k="shellRest.keybindingHint"
+                      components={{ code: (children) => <code>{children}</code> }}
+                    />
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="script-command">Command</Label>
+                  <Label htmlFor="script-command">{t("shellRest.commandLabel")}</Label>
                   <Textarea
                     id="script-command"
-                    placeholder="bun test"
+                    placeholder="bun test" // i18n-ignore: command sample, not translated
                     value={command}
                     onChange={(event) => setCommand(event.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="script-preview-url">Preview URL (optional)</Label>
+                  <Label htmlFor="script-preview-url">{t("shellRest.previewUrlLabel")}</Label>
                   <Input
                     id="script-preview-url"
-                    placeholder="http://localhost:5173"
+                    placeholder="http://localhost:5173" // i18n-ignore: URL sample
                     value={previewUrl}
                     onChange={(event) => setPreviewUrl(event.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Open this URL in the in-app preview when this action runs.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("shellRest.previewUrlHint")}</p>
                 </div>
                 <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>Run automatically on worktree creation</span>
+                  <span>{t("shellRest.runOnWorktreeCreation")}</span>
                   <Switch
                     checked={runOnWorktreeCreate}
                     onCheckedChange={(checked) => setRunOnWorktreeCreate(Boolean(checked))}
@@ -442,7 +475,7 @@ export function ProjectScriptEditorDialog({
                     runOnWorktreeCreate ? "" : "opacity-60"
                   }`}
                 >
-                  <span>Wait for it to finish before the agent starts</span>
+                  <span>{t("shellRest.waitBeforeAgent")}</span>
                   <Switch
                     checked={waitForSetup}
                     disabled={!runOnWorktreeCreate}
@@ -450,7 +483,7 @@ export function ProjectScriptEditorDialog({
                   />
                 </label>
                 <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>Run in the thread's worktree when the thread settles</span>
+                  <span>{t("shellRest.runWhenThreadSettles")}</span>
                   <Switch
                     checked={runOnSettle}
                     onCheckedChange={(checked) => setRunOnSettle(Boolean(checked))}
@@ -461,7 +494,7 @@ export function ProjectScriptEditorDialog({
                     previewUrl.trim().length === 0 ? "opacity-60" : ""
                   }`}
                 >
-                  <span>Open preview automatically when this action runs</span>
+                  <span>{t("shellRest.openPreviewAutomatically")}</span>
                   <Switch
                     checked={autoOpenPreview}
                     disabled={previewUrl.trim().length === 0}
@@ -481,14 +514,18 @@ export function ProjectScriptEditorDialog({
                 disabled={isSaving || !canEditActions}
                 onClick={() => setDeleteConfirmOpen(true)}
               >
-                Delete
+                {t("shellRest.deleteButton")}
               </Button>
             )}
             <Button type="button" variant="outline" onClick={close}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button form={formId} type="submit" disabled={isSaving || !canEditActions}>
-              {isSaving ? "Saving…" : isEditing ? "Save changes" : "Save action"}
+              {isSaving
+                ? t("shellRest.savingChanges")
+                : isEditing
+                  ? t("shellRest.saveChanges")
+                  : t("shellRest.saveAction")}
             </Button>
           </DialogFooter>
         </DialogPopup>
@@ -497,11 +534,13 @@ export function ProjectScriptEditorDialog({
       <AlertDialog open={deleteConfirmOpen && canEditActions} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete action "{name}"?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogTitle>{t("shellRest.deleteActionTitle", { name })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("shellRest.actionCannotBeUndone")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
             <Button
               variant="destructive"
               disabled={isSaving || !canEditActions}
@@ -516,7 +555,7 @@ export function ProjectScriptEditorDialog({
                 onDelete(request.scriptId);
               }}
             >
-              Delete action
+              {t("shellRest.deleteActionButton")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

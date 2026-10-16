@@ -42,6 +42,7 @@ import {
   resolveThreadRouteTarget,
 } from "../threadRoutes";
 import { toastManager } from "./ui/toast";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 /** Layout commands a focused desktop browser page hands back to the app. */
 const PREVIEW_FORWARDED_LAYOUT_COMMANDS = [
@@ -139,7 +140,7 @@ export function ReopenClosedViewShortcut() {
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: "Could not reopen view",
+          title: currentTranslator()("shellRest.couldNotReopenView"),
           description: error instanceof Error ? error.message : String(error),
         });
       });

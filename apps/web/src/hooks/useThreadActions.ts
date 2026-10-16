@@ -61,6 +61,7 @@ import { showThreadUndoNotice } from "./showThreadUndoNotice";
 import { useAtomCommand } from "../state/use-atom-command";
 import { useOrchestrationCommand } from "../state/use-orchestration-command";
 import { useAtomQueryRunner } from "../state/use-atom-query-runner";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export class ThreadArchiveBlockedError extends Schema.TaggedError<ThreadArchiveBlockedError>()(
   "ThreadArchiveBlockedError",
@@ -198,8 +199,9 @@ export async function navigateAfterThreadDeletion(navigate: () => Promise<void>)
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: "Thread deleted, but navigation failed",
-        description: error instanceof Error ? error.message : "An error occurred.",
+        title: currentTranslator()("shellRest.threadDeletedNavigationFailed"),
+        description:
+          error instanceof Error ? error.message : currentTranslator()("shellRest.genericError"),
       }),
     );
   }
@@ -261,7 +263,7 @@ function threadOperationFailure(target: ScopedThreadRef) {
     : AsyncResult.failure(
         Cause.fail(
           new EnvironmentAuthorizationError({
-            message: "This connection cannot change threads.",
+            message: currentTranslator()("shellRest.connectionCannotChangeThreads"),
             requiredScope: AuthOrchestrationOperateScope,
           }),
         ),
@@ -595,7 +597,7 @@ export function useThreadActions() {
         : AsyncResult.failure(
             Cause.fail(
               new EnvironmentAuthorizationError({
-                message: "This connection can no longer remove worktrees.",
+                message: currentTranslator()("shellRest.connectionCannotRemoveWorktrees"),
                 requiredScope: AuthSourceControlWriteScope,
               }),
             ),
@@ -627,10 +629,13 @@ export function useThreadActions() {
           stackedThreadToast({
             type: "error",
             title: removalFailed
-              ? "Failed to delete worktree"
-              : "Worktree deleted, but Git status refresh failed",
+              ? currentTranslator()("shellRest.failedToDeleteWorktree")
+              : currentTranslator()("shellRest.worktreeDeletedGitRefreshFailed"),
             description: removalFailed
-              ? `Could not remove ${displayWorktreePath ?? orphanedWorktreePath}. ${message}`
+              ? currentTranslator()("shellRest.couldNotRemovePath", {
+                  path: displayWorktreePath ?? orphanedWorktreePath,
+                  message,
+                })
               : message,
           }),
         );
@@ -849,7 +854,7 @@ export function useThreadActions() {
       const resolved = resolveThreadTarget(target);
       const confirmationResult = await requestThreadUnpinConfirmation({
         enabled: confirmThreadUnpin,
-        title: resolved?.thread.title ?? "this thread",
+        title: resolved?.thread.title ?? currentTranslator()("shellRest.thisThread"),
         confirm: localApi ? (message) => localApi.dialogs.confirm(message) : null,
       });
       if (confirmationResult._tag === "Failure") {

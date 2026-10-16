@@ -36,6 +36,7 @@ const badgeVariants = cva(
         warning: "bg-warning/8 text-warning-foreground dark:bg-warning/16",
         // A code-host label tinted from the --label color the consumer sets in style.
         label:
+          // i18n-ignore: CSS classes
           "bg-[color-mix(in_srgb,var(--label)_8%,transparent)] text-[color-mix(in_srgb,var(--label)_30%,var(--color-foreground))] dark:bg-[color-mix(in_srgb,var(--label)_12%,transparent)] dark:text-[color-mix(in_srgb,var(--label)_45%,var(--color-foreground))]",
       },
     },

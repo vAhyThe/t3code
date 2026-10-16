@@ -16,6 +16,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { HighlightedSearchLine } from "./HighlightedSearchLine";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 interface ProjectContentSearchDialogProps {
   readonly onOpenChange: (open: boolean) => void;
@@ -84,9 +85,10 @@ function SearchOptionButton(props: {
 }
 
 function EmptyContentSearchDialog() {
+  const t = useT();
   return (
     <CommandPaletteContent
-      aria-label="Search project contents"
+      aria-label={t("shellRest.searchProjectContentsLabel")}
       escapeLabel="Back"
       footerActionLabel="Open file"
       inputProps={{ disabled: true, placeholder: "Search project contents…" }}
@@ -96,7 +98,7 @@ function EmptyContentSearchDialog() {
       value=""
     >
       <p className="m-auto px-6 text-center text-muted-foreground text-sm">
-        Open a project to search its files.
+        {t("shellRest.openProjectToSearch")}
       </p>
     </CommandPaletteContent>
   );
@@ -106,6 +108,7 @@ function OpenContentSearchDialog(props: {
   readonly onOpenChange: (open: boolean) => void;
   readonly target: ActiveProjectTarget;
 }) {
+  const t = useT();
   const { target } = props;
   const { resolvedTheme } = useTheme();
   const [query, setQuery] = useState("");
@@ -169,7 +172,7 @@ function OpenContentSearchDialog(props: {
 
   return (
     <CommandPaletteContent
-      aria-label={`Search file contents in ${target.projectName}`}
+      aria-label={t("shellRest.searchFileContentsIn", { project: target.projectName })}
       escapeLabel="Back"
       footerActionLabel="Open file"
       inputAccessory={
@@ -177,15 +180,16 @@ function OpenContentSearchDialog(props: {
           <SearchOptionButton
             active={caseSensitive}
             disabled={!search.canReadFiles}
-            label="Match case"
+            label={t("shellRest.matchCase")}
             onClick={() => setCaseSensitive((current) => !current)}
           >
-            Aa
+            {"Aa"}
+            {/* i18n-ignore: visual glyph on the button, not a word */}
           </SearchOptionButton>
           <SearchOptionButton
             active={wholeWord}
             disabled={!search.canReadFiles}
-            label="Match whole word"
+            label={t("shellRest.matchWholeWord")}
             onClick={() => setWholeWord((current) => !current)}
           >
             <span className="underline decoration-2 underline-offset-2">ab</span>
@@ -193,7 +197,7 @@ function OpenContentSearchDialog(props: {
           <SearchOptionButton
             active={useRegex}
             disabled={!search.canReadFiles}
-            label="Use regular expression"
+            label={t("shellRest.useRegularExpression")}
             onClick={() => setUseRegex((current) => !current)}
           >
             .*
@@ -237,12 +241,12 @@ function OpenContentSearchDialog(props: {
         <div className="flex h-9 shrink-0 items-center border-b px-3 text-xs text-muted-foreground">
           {search.isPending ? (
             <span className="flex items-center gap-2">
-              <Spinner size="sm" /> Searching…
+              <Spinner size="sm" /> {t("shellRest.searchingEllipsis")}
             </span>
           ) : search.error ? (
             <span className="text-destructive">{search.error}</span>
           ) : search.invalidRegex ? (
-            <span className="text-destructive">Invalid regular expression</span>
+            <span className="text-destructive">{t("shellRest.invalidRegularExpression")}</span>
           ) : (
             `${matches.length.toLocaleString()}${search.truncated ? "+" : ""} results in ${fileCount.toLocaleString()} files`
           )}
@@ -252,12 +256,12 @@ function OpenContentSearchDialog(props: {
       {matches.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
           {search.isCheckingAccess
-            ? "Checking file access…"
+            ? t("shellRest.checkingFileAccess")
             : !search.canReadFiles
               ? search.error
               : search.hasQuery && !search.isPending && !search.error
-                ? "No results found."
-                : "Type to search across your project."}
+                ? t("shellRest.noResultsFound")
+                : t("shellRest.typeToSearchProject")}
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1" scrollFade>

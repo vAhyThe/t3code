@@ -95,6 +95,7 @@ import {
   resolveTerminalFontSizePreference,
   TYPOGRAPHY_ADVANCED_STORAGE_KEY,
 } from "../appearanceFonts";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 const MIN_DRAWER_HEIGHT = 180;
 const MAX_DRAWER_HEIGHT_RATIO = 0.75;
@@ -324,8 +325,10 @@ export function terminalSelectionMenuItems(options?: {
   return [
     ...(options?.canAddToChat === false
       ? []
-      : ([{ id: "add-to-chat", label: "Add to chat" }] satisfies ContextMenuItem<"add-to-chat">[])),
-    { id: "copy", label: "Copy" },
+      : ([
+          { id: "add-to-chat", label: currentTranslator()("shellRest.addToChat") },
+        ] satisfies ContextMenuItem<"add-to-chat">[])),
+    { id: "copy", label: currentTranslator()("shellRest.copyLabel") },
   ];
 }
 
@@ -346,9 +349,13 @@ export function terminalContextMenuItems(options: {
       ...item,
       disabled: !hasSelection,
     })),
-    { id: "paste", label: "Paste", ...(options.readOnly ? { disabled: true } : {}) },
-    { id: "select-all", label: "Select all" },
-    { id: "scroll-to-bottom", label: "Jump to latest" },
+    {
+      id: "paste",
+      label: currentTranslator()("shellRest.pasteLabel"),
+      ...(options.readOnly ? { disabled: true } : {}),
+    },
+    { id: "select-all", label: currentTranslator()("shellRest.selectAllLabel") },
+    { id: "scroll-to-bottom", label: currentTranslator()("shellRest.jumpToLatest") },
   ];
 }
 
@@ -935,8 +942,11 @@ export function TerminalViewport({
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Unable to open link",
-                description: error instanceof Error ? error.message : "An error occurred.",
+                title: currentTranslator()("shellRest.unableToOpenLink"),
+                description:
+                  error instanceof Error
+                    ? error.message
+                    : currentTranslator()("shellRest.genericError"),
               }),
             );
           });
@@ -1219,6 +1229,7 @@ export default function ThreadTerminalDrawer({
   terminalLabelsById,
   terminalLaunchLocationsById,
 }: ThreadTerminalDrawerProps) {
+  const t = useT();
   const canOperateTerminal = useEnvironmentScope(threadRef.environmentId, AuthTerminalOperateScope);
   const isPanel = mode === "panel";
   const [advancedTypography] = useLocalStorage(
@@ -1578,7 +1589,7 @@ export default function ThreadTerminalDrawer({
           />
         ) : null}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>No terminal sessions for this thread yet.</p>
+          <p>{t("shellRest.noTerminalSessionsYet")}</p>
           <Button
             size="xs"
             variant="outline"

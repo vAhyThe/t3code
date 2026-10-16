@@ -32,6 +32,7 @@ import { readEnvironmentScope, useEnvironmentScope } from "./session";
 import { sourceControlEnvironment } from "./sourceControl";
 import { useAtomCommand } from "./use-atom-command";
 import { vcsActionManager, vcsEnvironment } from "./vcs";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export type SourceControlActionKind =
   | "init"
@@ -101,7 +102,7 @@ function useAction<
           Cause.fail(
             new EnvironmentAuthorizationError({
               requiredScope: AuthSourceControlWriteScope,
-              message: "This connection cannot change source control.",
+              message: currentTranslator()("shellRest.connectionCannotChangeSourceControl"),
             }),
           ),
         );
@@ -181,7 +182,12 @@ export function useVcsInitAction(scope: SourceControlActionScope) {
       input: { cwd: target.cwd },
     });
   }, [init, scope]);
-  return useAction({ kind: "init", label: "Initializing repository", scope, action });
+  return useAction({
+    kind: "init",
+    label: currentTranslator()("shellRest.initializingRepository"),
+    scope,
+    action,
+  });
 }
 
 export function useVcsPullAction(scope: SourceControlActionScope) {
@@ -214,7 +220,7 @@ export function useVcsPullAction(scope: SourceControlActionScope) {
   }, [pull, scope]);
   return useAction({
     kind: "pull",
-    label: "Pulling latest changes...",
+    label: currentTranslator()("shellRest.pullingLatestChanges"),
     scope,
     action,
     onSuccess: status.refresh,
@@ -254,7 +260,7 @@ export function useGitStackedAction(scope: SourceControlActionScope) {
 
   return useAction({
     kind: "runStackedAction",
-    label: "Running source control action",
+    label: currentTranslator()("shellRest.runningSourceControlAction"),
     scope,
     action,
     onSuccess: status.refresh,
@@ -306,7 +312,7 @@ export function useSourceControlPublishRepositoryAction(scope: SourceControlActi
   );
   return useAction({
     kind: "publishRepository",
-    label: "Publishing repository",
+    label: currentTranslator()("shellRest.publishingRepository"),
     scope,
     action,
     onSuccess: status.refresh,
@@ -340,7 +346,7 @@ export function usePreparePullRequestThreadAction(scope: SourceControlActionScop
           Cause.fail(
             new EnvironmentAuthorizationError({
               requiredScope: AuthOrchestrationOperateScope,
-              message: "This connection cannot change threads.",
+              message: currentTranslator()("shellRest.connectionCannotChangeThreads"),
             }),
           ),
         );
@@ -359,7 +365,7 @@ export function usePreparePullRequestThreadAction(scope: SourceControlActionScop
   );
   return useAction({
     kind: "preparePullRequestThread",
-    label: "Preparing pull request thread",
+    label: currentTranslator()("shellRest.preparingPullRequestThread"),
     scope,
     action,
   });
