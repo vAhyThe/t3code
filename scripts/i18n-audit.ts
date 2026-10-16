@@ -101,7 +101,8 @@ export function auditSource(fileName: string, sourceText: string): Candidate[] {
   const candidates: Candidate[] = [];
   const report = (position: number, text: string) => {
     const line = sourceFile.getLineAndCharacterOfPosition(position).line + 1;
-    if (!isIgnored(line)) candidates.push({ line, text });
+    // One finding per output line, even for a template that spans several.
+    if (!isIgnored(line)) candidates.push({ line, text: text.replace(/\s+/g, " ") });
   };
   const reportLiterals = (expression: ts.Expression, requireUppercase: boolean) => {
     for (const literal of literalsOf(expression)) {
@@ -116,7 +117,7 @@ export function auditSource(fileName: string, sourceText: string): Candidate[] {
     if (ts.isJsxText(node)) {
       const text = node.text.trim();
       if (STARTS_UPPERCASE.test(text)) {
-        report(node.getStart(sourceFile) + node.text.indexOf(text), text.replace(/\s+/g, " "));
+        report(node.getStart(sourceFile) + node.text.indexOf(text), text);
       }
     } else if (
       ts.isJsxExpression(node) &&

@@ -36,6 +36,11 @@ const c = { title: "Flagged" };`;
     expect(texts("a.tsx", source)).toEqual(["Flagged"]);
   });
 
+  it("keeps a multi-line candidate on one line", () => {
+    const source = "const a = { message: `Failed to\n  save ${name}` };";
+    expect(texts("a.ts", source)).toEqual(["`Failed to save ${name}`"]);
+  });
+
   it("reports the line of each candidate", () => {
     const source = `const a = 1;\nconst b = { message: "Copied" };`;
     expect(auditSource("a.ts", source)).toEqual([{ line: 2, text: "Copied" }]);
