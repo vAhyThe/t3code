@@ -9,6 +9,7 @@ import { APP_VERSION } from "~/branding";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { useDesktopUpdateState } from "~/state/desktopUpdate";
 import { serverEnvironment } from "~/state/server";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { resolveVersionMismatch } from "~/versionSkew";
 import type { ServerUpdateOutcome, ServerUpdateTarget } from "../ServerUpdateAction";
 import { stackedThreadToast, toastManager } from "../ui/toast";
@@ -365,8 +366,11 @@ export function DesktopUpdateLaunchNotice() {
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: "Update did not apply",
-        description: `T3 Code is still on ${APP_VERSION}. Install ${notAppliedVersion} again from the update button.`,
+        title: currentTranslator()("shellNav.updateDidNotApply"),
+        description: currentTranslator()("shellNav.updateNotAppliedDescription", {
+          version: APP_VERSION,
+          notAppliedVersion,
+        }),
       }),
     );
   }, [notAppliedVersion]);

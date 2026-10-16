@@ -1,3 +1,5 @@
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { currentTranslator } from "../../i18n/I18nProvider";
 import type { ServerUpdateState } from "@t3tools/client-runtime/state/server";
 import type { EnvironmentId, ServerConfig } from "@t3tools/contracts";
 import { cliReleaseChannelOf } from "@t3tools/shared/cliRelease";
@@ -98,25 +100,25 @@ export function collectServerUpdateTargets(
     const skip = (reason: string) =>
       skipped.push({ environmentId: machine.environmentId, label: machine.label, reason });
     if (config === null || !machine.connected) {
-      skip("not connected");
+      skip(currentTranslator()("shellNav.skipNotConnected"));
       continue;
     }
     if (!machine.canMaintain) {
-      skip("no permission");
+      skip(currentTranslator()("shellNav.skipNoPermission"));
       continue;
     }
     if (machine.updateState.status === "running") {
-      skip("already updating");
+      skip(currentTranslator()("shellNav.skipAlreadyUpdating"));
       continue;
     }
     const selfUpdate = resolveServerSelfUpdateCapability(config);
     const desktopAppUpdate = supportsDesktopAppUpdate(config);
     if (selfUpdate === null) {
-      skip("needs a manual update");
+      skip(currentTranslator()("shellNav.skipNeedsManualUpdate"));
       continue;
     }
     if (selfUpdate === "desktop-managed" && !desktopAppUpdate) {
-      skip("needs a newer desktop app");
+      skip(currentTranslator()("shellNav.skipNeedsDesktopApp"));
       continue;
     }
     const serverVersion = config.environment.serverVersion;
@@ -124,7 +126,11 @@ export function collectServerUpdateTargets(
       selfUpdate !== "desktop-managed" &&
       cliReleaseChannelOf(serverVersion) !== cliReleaseChannelOf(targetVersion)
     ) {
-      skip(`on the ${cliReleaseChannelOf(serverVersion)} channel`);
+      skip(
+        currentTranslator()("shellNav.skipOnChannel", {
+          channel: cliReleaseChannelOf(serverVersion),
+        }),
+      );
       continue;
     }
     targets.push({
@@ -255,9 +261,12 @@ export const UPDATE_SLOW_AFTER_MS = 3 * 60 * 1000;
 /** Elapsed time in whole minutes, such as "6m" or "1h 4m". */
 export function formatUpdateElapsed(ms: number): string {
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return "<1m";
-  if (minutes < 60) return `${minutes}m`;
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  if (minutes < 1) return currentTranslator()("shellNav.elapsedLessThanMinute");
+  if (minutes < 60) return currentTranslator()("shellNav.elapsedMinutes", { minutes });
+  return currentTranslator()("shellNav.elapsedHoursMinutes", {
+    hours: Math.floor(minutes / 60),
+    minutes: minutes % 60,
+  });
 }
 
 export interface UpdateRunMachineView {
@@ -295,10 +304,14 @@ export function describeUpdateCapsule(
 ): UpdateCapsuleView {
   if (run.phase === "countdown" && run.restartAt !== null) {
     const seconds = Math.max(0, Math.ceil((run.restartAt - now) / 1000));
-    return { tone: "default", label: `Restart in ${seconds}s`, action: "later" };
+    return {
+      tone: "default",
+      label: currentTranslator()("shellNav.restartInSeconds", { seconds }),
+      action: "later",
+    };
   }
   if (run.phase === "installing") {
-    return { tone: "default", label: "Restarting…", action: null };
+    return { tone: "default", label: currentTranslator()("shellNav.restartingNow"), action: null };
   }
   const active = machines.filter(({ status }) => isActive(status) && status !== "waiting");
   const slowest = active.toSorted((a, b) => a.machine.startedAt - b.machine.startedAt)[0];
@@ -307,7 +320,7 @@ export function describeUpdateCapsule(
       tone: "slow",
       label: slowest.machine.label,
       slow: {
-        status: RUN_STATUS_LABELS[slowest.status],
+        status: currentTranslator()(RUN_STATUS_LABEL_KEYS[slowest.status]),
         elapsed: formatUpdateElapsed(now - slowest.machine.startedAt),
       },
       action: null,
@@ -315,12 +328,21 @@ export function describeUpdateCapsule(
   }
   const done = machines.filter(({ status }) => status === "done").length;
   if (machines.some(({ status }) => isActive(status))) {
-    return { tone: "default", label: `${done} of ${machines.length} updated`, action: null };
+    return {
+      tone: "default",
+      label: currentTranslator()("shellNav.machinesUpdated", { done, total: machines.length }),
+      action: null,
+    };
   }
   if (local?.status === "downloading") {
     return {
       tone: "default",
-      label: `Downloading${local.percent === null ? "" : ` ${Math.floor(local.percent)}%`}`,
+      label:
+        local.percent === null
+          ? currentTranslator()("shellNav.downloading")
+          : currentTranslator()("shellNav.downloadingPercent", {
+              percent: Math.floor(local.percent),
+            }),
       action: null,
     };
   }
@@ -328,20 +350,27 @@ export function describeUpdateCapsule(
   if (failed.length > 0) {
     return {
       tone: "failed",
-      label: failed.length === 1 ? `${failed[0]!.machine.label} failed` : `${failed.length} failed`,
+      label:
+        failed.length === 1
+          ? currentTranslator()("shellNav.machineFailed", { machine: failed[0]!.machine.label })
+          : currentTranslator()("shellNav.failedCount", { count: failed.length }),
       action: failed.some(({ machine }) => machine.server !== null) ? "retry" : "dismiss",
     };
   }
-  return { tone: "default", label: `${done} of ${machines.length} updated`, action: null };
+  return {
+    tone: "default",
+    label: currentTranslator()("shellNav.machinesUpdated", { done, total: machines.length }),
+    action: null,
+  };
 }
 
-export const RUN_STATUS_LABELS: Record<UpdateRunMachineStatus, string> = {
-  providers: "updating providers",
-  waiting: "waiting",
-  downloading: "downloading",
-  restarting: "restarting",
-  done: "done",
-  failed: "failed",
+export const RUN_STATUS_LABEL_KEYS: Record<UpdateRunMachineStatus, MessageKey> = {
+  providers: "shellNav.runStatusProviders",
+  waiting: "shellNav.runStatusWaiting",
+  downloading: "shellNav.runStatusDownloading",
+  restarting: "shellNav.runStatusRestarting",
+  done: "shellNav.runStatusDone",
+  failed: "shellNav.runStatusFailed",
 };
 
 /** What one pass did. It is saved before this app installs, so it outlives the relaunch. */
@@ -376,7 +405,9 @@ export function collectUpdateEverythingResult(input: {
     updatedProviders: input.providers.filter((outcome) => outcome.status === "updated").length,
     restarting: [],
     failures: [
-      ...input.localFailures.map((failure) => `This app: ${failure}`),
+      ...input.localFailures.map((failure) =>
+        currentTranslator()("shellNav.thisAppFailure", { failure }),
+      ),
       ...input.servers.flatMap(({ label, outcome }) =>
         outcome.status === "failed" ? [`${label}: ${outcome.message}`] : [],
       ),
@@ -401,27 +432,38 @@ export function getUpdateEverythingToastView(
   readonly description?: string;
 } | null {
   const parts = [
-    result.localVersion !== null && result.localVersion === appVersion ? "this app" : null,
-    countLabel(result.updatedServers, "server"),
-    countLabel(result.updatedProviders, "provider"),
+    result.localVersion !== null && result.localVersion === appVersion
+      ? currentTranslator()("shellNav.thisApp")
+      : null,
+    countLabel(result.updatedServers, "shellNav.countServer"),
+    countLabel(result.updatedProviders, "shellNav.countProvider"),
   ].filter((part) => part !== null);
   const restarting =
     result.restarting.length === 0
       ? []
       : [
-          `${joinList(result.restarting)} ${result.restarting.length === 1 ? "is" : "are"} still restarting.`,
+          result.restarting.length === 1
+            ? currentTranslator()("shellNav.restartingOne", {
+                machines: joinList(result.restarting),
+              })
+            : currentTranslator()("shellNav.restartingMany", {
+                machines: joinList(result.restarting),
+              }),
         ];
   if (result.failures.length === 0) {
     if (parts.length === 0) return null;
     return {
       type: "success",
-      title: `Updated ${joinList(parts)}`,
+      title: currentTranslator()("shellNav.updatedList", { items: joinList(parts) }),
       ...(restarting.length === 0 ? {} : { description: restarting.join("\n") }),
     };
   }
   return {
     type: "error",
-    title: parts.length === 0 ? "Update failed" : `Updated ${joinList(parts)}`,
+    title:
+      parts.length === 0
+        ? currentTranslator()("shellNav.updateFailedTitle")
+        : currentTranslator()("shellNav.updatedList", { items: joinList(parts) }),
     description: [...result.failures, ...restarting].join("\n"),
   };
 }
@@ -440,13 +482,21 @@ export interface UpdateEverythingPlan {
   }>;
 }
 
-function countLabel(count: number, noun: string): string | null {
-  return count === 0 ? null : `${count} ${noun}${count === 1 ? "" : "s"}`;
+function countLabel(
+  count: number,
+  key: "shellNav.countServer" | "shellNav.countProvider",
+): string | null {
+  return count === 0 ? null : currentTranslator()(key, { count });
 }
 
 function joinList(parts: ReadonlyArray<string>): string {
-  if (parts.length <= 2) return parts.join(" and ");
-  return `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`;
+  const t = currentTranslator();
+  if (parts.length <= 1) return parts.join("");
+  if (parts.length === 2) return t("shellNav.listTwo", { first: parts[0]!, second: parts[1]! });
+  return t("shellNav.listMany", {
+    rest: parts.slice(0, -1).join(", "),
+    last: parts[parts.length - 1]!,
+  });
 }
 
 /**
@@ -462,13 +512,15 @@ export function describeUpdateEverything(plan: UpdateEverythingPlan): {
     (count, machine) => count + machine.providers.length,
     0,
   );
-  const summary = `Update ${joinList(
-    [
-      plan.localVersion ? "this app" : null,
-      countLabel(plan.servers.length, "server"),
-      countLabel(providerCount, "provider"),
-    ].filter((part) => part !== null),
-  )}`;
+  const summary = currentTranslator()("shellNav.updateSummary", {
+    items: joinList(
+      [
+        plan.localVersion ? currentTranslator()("shellNav.thisApp") : null,
+        countLabel(plan.servers.length, "shellNav.countServer"),
+        countLabel(providerCount, "shellNav.countProvider"),
+      ].filter((part) => part !== null),
+    ),
+  });
 
   const machines = new Map<EnvironmentId, { label: string; items: string[] }>();
   const itemsFor = (environmentId: EnvironmentId, label: string) => {
@@ -483,8 +535,8 @@ export function describeUpdateEverything(plan: UpdateEverythingPlan): {
     // offers, so it has no target version to show.
     itemsFor(server.environmentId, server.serverLabel).push(
       server.selfUpdate === "desktop-managed"
-        ? "desktop app update"
-        : `server to ${server.targetVersion}`,
+        ? currentTranslator()("shellNav.desktopAppUpdate")
+        : currentTranslator()("shellNav.serverToVersion", { version: server.targetVersion }),
     );
   }
   for (const machine of plan.providerMachines) {
@@ -494,7 +546,9 @@ export function describeUpdateEverything(plan: UpdateEverythingPlan): {
   return {
     summary,
     lines: [
-      ...(plan.localVersion ? [`This app: ${plan.localVersion}, restarts last`] : []),
+      ...(plan.localVersion
+        ? [currentTranslator()("shellNav.thisAppRestartsLast", { version: plan.localVersion })]
+        : []),
       ...Array.from(machines.values(), ({ label, items }) => `${label}: ${items.join(", ")}`),
     ],
   };

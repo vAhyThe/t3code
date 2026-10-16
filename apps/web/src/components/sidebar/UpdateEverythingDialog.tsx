@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import { EnvironmentId } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 
+import { useT } from "~/i18n/I18nProvider";
 import { environmentThreadShells } from "~/state/threads";
 import {
   AlertDialog,
@@ -76,6 +77,7 @@ function UpdateEverythingDialogContent({
   skipped,
   onConfirm,
 }: Omit<UpdateEverythingDialogProps, "open" | "onOpenChange">) {
+  const t = useT();
   const stopped = useAtomValue(
     runningThreadCountAtom(
       restarts
@@ -93,7 +95,6 @@ function UpdateEverythingDialogContent({
     ),
   );
   const running = stopped + continuing;
-  const threads = `${running} running ${running === 1 ? "thread" : "threads"}`;
 
   return (
     <>
@@ -105,21 +106,30 @@ function UpdateEverythingDialogContent({
         {running > 0 ? (
           <p className="pt-2 text-sm">
             {stopped === 0
-              ? `${threads} will be interrupted and can resume after the restart.`
+              ? t("shellNav.runningThreadsInterruptResumable", { count: running })
               : continuing === 0
-                ? `${threads} will be interrupted.`
-                : `${threads} will be interrupted. ${continuing} can resume after the restart.`}
+                ? t("shellNav.runningThreadsInterrupted", { count: running })
+                : t("shellNav.runningThreadsInterruptedPartial", {
+                    count: running,
+                    resumable: continuing,
+                  })}
           </p>
         ) : null}
         {skipped.length > 0 ? (
           <p className="whitespace-pre-line pt-2 text-sm">
-            {skipped.map((machine) => `Skips ${machine.label}: ${machine.reason}`).join("\n")}
+            {skipped
+              .map((machine) =>
+                t("shellNav.skipsMachine", { machine: machine.label, reason: machine.reason }),
+              )
+              .join("\n")}
           </p>
         ) : null}
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
-        <Button onClick={onConfirm}>Update</Button>
+        <AlertDialogClose render={<Button variant="outline" />}>
+          {t("common.cancel")}
+        </AlertDialogClose>
+        <Button onClick={onConfirm}>{t("shellNav.updateButton")}</Button>
       </AlertDialogFooter>
     </>
   );

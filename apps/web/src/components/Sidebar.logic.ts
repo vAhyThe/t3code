@@ -1,3 +1,5 @@
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { currentTranslator } from "../i18n/I18nProvider";
 import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
 import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
 import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
@@ -553,13 +555,20 @@ export function buildMultiSelectThreadContextMenuItems(input: {
   hasRunningThread: boolean;
 }): readonly ContextMenuItem<"mark-unread" | "archive" | "delete">[] {
   return [
-    { id: "mark-unread", label: `Mark unread (${input.count})` },
+    {
+      id: "mark-unread",
+      label: currentTranslator()("shellNav.markUnreadCount", { count: input.count }),
+    },
     {
       id: "archive",
-      label: `Archive (${input.count})`,
+      label: currentTranslator()("shellNav.archiveCount", { count: input.count }),
       disabled: input.hasRunningThread,
     },
-    { id: "delete", label: `Delete (${input.count})`, destructive: true },
+    {
+      id: "delete",
+      label: currentTranslator()("shellNav.deleteCount", { count: input.count }),
+      destructive: true,
+    },
   ];
 }
 
@@ -601,13 +610,13 @@ export function buildBulkTitleRegenerationContextMenuItem(input: {
   if (input.actionableCount === 0) {
     return {
       id: "regenerate-title",
-      label: `Regenerating… (${input.supportedCount})`,
+      label: currentTranslator()("shellNav.regeneratingCount", { count: input.supportedCount }),
       disabled: true,
     };
   }
   return {
     id: "regenerate-title",
-    label: `Regenerate titles (${input.actionableCount})`,
+    label: currentTranslator()("shellNav.regenerateTitlesCount", { count: input.actionableCount }),
   };
 }
 
@@ -620,7 +629,10 @@ export function buildBulkUnpinContextMenuItem(input: {
   pinnedCount: number;
 }): ContextMenuItem<"unpin"> | null {
   if (input.pinnedCount === 0) return null;
-  return { id: "unpin", label: `Unpin (${input.pinnedCount})` };
+  return {
+    id: "unpin",
+    label: currentTranslator()("shellNav.unpinCount", { count: input.pinnedCount }),
+  };
 }
 
 export interface ThreadStatusPill {
@@ -636,6 +648,17 @@ export interface ThreadStatusPill {
   dotClass: string;
   pulse: boolean;
 }
+
+/** Translation keys for the pill text. The English labels stay the ids the priority map uses. */
+export const THREAD_STATUS_PILL_LABEL_KEYS: Record<ThreadStatusPill["label"], MessageKey> = {
+  "Pending Approval": "shellNav.pillPendingApproval",
+  "Awaiting Input": "shellNav.pillAwaitingInput",
+  Working: "shellNav.pillWorking",
+  Connecting: "shellNav.pillConnecting",
+  Waiting: "shellNav.pillWaiting",
+  "Plan Ready": "shellNav.pillPlanReady",
+  Completed: "shellNav.pillCompleted",
+};
 
 const THREAD_STATUS_PRIORITY: Record<ThreadStatusPill["label"], number> = {
   "Pending Approval": 5,
@@ -1184,7 +1207,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.hasPendingApprovals || thread.pendingSubagentRequest === "approval") {
     return {
-      label: "Pending Approval",
+      label: "Pending Approval", // i18n-ignore: status id, translated at render
       colorClass: "text-amber-600 dark:text-amber-300/90",
       dotClass: "bg-amber-500 dark:bg-amber-300/90",
       pulse: false,
@@ -1193,7 +1216,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.hasPendingUserInput || thread.pendingSubagentRequest === "user_input") {
     return {
-      label: "Awaiting Input",
+      label: "Awaiting Input", // i18n-ignore: status id, translated at render
       colorClass: "text-indigo-600 dark:text-indigo-300/90",
       dotClass: "bg-indigo-500 dark:bg-indigo-300/90",
       pulse: false,
@@ -1202,7 +1225,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.runtime?.status === "running" || thread.runtime?.status === "waiting") {
     return {
-      label: "Working",
+      label: "Working", // i18n-ignore: status id, translated at render
       colorClass: "text-sky-600 dark:text-sky-300/80",
       dotClass: "bg-sky-500 dark:bg-sky-300/80",
       pulse: true,
@@ -1215,7 +1238,7 @@ export function resolveThreadStatusPill(input: {
     thread.runtime?.status === "queued"
   ) {
     return {
-      label: "Connecting",
+      label: "Connecting", // i18n-ignore: status id, translated at render
       colorClass: "text-sky-600 dark:text-sky-300/80",
       dotClass: "bg-sky-500 dark:bg-sky-300/80",
       pulse: true,
@@ -1224,7 +1247,7 @@ export function resolveThreadStatusPill(input: {
 
   if (backgroundWorkHoldsCompletion(thread.pendingBackgroundTasks ?? [])) {
     return {
-      label: "Waiting",
+      label: "Waiting", // i18n-ignore: status id, translated at render
       colorClass: "text-sidebar-muted-foreground",
       dotClass: "bg-sidebar-muted-foreground",
       pulse: false,
@@ -1238,7 +1261,7 @@ export function resolveThreadStatusPill(input: {
     thread.hasActionableProposedPlan;
   if (hasPlanReadyPrompt) {
     return {
-      label: "Plan Ready",
+      label: "Plan Ready", // i18n-ignore: status id, translated at render
       colorClass: "text-violet-600 dark:text-violet-300/90",
       dotClass: "bg-violet-500 dark:bg-violet-300/90",
       pulse: false,
@@ -1247,7 +1270,7 @@ export function resolveThreadStatusPill(input: {
 
   if (hasUnseenCompletion(thread)) {
     return {
-      label: "Completed",
+      label: "Completed", // i18n-ignore: status id, translated at render
       colorClass: "text-emerald-600 dark:text-emerald-300/90",
       dotClass: "bg-emerald-500 dark:bg-emerald-300/90",
       pulse: false,
