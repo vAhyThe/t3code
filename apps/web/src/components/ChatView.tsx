@@ -6946,7 +6946,7 @@ export default function ChatView(props: ChatViewProps) {
       '[data-chat-composer-main-surface="true"]',
     );
     const button = composerOverlayElement?.parentElement?.querySelector<HTMLElement>(
-      'button[aria-label={t("shellNav.scrollToEnd")}]',
+      'button[data-chat-scroll-to-end="true"]',
     );
     const clearance =
       composerOverlayElement && mainSurface && button
@@ -11512,6 +11512,7 @@ export default function ChatView(props: ChatViewProps) {
                 >
                   <Button
                     aria-label={t("shellNav.scrollToEnd")}
+                    data-chat-scroll-to-end="true"
                     onPointerDown={(event) => event.preventDefault()}
                     onClick={() => {
                       composerRef.current?.restoreAfterTimelineReachedEnd();
