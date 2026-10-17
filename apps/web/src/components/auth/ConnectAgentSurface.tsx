@@ -7,6 +7,7 @@ import {
 } from "@t3tools/contracts";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { isLoopbackHost } from "@t3tools/shared/preview";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { EyeIcon, type LucideIcon } from "lucide-react";
 import type * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -28,9 +29,13 @@ import { AuthSurfaceShell } from "./AuthSurfaceShell";
 
 const accessConfig: Record<
   AuthMcpClientAccess,
-  { readonly label?: string; readonly description?: string; readonly icon: LucideIcon }
+  { readonly labelKey: MessageKey; readonly descriptionKey: MessageKey; readonly icon: LucideIcon }
 > = {
-  "read-only": { icon: EyeIcon },
+  "read-only": {
+    labelKey: "shellDevice.authAccessReadOnly",
+    descriptionKey: "shellDevice.authAccessReadOnlyDescription",
+    icon: EyeIcon,
+  },
   ...runtimeModeConfig,
 };
 
@@ -318,9 +323,9 @@ function AccessOption({
   readonly selected: boolean;
 }) {
   const t = useT();
-  const { label: configLabel, description: configDescription, icon: Icon } = accessConfig[access];
-  const label = configLabel ?? t("shellDevice.authAccessReadOnly");
-  const description = configDescription ?? t("shellDevice.authAccessReadOnlyDescription");
+  const { labelKey, descriptionKey, icon: Icon } = accessConfig[access];
+  const label = t(labelKey);
+  const description = t(descriptionKey);
   return (
     <RadioPrimitive.Root
       value={access}
