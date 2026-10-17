@@ -1549,8 +1549,11 @@ function DeviceTabTooltip(props: {
       <span>{props.title}</span>
       {target ? (
         <span className="text-muted-foreground">
-          {host?.label ?? t("shellNav.deviceHost")} · {/* i18n-ignore: platform names */}
-          {device?.version ?? (target.platform === "ios" ? "iOS" : "Android")}
+          {host?.label ?? t("shellNav.deviceHost")} ·{" "}
+          {
+            device?.version ??
+              (target.platform === "ios" ? "iOS" : "Android") /* i18n-ignore: platform names */
+          }
         </span>
       ) : null}
     </div>
