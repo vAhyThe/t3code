@@ -3,6 +3,8 @@ import { parseThreadLinkPrompt, withoutPromptLinkParams } from "@t3tools/shared/
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { placeLinkedPrompt } from "./linkedPrompt";
 
@@ -32,7 +34,7 @@ export function ThreadLinkPrompt({ threadRef }: { readonly threadRef: ScopedThre
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not open the linked prompt",
+            title: currentTranslator()("chat.linkedPromptOpenFailed"),
             description: parsed.error,
           }),
         );

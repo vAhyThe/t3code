@@ -1,4 +1,7 @@
 import type { ContextMenuItem } from "@t3tools/contracts";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 export type ExternalLinkContextMenuAction =
   | "open-in-preview"
@@ -24,10 +27,13 @@ const FAILURE_OPERATION_BY_ACTION = {
 } as const satisfies Record<ExternalLinkContextMenuAction, ExternalLinkContextMenuFailureOperation>;
 
 const EXTERNAL_LINK_CONTEXT_MENU_ITEMS = [
-  { id: "open-in-preview", label: "Open in integrated browser" },
-  { id: "open-external", label: "Open in system browser" },
-  { id: "copy-link", label: "Copy Link" },
-] as const satisfies readonly ContextMenuItem<ExternalLinkContextMenuAction>[];
+  { id: "open-in-preview", labelKey: "chat.linkMenuOpenInPreview" },
+  { id: "open-external", labelKey: "chat.linkMenuOpenExternal" },
+  { id: "copy-link", labelKey: "chat.linkMenuCopyLink" },
+] as const satisfies readonly {
+  readonly id: ExternalLinkContextMenuAction;
+  readonly labelKey: MessageKey;
+}[];
 
 /**
  * The integrated browser is not always there to offer — it needs a thread to open beside and a
@@ -39,15 +45,20 @@ function externalLinkContextMenuItems(options: {
   readonly canOpenInPreview: boolean;
   readonly threadLinkAction?: "link-to-thread" | "unlink-from-thread" | undefined;
 }): readonly ContextMenuItem<ExternalLinkContextMenuAction>[] {
-  const items = options.canOpenInPreview
+  const t = currentTranslator();
+  const entries = options.canOpenInPreview
     ? EXTERNAL_LINK_CONTEXT_MENU_ITEMS
     : EXTERNAL_LINK_CONTEXT_MENU_ITEMS.filter((item) => item.id !== "open-in-preview");
+  const items = entries.map((item) => ({ id: item.id, label: t(item.labelKey) }));
   if (options.threadLinkAction === undefined) return items;
   return [
     {
       id: options.threadLinkAction,
-      label:
-        options.threadLinkAction === "link-to-thread" ? "Link to thread" : "Unlink from thread",
+      label: t(
+        options.threadLinkAction === "link-to-thread"
+          ? "chat.linkMenuLinkToThread"
+          : "chat.linkMenuUnlinkFromThread",
+      ),
     },
     ...items,
   ];

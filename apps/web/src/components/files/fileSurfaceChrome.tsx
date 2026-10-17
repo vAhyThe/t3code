@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useT } from "~/i18n/I18nProvider";
 
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
@@ -125,10 +126,11 @@ export function FileSurfaceNotice(props: { readonly children: ReactNode }) {
 }
 
 export function FileSurfaceLoading(props: { readonly className?: string }) {
+  const t = useT();
   return (
     <div
       role="status"
-      aria-label="Loading file"
+      aria-label={t("chat.fileSurfaceLoadingAria")}
       className={cn(
         "flex min-h-0 flex-1 items-center justify-center text-muted-foreground",
         props.className,
@@ -143,6 +145,7 @@ export function FileSurfaceFailure(props: {
   readonly message: string;
   readonly onRetry?: () => void;
 }) {
+  const t = useT();
   return (
     <div
       role="alert"
@@ -155,7 +158,7 @@ export function FileSurfaceFailure(props: {
           onClick={props.onRetry}
           className="rounded-md border border-input px-2.5 py-1 text-xs text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
-          Try again
+          {t("common.tryAgain")}
         </button>
       ) : null}
     </div>

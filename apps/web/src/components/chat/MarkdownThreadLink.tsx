@@ -4,6 +4,7 @@ import { formatThreadLink, percentDecodedThreadLinkId } from "@t3tools/shared/th
 import { Link } from "@tanstack/react-router";
 import { MessageSquareTextIcon } from "lucide-react";
 
+import { useT } from "~/i18n/I18nProvider";
 import { useProject, useThreadShell } from "../../state/entities";
 import { ProjectFavicon } from "../ProjectFavicon";
 
@@ -18,6 +19,7 @@ export function MarkdownThreadLink(props: {
   readonly threadId: ThreadId;
   readonly label: string;
 }) {
+  const t = useT();
   const decodedId = percentDecodedThreadLinkId(props.threadId);
   const written = useThreadShell(scopeThreadRef(props.environmentId, props.threadId));
   const decoded = useThreadShell(
@@ -34,7 +36,7 @@ export function MarkdownThreadLink(props: {
       to="/$environmentId/$threadId"
       params={{ environmentId: props.environmentId, threadId }}
       // Like an attached thread chip: archived threads are not in the index but still open.
-      title={thread === null ? "Thread no longer available" : project?.title}
+      title={thread === null ? t("chat.threadNoLongerAvailable") : project?.title}
       data-markdown-copy={formatThreadLink(threadId, title)}
     >
       <span

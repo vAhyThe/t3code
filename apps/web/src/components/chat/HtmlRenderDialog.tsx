@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { HtmlRenderDocument } from "../files/BrowserDocumentFrame";
 import { Button } from "../ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "../ui/dialog";
+import { useT } from "~/i18n/I18nProvider";
 
 export function HtmlRenderDialog(props: {
   readonly src: string;
@@ -12,6 +13,7 @@ export function HtmlRenderDialog(props: {
   readonly threadRef?: ScopedThreadRef | undefined;
   readonly onClose: () => void;
 }) {
+  const t = useT();
   const [zoom, setZoom] = useState(1);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   return (
@@ -23,11 +25,13 @@ export function HtmlRenderDialog(props: {
         className="row-start-1"
         initialFocus={closeButtonRef}
       >
-        <DialogTitle className="sr-only">Expanded {props.title} preview</DialogTitle>
+        <DialogTitle className="sr-only">
+          {t("chat.htmlRenderExpandedTitle", { title: props.title })}
+        </DialogTitle>
         <div className="relative w-[92vw]">
           <Button
             ref={closeButtonRef}
-            aria-label="Close"
+            aria-label={t("common.close")}
             size="icon-xs"
             variant="media-close"
             className="absolute right-0 -top-10 z-20"
@@ -49,7 +53,7 @@ export function HtmlRenderDialog(props: {
             <span className="truncate">{props.title}</span>
             <div className="flex shrink-0 items-center gap-1">
               <Button
-                aria-label="Zoom out"
+                aria-label={t("chat.htmlRenderZoomOut")}
                 size="icon-sm"
                 variant="overlay"
                 disabled={zoom === 0.5}
@@ -58,7 +62,7 @@ export function HtmlRenderDialog(props: {
                 <MinusIcon />
               </Button>
               <Button
-                aria-label="Reset zoom"
+                aria-label={t("chat.htmlRenderZoomReset")}
                 size="sm"
                 variant="overlay"
                 onClick={() => setZoom(1)}
@@ -66,7 +70,7 @@ export function HtmlRenderDialog(props: {
                 {Math.round(zoom * 100)}%
               </Button>
               <Button
-                aria-label="Zoom in"
+                aria-label={t("chat.htmlRenderZoomIn")}
                 size="icon-sm"
                 variant="overlay"
                 disabled={zoom === 2}

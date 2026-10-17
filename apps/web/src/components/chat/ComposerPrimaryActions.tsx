@@ -5,6 +5,7 @@ import { MorphIcon } from "~/components/MorphIcon";
 import { useEnvironmentIdentificationMode } from "~/hooks/useSettings";
 import { formatContextWindowTokens } from "~/lib/contextWindow";
 import { cn } from "~/lib/utils";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { useShortcutModifierState } from "../../shortcutModifierState";
 import { StageBackdropButtonArt, useSidebarStageBackdropVariant } from "../SidebarStageBackdrop";
 import { Button } from "../ui/button";
@@ -64,16 +65,19 @@ const formatPendingPrimaryActionLabel = (input: {
   isResponding: boolean;
   questionIndex: number;
 }) => {
+  const t = currentTranslator();
   if (input.isResponding) {
-    return "Submitting...";
+    return t("chat.primaryActionSubmitting");
   }
   if (input.compact) {
-    return input.isLastQuestion ? "Submit" : "Next";
+    return input.isLastQuestion ? t("chat.primaryActionSubmit") : t("chat.primaryActionNext");
   }
   if (!input.isLastQuestion) {
-    return "Next question";
+    return t("chat.primaryActionNextQuestion");
   }
-  return input.questionIndex > 0 ? "Submit answers" : "Submit answer";
+  return input.questionIndex > 0
+    ? t("chat.primaryActionSubmitAnswers")
+    : t("chat.primaryActionSubmitAnswer");
 };
 
 // The composer's labeled primary actions (Submit, Refine, Implement) share the send button's
@@ -113,6 +117,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   keepFullHistory = false,
   onToggleKeepFullHistory,
 }: ComposerPrimaryActionsProps) {
+  const t = useT();
   const pointerFocusProps = preserveComposerFocusOnPointerDown
     ? { onPointerDown: preventPointerFocus }
     : undefined;
@@ -146,7 +151,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             onClick={() => {
               if (canOperateThread) onInterrupt();
             }}
-            aria-label="Stop generation"
+            aria-label={t("chat.primaryActionStopGeneration")}
           />
         }
       >
@@ -154,7 +159,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           <rect x="2" y="2" width="8" height="8" rx="1.5" />
         </svg>
       </TooltipTrigger>
-      <TooltipPopup>Interrupt</TooltipPopup>
+      <TooltipPopup>{t("chat.primaryActionInterrupt")}</TooltipPopup>
     </Tooltip>
   );
 
@@ -170,7 +175,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               {...pointerFocusProps}
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
-              aria-label="Previous question"
+              aria-label={t("chat.primaryActionPreviousQuestion")}
             >
               <ChevronLeftIcon className="size-3.5" />
             </Button>
@@ -182,7 +187,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
             >
-              Previous
+              {t("chat.primaryActionPrevious")}
             </Button>
           )
         ) : null}
@@ -217,7 +222,9 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           {...pointerFocusProps}
           disabled={isSendBusy || isSendDisabled || isConnecting || isEnvironmentUnavailable}
         >
-          {isConnecting || isSendBusy ? "Sending..." : "Refine"}
+          {isConnecting || isSendBusy
+            ? t("chat.primaryActionSending")
+            : t("chat.primaryActionRefine")}
         </button>
       );
     }
@@ -230,7 +237,9 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           {...pointerFocusProps}
           disabled={isSendBusy || isSendDisabled || isConnecting || isEnvironmentUnavailable}
         >
-          {isConnecting || isSendBusy ? "Sending..." : "Implement"}
+          {isConnecting || isSendBusy
+            ? t("chat.primaryActionSending")
+            : t("chat.primaryActionImplement")}
         </button>
         <Menu>
           <MenuTrigger
@@ -241,7 +250,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
                   messageActionPillClassName,
                   "h-9 rounded-l-none border-l border-message-action-foreground/20 px-2 sm:h-8",
                 )}
-                aria-label="Implementation actions"
+                aria-label={t("chat.primaryActionImplementationActions")}
                 {...pointerFocusProps}
                 disabled={isSendBusy || isSendDisabled || isConnecting || isEnvironmentUnavailable}
               />
@@ -256,7 +265,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
                 if (canOperateThread) onImplementPlanInNewThread();
               }}
             >
-              Implement in a new thread
+              {t("chat.primaryActionImplementInNewThread")}
             </MenuItem>
           </MenuPopup>
         </Menu>
@@ -277,34 +286,43 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   const compactsBeforeSend = compactTokens !== null && !keepFullHistory;
 
   const submitLabel = showResume
-    ? "Resume thread"
+    ? t("chat.primaryActionResumeThread")
     : isEditingQueuedMessage
-      ? "Update queued message"
+      ? t("chat.primaryActionUpdateQueuedMessage")
       : compactsBeforeSend
-        ? "Compact and send"
+        ? t("chat.primaryActionCompactAndSend")
         : isQueuing
-          ? "Queue message"
+          ? t("chat.primaryActionQueueMessage")
           : isRunning
-            ? "Steer message"
-            : "Submit message";
+            ? t("chat.primaryActionSteerMessage")
+            : t("chat.primaryActionSubmitMessage");
   const submitStatus = isEnvironmentUnavailable
-    ? "Environment disconnected"
+    ? t("chat.primaryActionEnvironmentDisconnected")
     : (sendDisabledReason ??
       (isConnecting
-        ? "Connecting"
+        ? t("chat.primaryActionConnecting")
         : isPreparingWorktree
-          ? "Preparing worktree"
+          ? t("chat.primaryActionPreparingWorktree")
           : isSendBusy
             ? isEditingQueuedMessage
-              ? "Updating queued message"
-              : "Submitting message"
+              ? t("chat.primaryActionUpdatingQueuedMessage")
+              : t("chat.primaryActionSubmittingMessage")
             : null));
+  // alternateAction is always the opposite of followUpBehavior.
+  const followUpClickHint =
+    alternateAction === "steer"
+      ? alternateShortcutLabel
+        ? t("chat.primaryActionClickQueueAltSteerShortcut", { shortcut: alternateShortcutLabel })
+        : t("chat.primaryActionClickQueueAltSteer")
+      : alternateShortcutLabel
+        ? t("chat.primaryActionClickSteerAltQueueShortcut", { shortcut: alternateShortcutLabel })
+        : t("chat.primaryActionClickSteerAltQueue");
   const submitTooltip =
     submitStatus ??
     (compactsBeforeSend
-      ? `Summarize ${compactTokens} tokens of history, then send`
+      ? t("chat.primaryActionSummarizeTokens", { tokens: compactTokens ?? "" })
       : isRunning && !isEditingQueuedMessage
-        ? `Click to ${followUpBehavior}, Ctrl/⌘-click${alternateShortcutLabel ? ` or ${alternateShortcutLabel}` : ""} to ${alternateAction}`
+        ? followUpClickHint
         : submitLabel);
 
   const sendButton = (
@@ -377,20 +395,20 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               )}
               {...pointerFocusProps}
               aria-pressed={!keepFullHistory}
-              aria-label={`Compact ${compactTokens} tokens of history before sending`}
+              aria-label={t("chat.primaryActionCompactTokensAria", { tokens: compactTokens })}
               disabled={!canOperateThread}
               onClick={onToggleKeepFullHistory}
             />
           }
         >
           <Minimize2Icon aria-hidden="true" />
-          {keepFullHistory ? "Full" : "Compact"}
+          {keepFullHistory ? t("chat.primaryActionFull") : t("chat.primaryActionCompact")}
           <span>{compactTokens}</span>
         </TooltipTrigger>
         <TooltipPopup>
           {keepFullHistory
-            ? `Next send keeps all ${compactTokens} tokens. Click to compact first`
-            : `Next send compacts ${compactTokens} tokens first. Click to keep full history`}
+            ? t("chat.primaryActionKeepsAllTokens", { tokens: compactTokens })
+            : t("chat.primaryActionCompactsTokens", { tokens: compactTokens })}
         </TooltipPopup>
       </Tooltip>
       {submit}

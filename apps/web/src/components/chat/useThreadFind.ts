@@ -15,6 +15,7 @@ import {
   stepThreadFindIndex,
 } from "./threadFind";
 import { subscribeThreadFindOpen } from "./threadFindActionBus";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { toastManager } from "../ui/toast";
 
 const EMPTY_SKILLS: readonly InlineSkill[] = [];
@@ -62,10 +63,11 @@ export function useThreadFind({
   const open = useCallback(() => {
     if (threadKey === null) return;
     if (!enabled) {
+      const t = currentTranslator();
       toastManager.add({
         id: "thread-find-unavailable",
-        title: "Thread search is unavailable on this server.",
-        description: "Update the server to enable it.",
+        title: t("chat.threadFindUnavailableTitle"),
+        description: t("chat.threadFindUnavailableDescription"),
       });
       return;
     }

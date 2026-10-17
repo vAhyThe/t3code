@@ -7,6 +7,7 @@ import { GaugeIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import type { ComposerBannerStackItem } from "./ComposerBannerStack";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 type RecoveryProps = {
   runId: RunId;
@@ -20,20 +21,22 @@ type RecoveryProps = {
 export function usageLimitRecoveryBannerItem(props: RecoveryProps): ComposerBannerStackItem {
   const { runId, resetAt, stoppedAt } = props;
   const canSchedule = resetAt !== null && Date.parse(resetAt) > Date.parse(stoppedAt);
+  const t = currentTranslator();
   return {
     id: `usage-limit-recovery:${runId}`,
     variant: "warning",
     priority: "urgent",
     icon: <GaugeIcon />,
-    title: "Usage limit reached",
+    title: t("chat.usageLimitRecoveryTitle"),
     description: resetAt
-      ? `Resets ${new Date(resetAt).toLocaleString()}`
-      : "Reset time unavailable; retry manually",
+      ? t("chat.usageLimitRecoveryResets", { time: new Date(resetAt).toLocaleString() })
+      : t("chat.usageLimitRecoveryResetUnknown"),
     actions: canSchedule ? <RecoveryActions key={`${runId}:${resetAt}`} {...props} /> : null,
   };
 }
 
 function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: RecoveryProps) {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -56,7 +59,7 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
   async function toggle(action: "resume" | "snooze") {
     if (resetAt === null) return;
     if (action === "snooze" && !snoozed && Date.parse(resetAt) <= Date.now()) {
-      setError("The reset time has passed. Retry the thread manually.");
+      setError(currentTranslator()("chat.usageLimitRecoveryResetPassed"));
       setNowMs(Date.now());
       return;
     }
@@ -69,14 +72,22 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
         ...(action === "resume" ? { autoResume: !scheduled } : { snooze: !snoozed }),
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not change limit recovery.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : currentTranslator()("chat.usageLimitRecoveryChangeFailed"),
+      );
     }
     setPending(false);
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button size="xs" variant="ghost" disabled={pending} onClick={() => void toggle("resume")}>
-        {pending ? "Saving..." : scheduled ? "Cancel auto-resume" : "Resume at reset"}
+        {pending
+          ? t("chat.usageLimitRecoverySaving")
+          : scheduled
+            ? t("chat.usageLimitRecoveryCancelAutoResume")
+            : t("chat.usageLimitRecoveryResumeAtReset")}
       </Button>
       {!snoozed ? (
         <Button
@@ -85,7 +96,7 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
           disabled={pending || Date.parse(resetAt!) <= nowMs}
           onClick={() => void toggle("snooze")}
         >
-          {pending ? "Saving..." : "Snooze until reset"}
+          {pending ? t("chat.usageLimitRecoverySaving") : t("chat.usageLimitRecoverySnooze")}
         </Button>
       ) : null}
       {error ? (

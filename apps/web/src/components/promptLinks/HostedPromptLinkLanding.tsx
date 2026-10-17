@@ -5,12 +5,14 @@ import {
   promptLinkAppPath,
   promptLinkDeepLink,
 } from "@t3tools/shared/promptLinks";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import { useLocation } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { APP_DISPLAY_NAME } from "~/branding";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
+import { useT } from "~/i18n/I18nProvider";
 import { isHostedStaticApp } from "~/hostedPairing";
 import { useEnvironments } from "~/state/environments";
 
@@ -30,12 +32,16 @@ interface LinkSummary {
 
 function summarize(
   appPath: string,
+  t: Translate,
 ): { ok: true; value: LinkSummary } | { ok: false; error: string } {
   const url = new URL(appPath, window.location.origin);
   if (url.pathname !== "/new") {
     const prompt = parseThreadLinkPrompt(url.search);
     return prompt.ok
-      ? { ok: true, value: { prompt: prompt.value, details: ["Opens one of your threads."] } }
+      ? {
+          ok: true,
+          value: { prompt: prompt.value, details: [t("chat.promptLinkOpensThread")] },
+        }
       : prompt;
   }
   const link = parseNewThreadLink(url.search);
@@ -44,7 +50,10 @@ function summarize(
     const { owner, name, number } = link.value.pullRequest;
     return {
       ok: true,
-      value: { prompt: link.value.prompt, details: [`Pull request ${owner}/${name}#${number}`] },
+      value: {
+        prompt: link.value.prompt,
+        details: [t("chat.promptLinkPullRequest", { owner, name, number })],
+      },
     };
   }
   const { repository, provider, model } = link.value;
@@ -53,8 +62,12 @@ function summarize(
     value: {
       prompt: link.value.prompt,
       details: [
-        repository ? `Repository ${repository.owner}/${repository.name}` : "No project",
-        ...(provider ? [`Model ${model ? `${provider} ${model}` : provider}`] : []),
+        repository
+          ? t("chat.promptLinkRepository", { owner: repository.owner, name: repository.name })
+          : t("chat.promptLinkNoProject"),
+        ...(provider
+          ? [t("chat.promptLinkModel", { model: model ? `${provider} ${model}` : provider })]
+          : []),
       ],
     },
   };
@@ -108,7 +121,8 @@ function HostedPromptLinkLanding({
   readonly openInAppRemembered: boolean;
   readonly onChoose: (choice: "app" | "browser", remember: boolean) => void;
 }) {
-  const summary = useMemo(() => summarize(appPath), [appPath]);
+  const t = useT();
+  const summary = useMemo(() => summarize(appPath, t), [appPath, t]);
   const [remember, setRemember] = useState(false);
   const deepLink = promptLinkDeepLink(appPath);
   const onPhone = /android|iphone|ipad/i.test(navigator.userAgent);
@@ -127,7 +141,7 @@ function HostedPromptLinkLanding({
       <StandalonePage tone="error">
         <StandalonePageHeader
           eyebrow={APP_DISPLAY_NAME}
-          title="Could not open the link"
+          title={t("chat.promptLinkOpenFailed")}
           description={summary.error}
         />
       </StandalonePage>
@@ -139,15 +153,14 @@ function HostedPromptLinkLanding({
     <StandalonePage tone="brand">
       <StandalonePageHeader
         eyebrow={APP_DISPLAY_NAME}
-        title="Open this prompt"
-        description="It opens as a draft. Nothing runs until you press Send."
+        title={t("chat.promptLinkOpenThisPrompt")}
+        description={t("chat.promptLinkOpensAsDraft")}
       />
       {prompt !== null && prompt.hiddenCharacters > 0 ? (
         <Alert className="mt-5" variant="error">
-          <AlertTitle>This prompt had hidden characters, it may be malicious</AlertTitle>
+          <AlertTitle>{t("chat.promptHiddenCharactersTitle")}</AlertTitle>
           <AlertDescription>
-            T3 Code removed {prompt.hiddenCharacters} hidden character
-            {prompt.hiddenCharacters === 1 ? "" : "s"}. Read the prompt before you send it.
+            {t("chat.promptHiddenCharactersDescription", { count: prompt.hiddenCharacters })}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -159,20 +172,20 @@ function HostedPromptLinkLanding({
       <p className="mt-3 text-xs text-muted-foreground">{details.join(" · ")}</p>
       <div className="mt-6 flex flex-wrap gap-2">
         <Button render={<a href={deepLink} />} onClick={() => onChoose("app", remember)}>
-          {onPhone ? "Open in app" : "Open in desktop app"}
+          {onPhone ? t("chat.promptLinkOpenInApp") : t("chat.promptLinkOpenInDesktopApp")}
         </Button>
         {canContinue ? (
           <Button variant="outline" onClick={() => onChoose("browser", remember)}>
-            Continue here
+            {t("chat.promptLinkContinueHere")}
           </Button>
         ) : null}
         <Button variant="ghost" render={<a href={DOWNLOAD_URL} />}>
-          Get T3 Code
+          {t("chat.promptLinkGetApp")}
         </Button>
       </div>
       <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Checkbox checked={remember} onCheckedChange={(checked) => setRemember(checked === true)} />
-        Remember my choice
+        {t("chat.promptLinkRememberChoice")}
       </label>
     </StandalonePage>
   );

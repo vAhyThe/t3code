@@ -1,5 +1,7 @@
 import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
 
+import { useT } from "~/i18n/I18nProvider";
+
 import { resolveExternalWebLinkHost } from "../chat/externalLinkContextMenu";
 import { Button } from "../ui/button";
 import { resolveProtocolRelativeMediaUrl } from "./mediaContent";
@@ -11,6 +13,7 @@ export function OpenMediaLink(props: {
   readonly fileName?: string | undefined;
   readonly className?: string | undefined;
 }) {
+  const t = useT();
   const originalUrl =
     resolveExternalWebLinkHost(props.originalUrl) !== null ? props.originalUrl : undefined;
   const source = originalUrl ?? props.src;
@@ -39,7 +42,11 @@ export function OpenMediaLink(props: {
       }
     >
       {isBlob ? <DownloadIcon /> : <ExternalLinkIcon />}
-      {originalUrl ? "Open original" : isBlob ? "Download video" : "Open in browser"}
+      {originalUrl
+        ? t("chat.mediaOpenOriginal")
+        : isBlob
+          ? t("chat.mediaDownloadVideo")
+          : t("chat.mediaOpenInBrowser")}
     </Button>
   );
 }

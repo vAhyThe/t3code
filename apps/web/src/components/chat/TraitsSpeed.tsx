@@ -3,15 +3,18 @@ import { getProviderOptionCurrentValue } from "@t3tools/shared/model";
 import { ZapIcon } from "lucide-react";
 import { UltrafastIcon } from "../Icons";
 import { cn } from "~/lib/utils";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { ComposerControlIcon, type ComposerControlSize } from "./ComposerControl";
 
 export function getTraitsSpeedDisplay(
   provider: ProviderDriverKind,
   descriptor: ProviderOptionDescriptor,
 ): { label: string; speedIcon: "fast" | "ultrafast" | null } | null {
+  const t = currentTranslator();
   if (descriptor.id === "fastMode" && descriptor.type === "boolean") {
     return {
-      label: descriptor.currentValue === true ? "Fast" : "Normal",
+      label:
+        descriptor.currentValue === true ? t("chat.traitsSpeedFast") : t("chat.traitsSpeedNormal"),
       speedIcon: descriptor.currentValue === true ? "fast" : null,
     };
   }
@@ -19,15 +22,17 @@ export function getTraitsSpeedDisplay(
     return null;
   }
   const currentValue = getProviderOptionCurrentValue(descriptor);
-  const fastTier = descriptor.options.find(({ label }) => label === "Fast");
-  const ultrafastTier = descriptor.options.find(({ label }) => label === "Ultrafast");
+  const fastTier = descriptor.options.find(({ label }) => label === "Fast"); // i18n-ignore: provider option label compared in code
+  const ultrafastTier = descriptor.options.find(({ label }) => label === "Ultrafast"); // i18n-ignore: provider option label compared in code
   if (
     ((fastTier || ultrafastTier) && currentValue === "default") ||
     (fastTier && currentValue === fastTier.id) ||
     (ultrafastTier && currentValue === ultrafastTier.id)
   ) {
     return {
-      label: descriptor.options.find(({ id }) => id === currentValue)?.label ?? "Normal",
+      label:
+        descriptor.options.find(({ id }) => id === currentValue)?.label ??
+        t("chat.traitsSpeedNormal"),
       speedIcon:
         ultrafastTier && currentValue === ultrafastTier.id
           ? "ultrafast"
@@ -48,6 +53,7 @@ export function TraitsSpeedIcon({
   speedIcon: "fast" | "ultrafast";
   size?: ComposerControlSize;
 }) {
+  const t = useT();
   return (
     <>
       <ComposerControlIcon
@@ -63,7 +69,9 @@ export function TraitsSpeedIcon({
         )}
       />
       <span className="sr-only">
-        {speedIcon === "ultrafast" ? "Ultrafast mode on" : "Fast mode on"}
+        {speedIcon === "ultrafast"
+          ? t("chat.traitsSpeedUltrafastModeOn")
+          : t("chat.traitsSpeedFastModeOn")}
       </span>
     </>
   );

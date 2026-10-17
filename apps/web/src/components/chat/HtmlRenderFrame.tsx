@@ -20,6 +20,7 @@ import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { HtmlRenderDialog } from "./HtmlRenderDialog";
 import { observeResize } from "~/lib/observeResize";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 // A frame may load its URL a little after mounting.
 const MIN_URL_LIFE_MS = 5 * 60_000;
@@ -36,6 +37,7 @@ export function HtmlRenderFrame(props: {
   readonly threadRef: ScopedThreadRef | undefined;
   readonly onFullscreenChange?: (fullscreen: boolean) => void;
 }) {
+  const t = useT();
   const { attachmentId, title } = props.htmlRender;
   // The frame takes the page's measured height at its own width, read before
   // first paint so the reserved box is already the right size.
@@ -141,7 +143,7 @@ export function HtmlRenderFrame(props: {
               <TooltipTrigger
                 render={
                   <Button
-                    aria-label="Open full screen"
+                    aria-label={t("chat.htmlRenderOpenFullScreen")}
                     size="icon-xs"
                     variant="glass"
                     onClick={async () => {
@@ -153,8 +155,8 @@ export function HtmlRenderFrame(props: {
                       else
                         toastManager.add({
                           type: "error",
-                          title: "Page unavailable",
-                          description: "Reconnect to the environment and try again.",
+                          title: currentTranslator()("chat.htmlRenderPageUnavailable"),
+                          description: currentTranslator()("chat.htmlRenderReconnectAndRetry"),
                         });
                     }}
                   />
@@ -162,7 +164,7 @@ export function HtmlRenderFrame(props: {
               >
                 <Maximize2Icon className="size-3.5" />
               </TooltipTrigger>
-              <TooltipPopup side="left">Open full screen</TooltipPopup>
+              <TooltipPopup side="left">{t("chat.htmlRenderOpenFullScreen")}</TooltipPopup>
             </Tooltip>
           </div>
           {expandedSrc !== null ? (
@@ -176,7 +178,7 @@ export function HtmlRenderFrame(props: {
         </>
       ) : failed ? (
         <p className="flex size-full items-center justify-center text-muted-foreground text-xs">
-          Unable to load {title}
+          {t("chat.htmlRenderUnableToLoad", { title })}
         </p>
       ) : null}
     </div>
@@ -224,11 +226,12 @@ function HtmlRenderSkeleton(props: {
   readonly height: number;
   readonly outline: ReadonlyArray<HtmlRenderOutlineBox>;
 }) {
+  const t = useT();
   if (props.outline.length > 0) {
     return (
       <div
         role="status"
-        aria-label={`Loading ${props.title}`}
+        aria-label={t("chat.htmlRenderLoading", { title: props.title })}
         className="pointer-events-none absolute inset-0 overflow-hidden motion-safe:animate-skeleton"
       >
         {props.outline.map((box) => (
@@ -245,7 +248,7 @@ function HtmlRenderSkeleton(props: {
   return (
     <div
       role="status"
-      aria-label={`Loading ${props.title}`}
+      aria-label={t("chat.htmlRenderLoading", { title: props.title })}
       className="pointer-events-none absolute inset-0 flex flex-col gap-6 overflow-hidden pt-1"
     >
       {Array.from({ length: sections }, (_, index) => (
