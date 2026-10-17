@@ -20,10 +20,12 @@ import {
   UserRoundIcon,
   type LucideIcon,
 } from "lucide-react";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { memo, useLayoutEffect, useRef } from "react";
 
 import { type ComposerSlashCommand, type ComposerTriggerKind } from "../../composer-logic";
 import { cn } from "~/lib/utils";
+import { useT } from "~/i18n/I18nProvider";
 import { Badge } from "../ui/badge";
 import { Command, CommandGroup, CommandItem, CommandList } from "../ui/command";
 import { PierreEntryIcon } from "./PierreEntryIcon";
@@ -88,6 +90,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   onHighlightedItemChange: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
 }) {
+  const t = useT();
   const listRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -116,7 +119,9 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
         {props.items.length > 0 ? (
           <CommandList
             id={props.listId}
-            aria-label={props.triggerKind ? LISTBOX_LABEL_BY_TRIGGER[props.triggerKind] : undefined}
+            aria-label={
+              props.triggerKind ? t(LISTBOX_LABEL_KEY_BY_TRIGGER[props.triggerKind]) : undefined
+            }
             className="max-h-72 min-h-0 scroll-pb-6"
           >
             <CommandGroup>
@@ -139,16 +144,16 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
             <p className="text-secondary-label text-xs">
               {props.isLoading
                 ? props.triggerKind === "skill"
-                  ? "Searching workspace skills..."
+                  ? t("chat.commandMenuSearchingSkills")
                   : props.triggerKind === "pull-request"
-                    ? "Finding pull request..."
-                    : "Searching workspace files..."
+                    ? t("chat.commandMenuFindingPullRequest")
+                    : t("chat.commandMenuSearchingFiles")
                 : (props.emptyStateText ??
                   (props.triggerKind === "skill"
-                    ? "No skills found. Try / to browse provider commands."
+                    ? t("chat.commandMenuNoSkills")
                     : props.triggerKind === "path"
-                      ? "No matching files or folders."
-                      : "No matching command."))}
+                      ? t("chat.commandMenuNoFiles")
+                      : t("chat.commandMenuNoCommand")))}
             </p>
           </div>
         )}
@@ -237,11 +242,11 @@ export function composerSuggestionOptionId(listId: string, itemId: string): stri
   return `${listId}-${encodeURIComponent(JSON.stringify(itemId))}`;
 }
 
-const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
-  path: "Files and folders",
-  "pull-request": "Pull requests",
-  "slash-command": "Commands",
-  skill: "Skills",
+const LISTBOX_LABEL_KEY_BY_TRIGGER: Record<ComposerTriggerKind, MessageKey> = {
+  path: "chat.commandMenuListFilesAndFolders",
+  "pull-request": "chat.commandMenuListPullRequests",
+  "slash-command": "chat.commandMenuListCommands",
+  skill: "chat.commandMenuListSkills",
 };
 
 const SKILL_SOURCE_ICON_BY_KIND: Record<ProviderSkillSourceKind, LucideIcon> = {
@@ -253,22 +258,33 @@ const SKILL_SOURCE_ICON_BY_KIND: Record<ProviderSkillSourceKind, LucideIcon> = {
   other: PackageIcon,
 };
 
-const SKILL_SOURCE_LABEL_BY_KIND: Record<ProviderSkillSourceKind, string> = {
-  app: "App",
-  repo: "Repo",
-  project: "Project",
-  personal: "Personal",
-  system: "System",
-  other: "Provider",
+const SKILL_SOURCE_LABEL_KEY_BY_KIND: Record<ProviderSkillSourceKind, MessageKey> = {
+  app: "chat.skillSourceApp",
+  repo: "chat.skillSourceRepo",
+  project: "chat.skillSourceProject",
+  personal: "chat.skillSourcePersonal",
+  system: "chat.skillSourceSystem",
+  other: "chat.skillSourceProvider",
+};
+
+const SKILL_SOURCE_SKILL_LABEL_KEY_BY_KIND: Record<ProviderSkillSourceKind, MessageKey> = {
+  app: "chat.skillSourceAppSkill",
+  repo: "chat.skillSourceRepoSkill",
+  project: "chat.skillSourceProjectSkill",
+  personal: "chat.skillSourcePersonalSkill",
+  system: "chat.skillSourceSystemSkill",
+  other: "chat.skillSourceProviderSkill",
 };
 
 function SkillSourceBadge(props: { kind: ProviderSkillSourceKind; showSkillSuffix: boolean }) {
+  const t = useT();
   const Icon = SKILL_SOURCE_ICON_BY_KIND[props.kind];
   return (
     <Badge className="ms-auto" variant="secondary">
       <Icon aria-hidden="true" className="text-current" />
-      {SKILL_SOURCE_LABEL_BY_KIND[props.kind]}
-      {props.showSkillSuffix ? " Skill" : null}
+      {props.showSkillSuffix
+        ? t(SKILL_SOURCE_SKILL_LABEL_KEY_BY_KIND[props.kind])
+        : t(SKILL_SOURCE_LABEL_KEY_BY_KIND[props.kind])}
     </Badge>
   );
 }

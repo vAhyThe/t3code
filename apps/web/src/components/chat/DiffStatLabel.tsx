@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
 
 export function hasNonZeroStat(stat: { additions: number; deletions: number }): boolean {
@@ -26,13 +27,14 @@ export const DiffStatLabel = memo(function DiffStatLabel(props: {
   showParentheses?: boolean;
   layout?: "aligned" | "inline";
 }) {
+  const t = useT();
   const { additions, deletions, className, showParentheses = false, layout = "aligned" } = props;
   return (
     <>
       {showParentheses && <span className="text-muted-foreground/70">(</span>}
       <span
         role="group"
-        aria-label={`${additions} additions, ${deletions} deletions`}
+        aria-label={t("chat.diffStatAdditionsDeletions", { additions, deletions })}
         className={cn(
           layout === "inline"
             ? "inline-flex items-center gap-1 tabular-nums align-middle"

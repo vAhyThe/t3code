@@ -5,6 +5,7 @@ import {
 import { MessageSquareIcon } from "lucide-react";
 
 import { writeTextToClipboard } from "../../hooks/useCopyToClipboard";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import type { ComposerBannerStackItem } from "./ComposerBannerStack";
@@ -13,6 +14,7 @@ export function feedbackBannerItem(
   submission: CodexFeedbackSubmission,
   onDismiss: () => void,
 ): ComposerBannerStackItem | null {
+  const t = currentTranslator();
   const notice = codexFeedbackNotice(submission);
   if (!notice) return null;
   return {
@@ -32,18 +34,18 @@ export function feedbackBannerItem(
               (error: unknown) => {
                 toastManager.add({
                   type: "error",
-                  title: "Could not copy thread ID",
-                  description: error instanceof Error ? error.message : "An error occurred.",
+                  title: t("chat.feedbackCopyIdFailed"),
+                  description: error instanceof Error ? error.message : t("chat.errorOccurred"),
                 });
               },
             );
           }}
         >
-          Copy ID
+          {t("chat.feedbackCopyId")}
         </Button>
       ) : undefined,
     ...(submission.status !== "uploading"
-      ? { dismissLabel: "Dismiss feedback notice", onDismiss }
+      ? { dismissLabel: t("chat.feedbackDismiss"), onDismiss }
       : {}),
   };
 }

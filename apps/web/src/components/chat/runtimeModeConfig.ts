@@ -1,28 +1,30 @@
 import type { RuntimeMode } from "@t3tools/contracts";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { type LucideIcon, LockIcon, LockOpenIcon, PenLineIcon, SparklesIcon } from "lucide-react";
 
+// Keys, not text: render with `t(labelKey)` so the label follows the UI language.
 export const runtimeModeConfig: Record<
   RuntimeMode,
-  { label: string; description: string; icon: LucideIcon }
+  { labelKey: MessageKey; descriptionKey: MessageKey; icon: LucideIcon }
 > = {
   "approval-required": {
-    label: "Supervised",
-    description: "Ask before commands and file changes.",
+    labelKey: "chat.runtimeModeSupervisedLabel",
+    descriptionKey: "chat.runtimeModeSupervisedDescription",
     icon: LockIcon,
   },
   "auto-accept-edits": {
-    label: "Auto-accept edits",
-    description: "Auto-approve edits, ask before other actions.",
+    labelKey: "chat.runtimeModeAutoAcceptEditsLabel",
+    descriptionKey: "chat.runtimeModeAutoAcceptEditsDescription",
     icon: PenLineIcon,
   },
   auto: {
-    label: "Auto",
-    description: "Supported providers approve routine actions; others still ask.",
+    labelKey: "chat.runtimeModeAutoLabel",
+    descriptionKey: "chat.runtimeModeAutoDescription",
     icon: SparklesIcon,
   },
   "full-access": {
-    label: "Full access",
-    description: "Allow commands and edits without prompts.",
+    labelKey: "chat.runtimeModeFullAccessLabel",
+    descriptionKey: "chat.runtimeModeFullAccessDescription",
     icon: LockOpenIcon,
   },
 };

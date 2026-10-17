@@ -5,6 +5,7 @@ import {
   resolveAssistantCitationRange,
   type AssistantCitationSourceAnchor,
 } from "~/lib/assistantTextSelection";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { toastManager } from "../ui/toast";
 import { observeResize } from "~/lib/observeResize";
 
@@ -197,10 +198,11 @@ export function observeAssistantCitationSource({
             activation.dismissed = true;
             clear();
             request.onComplete();
+            const t = currentTranslator();
             toastManager.add({
               type: "warning",
-              title: "Could not open the cited response",
-              description: "Click the citation to try again.",
+              title: t("chat.citationOpenFailed"),
+              description: t("chat.citationOpenFailedHint"),
             });
           },
         );
@@ -211,10 +213,11 @@ export function observeAssistantCitationSource({
       activation.scrolled = true;
       request.onComplete();
       if (!range) {
+        const t = currentTranslator();
         toastManager.add({
           type: "warning",
-          title: "The quoted text has changed",
-          description: "Showing the source response. The saved quote is unchanged.",
+          title: t("chat.citationQuoteChanged"),
+          description: t("chat.citationQuoteChangedHint"),
         });
       }
     }

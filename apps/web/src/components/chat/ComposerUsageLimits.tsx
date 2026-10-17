@@ -3,6 +3,7 @@ import { limitsNotice } from "@t3tools/shared/usageLimits";
 import { GaugeIcon } from "lucide-react";
 
 import { ensureLocalApi } from "../../localApi";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { Button } from "../ui/button";
 import { providerClients } from "../settings/providerDriverMeta";
 import { RedactedSensitiveText } from "../settings/RedactedSensitiveText";
@@ -51,21 +52,22 @@ export function usageLimitsBannerItem(
   environmentId: EnvironmentId,
   onDismiss: () => void,
 ): ComposerBannerStackItem {
+  const t = currentTranslator();
   const [first] = report.accounts;
   const single = report.accounts.length === 1 && first ? first : null;
   const summary = single ? (
     <AccountSummary account={single} />
   ) : (
-    `${report.accounts.length} accounts`
+    t("chat.usageLimitsAccountCount", { count: report.accounts.length })
   );
   return {
     id,
     variant: "info",
     priority: "notice",
     icon: <GaugeIcon />,
-    title: "Usage limits",
+    title: t("chat.usageLimitsTitle"),
     description: summary,
-    dismissLabel: "Dismiss usage limits",
+    dismissLabel: t("chat.usageLimitsDismiss"),
     onDismiss,
     children: <UsageLimitsBannerBody report={report} environmentId={environmentId} />,
   };
@@ -78,6 +80,7 @@ function UsageLimitsBannerBody({
   readonly report: UsageLimitsReport;
   readonly environmentId: EnvironmentId;
 }) {
+  const t = useT();
   const now = Date.parse(report.createdAt);
   return (
     <ComposerBanner.Scroll>
@@ -112,7 +115,7 @@ function UsageLimitsBannerBody({
                   className="self-start"
                   onClick={() => void ensureLocalApi().shell.openExternal(externalUsage.url)}
                 >
-                  Manage usage
+                  {t("chat.usageLimitsManage")}
                 </Button>
               ) : null}
               {resetCreditInput && account.limits.resetCredits ? (

@@ -5,6 +5,7 @@ import type {
 import type { ProviderDriverKind, ProviderInstanceId, ServerProvider } from "@t3tools/contracts";
 import { ChevronDownIcon, LoaderCircleIcon, SquareIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 
 import { AgentElapsed } from "./AgentElapsed";
 import { SubagentTooltipContent } from "./SubagentTooltipContent";
@@ -18,6 +19,7 @@ import {
   THREAD_DETAILS_PANEL_SPLIT_GROUP_CLASS,
   THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS,
 } from "./threadDetailsPanelStyles";
+import { useT } from "~/i18n/I18nProvider";
 
 /**
  * Wall clock for the phase: its members run in parallel, so the span from the
@@ -53,6 +55,25 @@ function phaseStatusLabel(phase: SubagentWorkflowGroup["phases"][number]) {
   return phase.state === "done" ? "done" : "not started";
 }
 
+const PHASE_STATUS_LABEL_KEYS = {
+  running: "chat.lineagePhaseStatusRunning",
+  failed: "chat.lineagePhaseStatusFailed",
+  stopped: "chat.lineagePhaseStatusStopped",
+  done: "chat.lineagePhaseStatusDone",
+  "not started": "chat.lineagePhaseStatusNotStarted",
+} as const satisfies Record<ReturnType<typeof phaseStatusLabel>, MessageKey>;
+
+const MEMBER_STATUS_LABEL_KEYS = {
+  pending: "chat.lineageMemberStatusPending",
+  running: "chat.lineageMemberStatusRunning",
+  waiting: "chat.lineageMemberStatusWaiting",
+  idle: "chat.lineageMemberStatusIdle",
+  completed: "chat.lineageMemberStatusCompleted",
+  failed: "chat.lineageMemberStatusFailed",
+  cancelled: "chat.lineageMemberStatusCancelled",
+  interrupted: "chat.lineageMemberStatusInterrupted",
+} as const satisfies Record<RuntimeSubagent["status"], MessageKey>;
+
 /** Members run under the coordinator's provider, so they share its glyph. */
 function WorkflowMemberRow({
   member,
@@ -71,6 +92,7 @@ function WorkflowMemberRow({
   onOpen: (threadId: string) => void;
   isThreadAvailable: (threadId: string) => boolean;
 }) {
+  const t = useT();
   const threadId = member.childThreadId;
   const canOpen = threadId !== null && isThreadAvailable(threadId);
   return (
@@ -81,7 +103,7 @@ function WorkflowMemberRow({
           render={
             <ThreadDetailsControl
               part="row"
-              aria-label={`Open ${member.title} chat`}
+              aria-label={t("chat.lineageOpenMemberChat", { title: member.title })}
               disabled={!canOpen}
               onClick={() => canOpen && onOpen(threadId)}
             />
@@ -89,7 +111,7 @@ function WorkflowMemberRow({
         >
           <ThreadRelationshipIcon driver={driver} provider={provider} status={member.status} />
           <span className="min-w-0 flex-1 truncate">{member.title}</span>
-          <span className="sr-only">{member.status}</span>
+          <span className="sr-only">{t(MEMBER_STATUS_LABEL_KEYS[member.status])}</span>
           {member.startedAt ? (
             <span className="shrink-0 text-2xs font-normal tabular-nums text-muted-foreground">
               <AgentElapsed agent={member} />
@@ -141,6 +163,7 @@ export function ThreadLineageWorkflowRow({
   readonly stopping: boolean;
   readonly stopDisabled: boolean;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   // The running phase opens itself until the user picks a side for it.
   const [phaseOpen, setPhaseOpen] = useState<ReadonlyMap<number, boolean>>(() => new Map());
@@ -161,7 +184,7 @@ export function ThreadLineageWorkflowRow({
                     variant="ghost"
                     part="icon"
                     tone="destructive"
-                    aria-label={`Stop workflow ${label}`}
+                    aria-label={t("chat.lineageStopWorkflow", { label })}
                     disabled={stopDisabled}
                     onClick={onStop}
                   />
@@ -173,7 +196,7 @@ export function ThreadLineageWorkflowRow({
                   <SquareIcon aria-hidden className="size-3 fill-current" />
                 )}
               </TooltipTrigger>
-              <TooltipPopup side="left">Stop entire workflow</TooltipPopup>
+              <TooltipPopup side="left">{t("chat.lineageStopEntireWorkflow")}</TooltipPopup>
             </Tooltip>
           </div>
         ) : null}
@@ -183,7 +206,11 @@ export function ThreadLineageWorkflowRow({
           variant="ghost"
           part="secondary"
           aria-expanded={expanded}
-          aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
+          aria-label={
+            expanded
+              ? t("chat.lineageCollapseWorkflow", { label })
+              : t("chat.lineageExpandWorkflow", { label })
+          }
           onClick={() => setExpanded((value) => !value)}
         >
           <ChevronDownIcon
@@ -206,16 +233,26 @@ export function ThreadLineageWorkflowRow({
                   variant="panel"
                   tone={phase.state === "running" ? "emphasized" : "muted"}
                   expanded={open}
-                  aria-label={`${open ? "Collapse" : "Expand"} ${phase.title} phase, ${status}`}
+                  aria-label={
+                    open
+                      ? t("chat.lineageCollapsePhase", {
+                          phase: phase.title,
+                          status: t(PHASE_STATUS_LABEL_KEYS[status]),
+                        })
+                      : t("chat.lineageExpandPhase", {
+                          phase: phase.title,
+                          status: t(PHASE_STATUS_LABEL_KEYS[status]),
+                        })
+                  }
                   onClick={() => setPhaseOpen((phases) => new Map(phases).set(phase.index, !open))}
                   accessory={
                     <>
                       {status === "failed" ? (
-                        <SectionHeaderStatus>Failed</SectionHeaderStatus>
+                        <SectionHeaderStatus>{t("chat.lineagePhaseFailed")}</SectionHeaderStatus>
                       ) : null}
                       <span className="shrink-0 text-2xs font-normal tabular-nums">
                         {phase.settledCount}/{phase.members.length}{" "}
-                        {phase.members.length === 1 ? "agent" : "agents"}
+                        {t("chat.lineagePhaseAgents", { count: phase.members.length })}
                       </span>
                       <span className="shrink-0 text-2xs font-normal tabular-nums empty:hidden">
                         <AgentElapsed agent={phaseElapsed(phase)} />
@@ -257,7 +294,9 @@ export function ThreadLineageWorkflowRow({
             />
           ))}
           {phases.length === 0 && group.unphasedMembers.length === 0 ? (
-            <li className="px-2.5 py-1.5 text-2xs text-muted-foreground/70">No agents yet</li>
+            <li className="px-2.5 py-1.5 text-2xs text-muted-foreground/70">
+              {t("chat.lineageNoAgentsYet")}
+            </li>
           ) : null}
         </ul>
       ) : null}

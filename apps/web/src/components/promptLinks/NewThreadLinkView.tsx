@@ -22,6 +22,7 @@ import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "rea
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { isElectron } from "~/env";
 import { useNewThreadHandler } from "~/hooks/useHandleNewThread";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { useScratchProject } from "~/hooks/useScratchProject";
 import { newProjectId } from "~/lib/utils";
 import { useProjects, useThreadShells, waitForProject } from "~/state/entities";
@@ -59,6 +60,7 @@ const openedLinkKeys = new Set<string>();
  * still reads the prompt and presses Send.
  */
 export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
+  const t = useT();
   const locationKey = useLocation({ select: (location) => location.state.__TSR_key ?? "" });
   const navigate = useNavigate();
   // The link needs every reachable machine's projects and threads to find its repository.
@@ -99,7 +101,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
       replace: true,
     }).catch(() => null);
     if (opened === null) {
-      setState({ status: "failed", message: "T3 Code could not open a new thread." });
+      setState({ status: "failed", message: currentTranslator()("chat.newThreadLinkOpenFailed") });
       return;
     }
     setState({ status: "opened" });
@@ -119,10 +121,14 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
         });
       }
       if (resolved === null || !resolved.exact) {
+        const t = currentTranslator();
         notes.push(
           resolved === null
-            ? `The link asked for ${link.provider}, which is not set up here, so your default model is used.`
-            : `The link asked for ${link.model}, which ${link.provider} does not offer here, so its default model is used.`,
+            ? t("chat.newThreadLinkProviderMissing", { provider: link.provider })
+            : t("chat.newThreadLinkModelMissing", {
+                model: String(link.model),
+                provider: link.provider,
+              }),
         );
       }
     }
@@ -146,7 +152,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
     if (project === null) {
       setState({
         status: "failed",
-        message: "None of your machines can start a thread without a project right now.",
+        message: currentTranslator()("chat.newThreadLinkNoScratch"),
       });
       return;
     }
@@ -168,8 +174,7 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
     ) {
       setState({
         status: "failed",
-        message:
-          "This machine cannot clone from a link. Update T3 Code on it, or clone the repository from the command palette.",
+        message: currentTranslator()("chat.newThreadLinkCannotClone"),
       });
       return;
     }
@@ -188,11 +193,12 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
     if (result._tag === "Failure") {
       if (!isAtomCommandInterrupted(result)) {
         const error = squashAtomCommandFailure(result);
+        const t = currentTranslator();
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Clone failed",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title: t("chat.newThreadLinkCloneFailed"),
+            description: error instanceof Error ? error.message : t("chat.errorOccurred"),
           }),
         );
       }
@@ -205,15 +211,19 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
       () => null,
     );
     if (project === null) {
-      setState({ status: "failed", message: "The clone started, but its project did not appear." });
+      setState({
+        status: "failed",
+        message: currentTranslator()("chat.newThreadLinkCloneProjectMissing"),
+      });
       return;
     }
     // A pull request checks out from the cloned repository, which is not there yet.
     if (link.kind === "pull-request") {
+      const t = currentTranslator();
       setState({
         status: "failed",
-        title: `Cloning ${repository.owner}/${repository.name}`,
-        message: "Open this link again when the clone finishes.",
+        title: t("chat.newThreadLinkCloning", { owner: repository.owner, name: repository.name }),
+        message: t("chat.newThreadLinkOpenAfterClone"),
       });
       return;
     }
@@ -262,10 +272,10 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
 
   switch (state.status) {
     case "opening":
-      return <LinkPage title="Opening the link..." />;
+      return <LinkPage title={t("chat.newThreadLinkOpening")} />;
     case "opened":
       return (
-        <LinkPage title="This link is open">
+        <LinkPage title={t("chat.newThreadLinkOpened")}>
           <Button
             size="sm"
             variant="outline"
@@ -275,26 +285,29 @@ export function NewThreadLinkView({ link }: { readonly link: NewThreadLink }) {
               setState({ status: "opening" });
             }}
           >
-            Open it again
+            {t("chat.newThreadLinkOpenAgain")}
           </Button>
         </LinkPage>
       );
     case "failed":
       return (
-        <LinkPage title={state.title ?? "Could not open the link"} description={state.message} />
+        <LinkPage
+          title={state.title ?? t("chat.promptLinkOpenFailed")}
+          description={state.message}
+        />
       );
     case "missing-repository": {
       const name = `${state.repository.owner}/${state.repository.name}`;
       return (
         <LinkPage
-          title={`You don't have ${name}`}
-          description="Clone it to work on it here, or start without a project."
+          title={t("chat.newThreadLinkMissingRepo", { name })}
+          description={t("chat.newThreadLinkMissingRepoHint")}
         >
           <Button size="sm" onClick={() => void cloneRepository(state.repository)}>
-            Clone {name}
+            {t("chat.newThreadLinkClone", { name })}
           </Button>
           <Button size="sm" variant="outline" onClick={() => void openWithoutProject()}>
-            Use without project
+            {t("chat.newThreadLinkUseWithoutProject")}
           </Button>
         </LinkPage>
       );
@@ -326,6 +339,7 @@ function PullRequestLinkCheckout({
       url: promptLinkPullRequestUrl(link.pullRequest),
     },
   });
+  const t = useT();
   const warnedRef = useRef(false);
   useEffect(() => {
     if (warnedRef.current || link.prompt === null) return;
@@ -335,8 +349,8 @@ function PullRequestLinkCheckout({
   const { owner, name, number } = link.pullRequest;
   return (
     <LinkPage
-      title={`Check out ${owner}/${name}#${number}?`}
-      description="This puts the pull request's code in a new worktree and runs your project's setup script on it."
+      title={t("chat.newThreadLinkCheckoutTitle", { owner, name, number })}
+      description={t("chat.newThreadLinkCheckoutDescription")}
     >
       <Button
         size="sm"
@@ -349,7 +363,7 @@ function PullRequestLinkCheckout({
           )
         }
       >
-        {handoff !== null ? "Checking out..." : "Check out"}
+        {handoff !== null ? t("chat.newThreadLinkCheckingOut") : t("chat.newThreadLinkCheckOut")}
       </Button>
     </LinkPage>
   );

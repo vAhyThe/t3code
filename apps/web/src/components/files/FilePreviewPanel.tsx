@@ -40,6 +40,7 @@ import { mediaFileReference } from "@t3tools/client-runtime/media-reference";
 import { FolderTree, Globe2, WrapTextIcon } from "lucide-react";
 import { Code2, Eye, Table2 } from "lucide";
 import * as Schema from "effect/Schema";
+import type { Translate } from "@t3tools/client-runtime/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isBrowserPreviewFile, openFileInPreview } from "~/browser/openFileInPreview";
@@ -115,6 +116,8 @@ import {
   setProjectFileQueryData,
   useProjectFileQuery,
 } from "./projectFilesQueryState";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { Trans } from "~/i18n/Trans";
 
 interface FilePreviewPanelProps {
   environmentId: EnvironmentId;
@@ -155,6 +158,7 @@ function WorkspaceImagePreview(props: {
   readonly alt: string;
   readonly workspaceMutationId: string | null;
 }) {
+  const t = useT();
   const resource = useMemo(
     () =>
       workspaceAssetResource({
@@ -185,7 +189,7 @@ function WorkspaceImagePreview(props: {
     return (
       <MediaActions source={actionsSource}>
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">
-          Unable to load workspace image.
+          {t("chat.fileWorkspaceImageLoadFailed")}
         </div>
       </MediaActions>
     );
@@ -226,6 +230,7 @@ function WorkspaceBrowserPreview(props: {
   readonly title: string;
   readonly workspaceMutationId: string | null;
 }) {
+  const t = useT();
   const insideWorkspace =
     mediaFileReference(props.absolutePath, props.workspaceRoot).relativePath !== undefined;
   const resource = useMemo(
@@ -248,7 +253,7 @@ function WorkspaceBrowserPreview(props: {
   if (assetUrl._tag === "Failure") {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-destructive">
-        Unable to load file preview.
+        {t("chat.filePreviewLoadFailed")}
       </div>
     );
   }
@@ -337,6 +342,7 @@ function WorkspaceAudioPreview(props: {
   readonly name: string;
   readonly workspaceMutationId: string | null;
 }) {
+  const t = useT();
   const resource = useMemo(
     () =>
       workspaceAssetResource({
@@ -366,7 +372,7 @@ function WorkspaceAudioPreview(props: {
   if (assetUrl._tag === "Failure" || (url !== null && failedUrl === url)) {
     return (
       <FileSurfaceFailure
-        message="Unable to load audio."
+        message={t("chat.fileAudioLoadFailed")}
         onRetry={() => {
           setFailedUrl(null);
           void refreshAssetUrl().catch(() => undefined);
@@ -1010,10 +1016,15 @@ function RenderedMarkdownSurface({
   );
 }
 
-function renderedToggleLabel(mode: "markdown" | "html" | "table", rendered: boolean): string {
-  if (mode === "markdown") return rendered ? "Show markdown source" : "Show rendered markdown";
-  if (mode === "table") return rendered ? "Show source" : "Show table";
-  return rendered ? "Show HTML source" : "Show rendered page";
+function renderedToggleLabel(
+  t: Translate,
+  mode: "markdown" | "html" | "table",
+  rendered: boolean,
+): string {
+  if (mode === "markdown")
+    return rendered ? t("chat.fileShowMarkdownSource") : t("chat.fileShowRenderedMarkdown");
+  if (mode === "table") return rendered ? t("chat.fileShowSource") : t("chat.fileShowTable");
+  return rendered ? t("chat.fileShowHtmlSource") : t("chat.fileShowRenderedPage");
 }
 
 function initialExplorerOpen(): boolean {
@@ -1042,6 +1053,7 @@ export default function FilePreviewPanel({
   selectedFilePending,
   workspaceMutationId,
 }: FilePreviewPanelProps) {
+  const t = useT();
   const relativePath =
     attachment === undefined ? resolveFilePreviewPath(requestedPath, cwd) : requestedPath;
   // A draft's composer target is its draft id; a thread the server knows is a ref.
@@ -1216,8 +1228,9 @@ export default function FilePreviewPanel({
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Unable to open file in browser",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: currentTranslator()("chat.fileOpenInBrowserFailed"),
+          description:
+            error instanceof Error ? error.message : currentTranslator()("chat.errorOccurred"),
         }),
       );
     })();
@@ -1237,13 +1250,13 @@ export default function FilePreviewPanel({
       return (
         <div className="flex min-h-0 flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
           <Spinner className="size-4" />
-          Checking file access...
+          {t("chat.fileCheckingAccess")}
         </div>
       );
     }
     return (
       <div className="p-4 text-sm text-muted-foreground">
-        {fileAccess.error ?? "This connection cannot read host files."}
+        {fileAccess.error ?? t("chat.mediaCannotReadHostFiles")}
       </div>
     );
   }
@@ -1283,7 +1296,7 @@ export default function FilePreviewPanel({
           ) : null}
           {canToggleRendered && renderedMode ? (
             <FileSurfaceAction
-              label={renderedToggleLabel(renderedMode, rendered)}
+              label={renderedToggleLabel(t, renderedMode, rendered)}
               pressed={rendered}
               onPress={() => {
                 const pressed = !rendered;
@@ -1303,7 +1316,7 @@ export default function FilePreviewPanel({
           ) : null}
           {showsRawText ? (
             <FileSurfaceAction
-              label={wordWrap ? "Disable word wrap" : "Enable word wrap"}
+              label={wordWrap ? t("chat.fileDisableWordWrap") : t("chat.fileEnableWordWrap")}
               pressed={wordWrap}
               onPress={() => updateClientSettings({ wordWrap: !wordWrap })}
             >
@@ -1311,13 +1324,16 @@ export default function FilePreviewPanel({
             </FileSurfaceAction>
           ) : null}
           {canOpenInBrowser ? (
-            <FileSurfaceAction label="Open file in preview browser" onPress={handleOpenInBrowser}>
+            <FileSurfaceAction
+              label={t("chat.fileOpenInPreviewBrowser")}
+              onPress={handleOpenInBrowser}
+            >
               <Globe2 className="size-3.5" />
             </FileSurfaceAction>
           ) : null}
           {!isHostFile && previewPath !== null ? (
             <FileSurfaceAction
-              label={explorerOpen ? "Hide file explorer" : "Show file explorer"}
+              label={explorerOpen ? t("chat.fileHideExplorer") : t("chat.fileShowExplorer")}
               pressed={explorerOpen}
               onPress={toggleExplorer}
             >
@@ -1328,7 +1344,7 @@ export default function FilePreviewPanel({
       ) : null}
       {relativePath && !attachment && !isHostFile && !canWriteFiles && !fileAccess.isPending ? (
         <div className="shrink-0 border-b px-3 py-1.5 text-2xs text-muted-foreground">
-          Read-only connection. Unsaved edits are kept until write access returns.
+          {t("chat.fileReadOnlyConnection")}
         </div>
       ) : null}
       {previewPath &&
@@ -1337,7 +1353,7 @@ export default function FilePreviewPanel({
       !renderBrowserFile &&
       file.data?.truncated ? (
         <div className="shrink-0 border-b border-warning/20 bg-warning-surface px-3 py-1.5 text-2xs text-warning-foreground">
-          Preview limited to the first 1 MB of a {file.data.byteLength.toLocaleString()} byte file.
+          {t("chat.filePreviewLimitedOfSize", { size: file.data.byteLength.toLocaleString() })}
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -1409,7 +1425,7 @@ export default function FilePreviewPanel({
                 </p>
                 {attemptedPath ? (
                   <p className="text-muted-foreground">
-                    Attempted path
+                    {t("chat.fileAttemptedPath")}
                     <code className="block break-all font-mono text-foreground select-all">
                       {attemptedPath}
                     </code>
@@ -1417,11 +1433,15 @@ export default function FilePreviewPanel({
                 ) : null}
                 {!isHostFile ? (
                   <p className="text-muted-foreground">
-                    Workspace folder:{" "}
-                    <code className="break-all font-mono select-all">
-                      {file.readError?.cwd ?? cwd}
-                    </code>
-                    . Check the link's path or locate the file in Files.
+                    <Trans
+                      k="chat.fileWorkspaceFolderHint"
+                      params={{ cwd: file.readError?.cwd ?? cwd }}
+                      components={{
+                        code: (children) => (
+                          <code className="break-all font-mono select-all">{children}</code>
+                        ),
+                      }}
+                    />
                   </p>
                 ) : null}
               </div>

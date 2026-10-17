@@ -1,16 +1,18 @@
 import type { LinkedPrompt } from "@t3tools/shared/promptLinks";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "~/composerDraftStore";
+import { currentTranslator } from "~/i18n/I18nProvider";
 
 import { toastManager } from "../ui/toast";
 
 /** A warning that stays until dismissed when the link's prompt hid characters from the reader. */
 export function warnAboutHiddenCharacters(prompt: LinkedPrompt): void {
   if (prompt.hiddenCharacters === 0) return;
+  const t = currentTranslator();
   toastManager.add({
     type: "warning",
-    title: "This prompt had hidden characters, it may be malicious",
-    description: `T3 Code removed ${prompt.hiddenCharacters} hidden character${prompt.hiddenCharacters === 1 ? "" : "s"}. Read the prompt before you send it.`,
+    title: t("chat.promptHiddenCharactersTitle"),
+    description: t("chat.promptHiddenCharactersDescription", { count: prompt.hiddenCharacters }),
     timeout: 0,
   });
 }
@@ -26,13 +28,14 @@ export function placeLinkedPrompt(
   notes: ReadonlyArray<string> = [],
 ): void {
   warnAboutHiddenCharacters(prompt);
+  const t = currentTranslator();
   const place = () => {
     useComposerDraftStore.getState().setPrompt(target, prompt.text);
     // It was not written here, so it must be read before it is sent.
     toastManager.add({
       type: "info",
-      title: "Prompt added from a link",
-      description: ["Read it before you send.", ...notes].join(" "),
+      title: t("chat.promptAddedFromLink"),
+      description: [t("chat.promptReadBeforeSend"), ...notes].join(" "),
     });
   };
   const existing = useComposerDraftStore.getState().getComposerDraft(target)?.prompt ?? "";
@@ -42,11 +45,11 @@ export function placeLinkedPrompt(
   }
   const id = toastManager.add({
     type: "info",
-    title: "Linked prompt ready",
-    description: "This thread already has a draft. Replace it with the linked prompt?",
+    title: t("chat.linkedPromptReady"),
+    description: t("chat.linkedPromptReplaceDraftQuestion"),
     timeout: 0,
     actionProps: {
-      children: "Replace draft",
+      children: t("chat.linkedPromptReplaceDraftAction"),
       onClick: () => {
         toastManager.close(id);
         place();

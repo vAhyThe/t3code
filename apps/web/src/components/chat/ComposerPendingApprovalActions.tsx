@@ -3,12 +3,14 @@ import {
   type ProviderApprovalOption,
   type RuntimeRequestId,
 } from "@t3tools/contracts";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { memo } from "react";
 import { EllipsisIcon, TriangleAlertIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { composerFloatingLayerProps } from "./composerEventScope";
+import { useT } from "~/i18n/I18nProvider";
 
 interface ComposerPendingApprovalActionsProps {
   requestId: RuntimeRequestId;
@@ -23,20 +25,24 @@ interface ComposerPendingApprovalActionsProps {
 }
 
 const DEFAULT_APPROVAL_OPTIONS = [
-  { decision: "cancel", label: "Cancel" },
-  { decision: "decline", label: "Decline" },
-  { decision: "acceptForSession", label: "Always allow this session" },
-  { decision: "accept", label: "Approve" },
-] satisfies ReadonlyArray<ProviderApprovalOption>;
+  { decision: "cancel", labelKey: "chat.approvalOptionCancel" },
+  { decision: "decline", labelKey: "chat.approvalOptionDecline" },
+  { decision: "acceptForSession", labelKey: "chat.approvalOptionAcceptForSession" },
+  { decision: "accept", labelKey: "chat.approvalOptionApprove" },
+] as const satisfies ReadonlyArray<{ decision: ProviderApprovalDecision; labelKey: MessageKey }>;
 
 export const ComposerPendingApprovalActions = memo(function ComposerPendingApprovalActions({
   requestId,
   isResponding,
   canRespond,
   disabled = false,
-  options = DEFAULT_APPROVAL_OPTIONS,
+  options: optionsProp,
   onRespondToApproval,
 }: ComposerPendingApprovalActionsProps) {
+  const t = useT();
+  const options: ReadonlyArray<ProviderApprovalOption> =
+    optionsProp ??
+    DEFAULT_APPROVAL_OPTIONS.map(({ decision, labelKey }) => ({ decision, label: t(labelKey) }));
   const primaryOptions = options.filter(
     (option) => option.decision === "decline" || option.decision === "accept",
   );
@@ -77,7 +83,9 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
         <Menu>
           <MenuTrigger
             disabled={disabled || isResponding}
-            render={<Button size="icon-xs" variant="outline" aria-label="More approval options" />}
+            render={
+              <Button size="icon-xs" variant="outline" aria-label={t("chat.approvalMoreOptions")} />
+            }
           >
             <EllipsisIcon />
           </MenuTrigger>

@@ -1,5 +1,7 @@
 import { CheckIcon, CircleDotIcon, CircleIcon, ListTodoIcon } from "lucide-react";
 import { memo, type ComponentProps } from "react";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { useT } from "~/i18n/I18nProvider";
 
 import { formatDuration } from "../../session-logic";
 import { cn } from "~/lib/utils";
@@ -19,11 +21,11 @@ export interface ComposerTaskStep {
 
 const MAX_TASK_SEGMENTS = 10;
 
-const taskStatusLabels = {
-  pending: "Pending",
-  inProgress: "Running",
-  completed: "Completed",
-} satisfies Record<ComposerTaskStep["status"], string>;
+const taskStatusLabelKeys = {
+  pending: "chat.taskStatusPending",
+  inProgress: "chat.taskStatusRunning",
+  completed: "chat.taskStatusCompleted",
+} satisfies Record<ComposerTaskStep["status"], MessageKey>;
 
 function keyedTaskSteps(steps: readonly ComposerTaskStep[]) {
   const occurrences = new Map<string, number>();
@@ -71,13 +73,14 @@ function TaskSummary({
   readonly progress: ComposerTasksProgress;
   readonly steps: readonly ComposerTaskStep[];
 }) {
+  const t = useT();
   return (
     <>
       <ComposerBanner.Icon>
         <ListTodoIcon />
       </ComposerBanner.Icon>
       <ComposerBanner.Content>
-        <span className="shrink-0 text-muted-foreground">Tasks</span>
+        <span className="shrink-0 text-muted-foreground">{t("chat.tasksLabel")}</span>
         <span
           className="min-w-0 flex-1 truncate text-left font-medium text-foreground/80"
           data-composer-task-current="true"
@@ -112,13 +115,18 @@ export const ComposerTasksBadge = memo(function ComposerTasksBadge({
   readonly progress: ComposerTasksProgress;
   readonly steps: readonly ComposerTaskStep[];
 }) {
+  const t = useT();
   if (progress.totalSteps <= 0) return null;
 
   const row = (
     <ComposerBanner.Row
       render={<button type="button" />}
       aria-expanded={expanded}
-      aria-label={`${expanded ? "Collapse tasks" : "Tasks"}: ${progress.completedSteps} of ${progress.totalSteps} complete. Current task: ${progress.step}`}
+      aria-label={t(expanded ? "chat.taskBadgeAriaCollapsed" : "chat.taskBadgeAriaExpanded", {
+        completed: progress.completedSteps,
+        total: progress.totalSteps,
+        step: progress.step,
+      })}
       data-composer-tasks-badge="true"
       onClick={onToggle}
       onPointerDown={(event) => event.preventDefault()}
@@ -146,6 +154,7 @@ export const ComposerTasksContent = memo(function ComposerTasksContent({
   readonly progress: ComposerTasksProgress;
   readonly steps: readonly ComposerTaskStep[];
 }) {
+  const t = useT();
   return (
     <div
       data-chat-composer-collapsed-controls="true"
@@ -162,7 +171,10 @@ export const ComposerTasksContent = memo(function ComposerTasksContent({
         <ComposerBanner.Scroll data-composer-tasks-scroll="true">
           <ComposerBanner.Children
             render={<ul role="list" />}
-            aria-label={`Task list. ${progress.completedSteps} of ${progress.totalSteps} complete.`}
+            aria-label={t("chat.taskListAria", {
+              completed: progress.completedSteps,
+              total: progress.totalSteps,
+            })}
             data-composer-tasks-list="true"
           >
             {keyedTaskSteps(steps).map(({ key, step }) => (
@@ -195,7 +207,7 @@ export const ComposerTasksContent = memo(function ComposerTasksContent({
                         : "text-muted-foreground/70",
                   )}
                 >
-                  <span className="sr-only">{taskStatusLabels[step.status]}: </span>
+                  <span className="sr-only">{t(taskStatusLabelKeys[step.status])}: </span>
                   {step.step}
                 </ComposerBanner.Content>
                 <ComposerBanner.Actions>

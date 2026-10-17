@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { cn } from "~/lib/utils";
+import { useT } from "~/i18n/I18nProvider";
 
 interface ComposerPendingApprovalPanelProps {
   approval: PendingApproval;
@@ -13,27 +14,28 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
   pendingCount,
   className,
 }: ComposerPendingApprovalPanelProps) {
+  const t = useT();
   const Detail = approval.requestKind === "mcp-elicitation" ? "span" : "code";
   const fallbackLabel =
     approval.requestKind === "mcp-elicitation"
-      ? "App access approval"
+      ? t("chat.approvalAppAccess")
       : approval.requestKind === "command"
-        ? "Command approval"
+        ? t("chat.approvalCommand")
         : approval.requestKind === "file-read"
-          ? "File read approval"
+          ? t("chat.approvalFileRead")
           : approval.requestKind === "permission"
-            ? "App permission approval"
-            : "File change approval";
+            ? t("chat.approvalAppPermission")
+            : t("chat.approvalFileChange");
   const detailAriaLabel =
     approval.requestKind === "mcp-elicitation"
-      ? "App access request"
+      ? t("chat.approvalDetailAppAccess")
       : approval.requestKind === "command"
-        ? "Command"
+        ? t("chat.approvalDetailCommand")
         : approval.requestKind === "file-read"
-          ? "File to read"
+          ? t("chat.approvalDetailFileRead")
           : approval.requestKind === "permission"
-            ? "Permission request"
-            : "File change";
+            ? t("chat.approvalDetailPermission")
+            : t("chat.approvalDetailFileChange");
 
   return (
     <span
@@ -60,7 +62,7 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
         tabIndex={0}
       >
         {approval.responseCapability === "not_resumable"
-          ? "Provider process is gone — interrupt or restart the run to respond."
+          ? t("chat.approvalNotResumable")
           : approval.detail || fallbackLabel}
       </Detail>
     </span>

@@ -2,6 +2,8 @@
 import { parseDelimitedPreview } from "@t3tools/shared/delimitedPreview";
 import { useMemo } from "react";
 
+import { useT } from "~/i18n/I18nProvider";
+
 import { FileSurfaceNotice } from "./fileSurfaceChrome";
 
 /** A bounded, readable table for CSV and TSV text; the source view keeps every byte. */
@@ -10,6 +12,7 @@ export function DelimitedTablePreview(props: {
   readonly text: string;
   readonly delimiter: "," | "\t";
 }) {
+  const t = useT();
   const table = useMemo(
     () => parseDelimitedPreview(props.text, props.delimiter),
     [props.text, props.delimiter],
@@ -18,9 +21,7 @@ export function DelimitedTablePreview(props: {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {table.truncated ? (
-        <FileSurfaceNotice>
-          Table limited to the first 100 rows and 30 columns. Switch to source for the rest.
-        </FileSurfaceNotice>
+        <FileSurfaceNotice>{t("chat.fileTableTruncated")}</FileSurfaceNotice>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <table

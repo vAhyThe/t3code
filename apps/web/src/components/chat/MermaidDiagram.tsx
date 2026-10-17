@@ -3,6 +3,7 @@ import type { Mermaid } from "mermaid";
 import { use, useState } from "react";
 
 import { Button } from "../ui/button";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 type MermaidRenderResult =
   | { readonly status: "rendered"; readonly svg: string }
@@ -69,7 +70,11 @@ async function renderMermaid(
   try {
     mermaid = await loadMermaid();
   } catch {
-    return { status: "error", message: "Mermaid failed to load.", retryable: true };
+    return {
+      status: "error",
+      message: currentTranslator()("chat.mermaidFailedToLoad"),
+      retryable: true,
+    };
   }
   try {
     // initialize() mutates global config, so renders run one at a time.
@@ -97,7 +102,8 @@ async function renderMermaid(
     const { svg } = await mermaid.render(id, source);
     return { status: "rendered", svg: sanitizeMermaidSvg(svg) };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "The diagram could not be rendered.";
+    const message =
+      error instanceof Error ? error.message : currentTranslator()("chat.mermaidCouldNotRender");
     return { status: "error", message, retryable: CHUNK_LOAD_ERROR.test(message) };
   } finally {
     document.getElementById(`d${id}`)?.remove();
@@ -170,6 +176,7 @@ export function MermaidDiagram({
   theme: "light" | "dark";
   onExpand: (imageUrl: string) => void;
 }) {
+  const t = useT();
   const [, setAttempt] = useState(0);
   const result = use(mermaidRenderPromise(source.trim(), theme));
 
@@ -177,7 +184,9 @@ export function MermaidDiagram({
     return (
       <div>
         <div className="flex items-center justify-between gap-2">
-          <p className="m-0 text-xs text-destructive">Unable to render diagram: {result.message}</p>
+          <p className="m-0 text-xs text-destructive">
+            {t("chat.mermaidUnableToRender", { message: result.message })}
+          </p>
           {result.retryable ? (
             <Button
               type="button"
@@ -188,7 +197,7 @@ export function MermaidDiagram({
                 setAttempt((attempt) => attempt + 1);
               }}
             >
-              Retry
+              {t("common.retry")}
             </Button>
           ) : null}
         </div>
@@ -207,7 +216,7 @@ export function MermaidDiagram({
     <div className="overflow-x-auto">
       <button
         type="button"
-        aria-label="Expand diagram"
+        aria-label={t("chat.mermaidExpand")}
         className="flex w-full cursor-zoom-in justify-center rounded-md focus-visible:outline-2 focus-visible:outline-ring [&_svg]:h-auto [&_svg]:max-w-full"
         onClick={() => onExpand(mermaidImageUrl(result.svg))}
         dangerouslySetInnerHTML={{ __html: result.svg }}

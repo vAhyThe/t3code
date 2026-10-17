@@ -30,6 +30,8 @@ import {
 import { useComposerDraftStore, DraftId } from "../../composerDraftStore";
 import { getProviderModelCapabilities } from "../../providerModels";
 import { cn } from "~/lib/utils";
+import type { MessageKey } from "@t3tools/client-runtime/i18n";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -43,18 +45,19 @@ import { useComposerMenuState } from "./useComposerMenuState";
 
 type ProviderOptions = ReadonlyArray<ProviderOptionSelection>;
 
-const SAVED_OPTION_LABELS: Readonly<Record<string, string>> = {
-  agent: "Agent",
-  effort: "Effort",
-  reasoningEffort: "Reasoning effort",
-  variant: "Reasoning",
+const SAVED_OPTION_LABEL_KEYS: Readonly<Record<string, MessageKey>> = {
+  agent: "chat.traitsSavedOptionAgent",
+  effort: "chat.traitsSavedOptionEffort",
+  reasoningEffort: "chat.traitsSavedOptionReasoningEffort",
+  variant: "chat.traitsSavedOptionReasoning",
 };
 
 function savedOptionLabel(id: string): string {
-  return (
-    SAVED_OPTION_LABELS[id] ??
-    id.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase())
-  );
+  const labelKey = SAVED_OPTION_LABEL_KEYS[id];
+  if (labelKey) return currentTranslator()(labelKey);
+  return id
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/^./, (character) => character.toUpperCase());
 }
 
 /** Read-only descriptors for saved values whose OpenCode model metadata is unavailable. */
@@ -90,12 +93,13 @@ type TraitsPersistence =
       onModelOptionsChange: (nextOptions: ProviderOptions | undefined) => void;
     };
 
-const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
+const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n"; // i18n-ignore: prompt text sent to the agent
 
 function DefaultBadge() {
+  const t = useT();
   return (
     <Badge variant="outline" size="sm" className="min-w-0">
-      Default
+      {t("chat.traitsDefaultBadge")}
     </Badge>
   );
 }
@@ -296,6 +300,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   planModeEnabled,
   ...persistence
 }: TraitsMenuContentProps & TraitsPersistence) {
+  const t = useT();
   const modelSelection =
     instanceId && model ? { instanceId, model, options: modelOptions ?? [] } : null;
   const setProviderModelOptions = useComposerDraftStore((store) => store.setProviderModelOptions);
@@ -407,8 +412,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
               </div>
               {ultrathinkInBodyText && descriptor.id === primarySelectDescriptor?.id ? (
                 <div className="px-2 pb-1.5 text-muted-foreground/80 text-xs">
-                  Your prompt contains &quot;ultrathink&quot; in the text. Remove it to change this
-                  option.
+                  {t("chat.traitsUltrathinkInPrompt")}
                 </div>
               ) : null}
               <MenuRadioGroup
@@ -471,7 +475,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
                 {(["on", "off"] as const).map((value) => (
                   <MenuRadioItem key={value} value={value} hideIndicator closeOnClick>
                     <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                      <span>{value === "on" ? "On" : "Off"}</span>
+                      <span>{value === "on" ? t("chat.traitsOn") : t("chat.traitsOff")}</span>
                     </span>
                   </MenuRadioItem>
                 ))}
@@ -493,14 +497,15 @@ export function buildTraitsTriggerDisplay(input: {
   modelSelection?: ModelSelection | null;
   reportedModelSelection?: ModelSelection | null | undefined;
 }): { label: string } {
+  const t = currentTranslator();
   let fastModeFallbackLabel: string | null = null;
   let speedLabel: string | null = null;
   let reasoningLabelIndex = -1;
   const labels: Array<string> = [];
   for (const descriptor of input.descriptors) {
     if (descriptor.id === "fastMode" && descriptor.type === "boolean") {
-      speedLabel = descriptor.currentValue === true ? "Fast" : null;
-      fastModeFallbackLabel = speedLabel ?? "Normal";
+      speedLabel = descriptor.currentValue === true ? t("chat.traitsSpeedFast") : null;
+      fastModeFallbackLabel = speedLabel ?? t("chat.traitsSpeedNormal");
       continue;
     }
     if (
@@ -509,8 +514,8 @@ export function buildTraitsTriggerDisplay(input: {
       descriptor.type === "select"
     ) {
       const currentValue = getProviderOptionCurrentValue(descriptor);
-      const fastTier = descriptor.options.find(({ label }) => label === "Fast");
-      const ultrafastTier = descriptor.options.find(({ label }) => label === "Ultrafast");
+      const fastTier = descriptor.options.find(({ label }) => label === "Fast"); // i18n-ignore: provider option label compared in code
+      const ultrafastTier = descriptor.options.find(({ label }) => label === "Ultrafast"); // i18n-ignore: provider option label compared in code
       if (
         ((fastTier || ultrafastTier) && currentValue === "default") ||
         (fastTier && currentValue === fastTier.id) ||
@@ -518,20 +523,23 @@ export function buildTraitsTriggerDisplay(input: {
       ) {
         speedLabel =
           ultrafastTier && currentValue === ultrafastTier.id
-            ? "Ultrafast"
+            ? t("chat.traitsSpeedUltrafast")
             : fastTier && currentValue === fastTier.id
-              ? "Fast"
+              ? t("chat.traitsSpeedFast")
               : null;
         fastModeFallbackLabel =
-          descriptor.options.find(({ id }) => id === currentValue)?.label ?? "Normal";
+          descriptor.options.find(({ id }) => id === currentValue)?.label ??
+          t("chat.traitsSpeedNormal");
         continue;
       }
     }
     const label =
       input.ultrathinkPromptControlled && descriptor.id === input.primarySelectDescriptorId
-        ? "Ultrathink"
+        ? "Ultrathink" // i18n-ignore: Claude keyword name
         : descriptor.type === "boolean"
-          ? `${descriptor.label} ${descriptor.currentValue === true ? "On" : "Off"}`
+          ? descriptor.currentValue === true
+            ? t("chat.traitsBooleanOn", { label: descriptor.label })
+            : t("chat.traitsBooleanOff", { label: descriptor.label })
           : getProviderOptionCurrentLabel(
               descriptor,
               input.modelSelection,
