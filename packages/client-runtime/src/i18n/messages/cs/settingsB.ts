@@ -1,6 +1,13 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const settingsB = {
+  customSearchInvalid:
+    "Zadejte URL s protokolem http nebo https obsahující %s. Do té doby se používá DuckDuckGo.",
+  customSearchHint: "Na místo hledaného textu vložte %s.",
+  customSearchUrl: "Vlastní URL vyhledávání",
+  browserSearchEngine: "Vyhledávač",
+  browserSearchReset: "vyhledávač",
+  browserSearchDescription: "Vyhledávač pro text zadaný do adresního řádku, který není URL.",
   browserKeybindingNotice:
     "Prohlížeč může některé zkratky zachytit dřív. Desktopová aplikace je dostane všechny.",
   customModelAddChoice: "Přidat volbu",

@@ -1,6 +1,14 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const settingsB = {
+  customSearchInvalid:
+    "Enter an http or https URL containing %s. Searches use DuckDuckGo until then.",
+  customSearchHint: "Use %s where the search terms go.",
+  customSearchUrl: "Custom search URL",
+  browserSearchEngine: "Search engine",
+  browserSearchReset: "search engine",
+  browserSearchDescription:
+    "What the address bar searches when you type something that isn't a URL.",
   browserKeybindingNotice:
     "The browser may claim some shortcuts first. The desktop app receives them all.",
   customModelAddChoice: "Add choice",

@@ -1,6 +1,8 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const shellRest = {
+  threadUnreadable:
+    "On another machine, so this machine's agent can't read it. Remove it or switch back to send.",
   justNow: "just now",
   justNowCompact: "now",
   ago: "ago",
@@ -64,10 +66,10 @@ export const shellRest = {
   createNewRef: 'Create new ref "{ref}"',
   searchRefs: "Search refs...",
   noRefsFound: "No refs found.",
-  startFromOrigin: "Start from origin",
-  startWorktreeFromOrigin: "Start worktree from origin",
+  startFromOrigin: "Start from remote",
+  startWorktreeFromOrigin: "Start worktree from remote",
   startWorktreeFromOriginHint:
-    "Creates the worktree from the latest matching branch on origin instead of your local branch.",
+    "Uses the latest commit of the base branch’s tracked remote branch, even if its name differs. Otherwise uses the same-named branch on origin. Uses your local branch if that remote branch is missing.",
   toggleMainSidebar: "Toggle main sidebar",
   toggleMainSidebarShortcut: "Toggle main sidebar ({shortcut})",
   settingsNavLabel: "Settings",

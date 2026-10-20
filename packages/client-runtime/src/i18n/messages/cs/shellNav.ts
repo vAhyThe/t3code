@@ -1,6 +1,17 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const shellNav = {
+  autoUpdatesUnavailable: "Automatické aktualizace nejsou v tomto sestavení dostupné.",
+  updatesUnavailable: "Aktualizace nejsou dostupné",
+  strandedThread:
+    "Agent na tomto počítači nemůže přečíst „{title}“. Odeberte vlákno nebo před odesláním přepněte zpět na {owner}.",
+  couldNotStartThread: "Vlákno se nepodařilo spustit",
+  attachedThreadOtherMachine: "Přiložené vlákno je na jiném počítači",
+  noMachineReadsThreads:
+    "Žádný počítač nemůže přečíst všechna přiložená vlákna. Vyberte počítač v editoru zprávy nebo vlákna odeberte.",
+  serverUpdate: "Aktualizace serveru",
+  pillFailed: "Selhalo",
+  showSubagent: "Zobrazit podagenta {name}",
   untitledThread: "Vlákno bez názvu",
   linkedThread: "Propojené vlákno",
   archivedThread: "Archivované vlákno",

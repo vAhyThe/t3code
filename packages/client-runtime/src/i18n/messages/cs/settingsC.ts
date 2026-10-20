@@ -1,6 +1,10 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const settingsC = {
+  renderMath: "Vykreslovat matematiku",
+  mathRenderingReset: "vykreslování matematiky",
+  mathRenderingDescription:
+    "Zobrazovat matematické vzorce LaTeX, například $x^2$, ve zprávách a náhledech Markdownu. V editoru zprávy zůstává zdrojový TeX upravitelný.",
   breadcrumbSettings: "Nastavení",
   breadcrumbAria: "Drobečková navigace nastavení",
   breadcrumbDiagnostics: "Diagnostika",
@@ -604,8 +608,8 @@ export const settingsC = {
   configureBackground: "Nastavit aktivitu na pozadí",
   projectsAndThreads: "Projekty a vlákna",
   worktreeFromOrigin:
-    "Vytvoří worktree z nejnovější odpovídající větve na origin místo lokální větve.",
-  startWorktreesFromOrigin: "Ve výchozím nastavení začínat nové worktree z origin",
+    "Použije nejnovější commit sledované vzdálené větve, i když má jiné jméno. Jinak použije stejnojmennou větev na originu. Pokud vzdálená větev chybí, použije místní větev.",
+  startWorktreesFromOrigin: "Ve výchozím nastavení zakládat nové worktree ze vzdálené větve",
   leaveEmptyHomeDir:
     "Nechte prázdné, aby se při otevření průzkumníka pro přidání projektu použilo „~/“.",
   mixed: "Smíšené",
@@ -677,7 +681,7 @@ export const settingsC = {
   labelProviderUpdateChecks: "kontroly aktualizací poskytovatelů",
   labelContinueAfterRestarts: "pokračování vláken po restartu",
   labelBackgroundActivity: "aktivita na pozadí",
-  labelWorktreesFromOrigin: "nové worktree z origin",
+  labelWorktreesFromOrigin: "nové worktree ze vzdálené větve",
   labelProjectBaseDir: "základní adresář projektu",
   labelUnpinConfirmation: "potvrzení odepnutí",
   labelArchiveConfirmation: "potvrzení archivace",
@@ -735,7 +739,7 @@ export const settingsC = {
   restoreProjectGrouping: "Seskupování projektů",
   restoreProactivePanels: "Proaktivní panely",
   restorePanelAnimations: "Animace panelů",
-  restoreWorktreesFromOrigin: "Nové worktree z origin",
+  restoreWorktreesFromOrigin: "Nové worktree ze vzdálené větve",
   restoreNewThreadMode: "Režim nového vlákna",
   restoreLanguage: "Jazyk",
   restoreKeepPrThreads: "Ponechat vlákna s PR",

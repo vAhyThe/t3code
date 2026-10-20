@@ -57,7 +57,7 @@ const PI_PRESENTATION = {
 } as const;
 
 const VERSION_PROBE_TIMEOUT_MS = 4_000;
-const PI_RPC_DISCOVERY_TIMEOUT_MS = 15_000;
+const PI_RPC_DISCOVERY_TIMEOUT_MS = 30_000;
 /**
  * get_entries arrived in 0.80.3 and agent_settled landed in source at 0.80.4.
  * Version 0.80.5 was the first published package containing both hooks.
@@ -87,9 +87,16 @@ function piModelsFromSettings(
   );
 }
 
-function parseDiscoveredModels(data: unknown, state: unknown): ReadonlyArray<ServerProviderModel> {
+function parseDiscoveredModels(
+  data: unknown,
+  state: unknown,
+): Result.Result<ReadonlyArray<ServerProviderModel>, PiRpcError> {
   const models = recordField(data, "models");
-  if (!Array.isArray(models)) return [];
+  if (!Array.isArray(models)) {
+    return Result.fail(
+      new PiRpcError({ operation: "get_available_models", detail: "Invalid model inventory" }),
+    );
+  }
   const activeModel = recordField(state, "model");
   const activeProvider = recordString(activeModel, "provider");
   const activeModelId = recordString(activeModel, "id");
@@ -98,7 +105,11 @@ function parseDiscoveredModels(data: unknown, state: unknown): ReadonlyArray<Ser
   for (const model of models) {
     const provider = recordString(model, "provider");
     const id = recordString(model, "id");
-    if (provider === undefined || id === undefined) continue;
+    if (provider === undefined || id === undefined || provider.trim() === "" || id.trim() === "") {
+      return Result.fail(
+        new PiRpcError({ operation: "get_available_models", detail: "Invalid model identity" }),
+      );
+    }
     const slug = `${provider}/${id}`;
     if (seen.has(slug)) continue;
     seen.add(slug);
@@ -115,7 +126,7 @@ function parseDiscoveredModels(data: unknown, state: unknown): ReadonlyArray<Ser
       ),
     });
   }
-  return parsed;
+  return Result.succeed(parsed);
 }
 
 const makePiDiscoveryConnection = Effect.fnUntraced(function* (
@@ -158,7 +169,7 @@ const discoverPiViaRpc = (
     const commandsData = yield* connection
       .request({ type: "get_commands" })
       .pipe(Effect.orElseSucceed(() => undefined));
-    const discoveredModels = parseDiscoveredModels(modelsData, stateData);
+    const discoveredModels = yield* Effect.fromResult(parseDiscoveredModels(modelsData, stateData));
     const { slashCommands, skills } = parsePiDiscoveredCommands(commandsData);
     return {
       models: discoveredModels,

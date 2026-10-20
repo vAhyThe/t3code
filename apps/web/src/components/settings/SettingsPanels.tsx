@@ -62,6 +62,7 @@ import { MobileAppSettingsRow } from "./MobileAppSettingsRow";
 import {
   canCheckForUpdate,
   getDesktopUpdateButtonTooltip,
+  getDesktopUpdateDisabledReason,
   getDesktopUpdateInstallConfirmationMessage,
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
@@ -397,8 +398,7 @@ function AboutVersionSection() {
           stackedThreadToast({
             type: "error",
             title: t("settingsC.couldNotChangeTrack"),
-            description:
-              error instanceof Error ? error.message : t("settingsC.trackChangeFailed"),
+            description: error instanceof Error ? error.message : t("settingsC.trackChangeFailed"),
           }),
         );
       })
@@ -514,7 +514,7 @@ function AboutVersionSection() {
   const description =
     action === "download" || action === "install"
       ? currentTranslator()("settingsC.updateAvailable")
-      : "Current version of the application.";
+      : (getDesktopUpdateDisabledReason(updateState) ?? "Current version of the application.");
 
   return (
     <>
@@ -648,6 +648,10 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.chatWidth !== DEFAULT_UNIFIED_SETTINGS.chatWidth
       ? [currentTranslator()("settingsC.restoreChatWidth")]
       : []),
+    ...(settings.chatWidth !== DEFAULT_UNIFIED_SETTINGS.chatWidth ? ["Chat width"] : []),
+    ...(settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled
+      ? [currentTranslator()("settingsC.renderMath")]
+      : []),
     ...(settings.panelAnimationDurationMs !== DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs
       ? [currentTranslator()("settingsC.restorePanelAnimations")]
       : []),
@@ -673,19 +677,16 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.sidebarThreadPreviewCount !== DEFAULT_UNIFIED_SETTINGS.sidebarThreadPreviewCount
       ? [currentTranslator()("settingsC.restoreVisibleThreads")]
       : []),
-    ...(settings.sidebarProjectGroupingMode !==
-    DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode
+    ...(settings.sidebarProjectGroupingMode !== DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode
       ? [currentTranslator()("settingsC.restoreProjectGrouping")]
       : []),
     ...(settings.sidebarProjectSortOrder !== DEFAULT_UNIFIED_SETTINGS.sidebarProjectSortOrder
       ? [currentTranslator()("settingsC.restoreProjectOrder")]
       : []),
-    ...(settings.sidebarWorkingShelfEnabled !==
-    DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled
+    ...(settings.sidebarWorkingShelfEnabled !== DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled
       ? [currentTranslator()("settingsC.restoreWorkingSection")]
       : []),
-    ...(settings.sidebarAutoSettleAfterDays !==
-    DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleAfterDays
+    ...(settings.sidebarAutoSettleAfterDays !== DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleAfterDays
       ? [currentTranslator()("settingsC.restoreAutoSettleInactive")]
       : []),
     ...(settings.sidebarAutoSettleKeepPullRequests !==
@@ -742,8 +743,7 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.responseStreamingMode !== DEFAULT_UNIFIED_SETTINGS.responseStreamingMode
       ? [currentTranslator()("settingsC.restoreResponseStreaming")]
       : []),
-    ...(settings.enableProviderUpdateChecks !==
-    DEFAULT_UNIFIED_SETTINGS.enableProviderUpdateChecks
+    ...(settings.enableProviderUpdateChecks !== DEFAULT_UNIFIED_SETTINGS.enableProviderUpdateChecks
       ? [currentTranslator()("settingsC.restoreProviderUpdateChecks")]
       : []),
     ...(settings.continueThreadsAfterServerUpdate !==
@@ -847,6 +847,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       chatWidth: DEFAULT_UNIFIED_SETTINGS.chatWidth,
       interfaceLanguage: DEFAULT_UNIFIED_SETTINGS.interfaceLanguage,
       displayCurrency: DEFAULT_UNIFIED_SETTINGS.displayCurrency,
+      mathRenderingEnabled: DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled,
       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
       notificationMode: DEFAULT_UNIFIED_SETTINGS.notificationMode,
       inAppNotificationsEnabled: DEFAULT_UNIFIED_SETTINGS.inAppNotificationsEnabled,
@@ -904,6 +905,8 @@ export function useSettingsRestore(onRestored?: () => void) {
       browserRecordingShowKeyPresses: DEFAULT_UNIFIED_SETTINGS.browserRecordingShowKeyPresses,
       browserRecordingShowMousePresses: DEFAULT_UNIFIED_SETTINGS.browserRecordingShowMousePresses,
       browserLinkTarget: DEFAULT_UNIFIED_SETTINGS.browserLinkTarget,
+      browserSearchEngine: DEFAULT_UNIFIED_SETTINGS.browserSearchEngine,
+      browserCustomSearchUrl: DEFAULT_UNIFIED_SETTINGS.browserCustomSearchUrl,
       browserAutoShowFloatingPreview: DEFAULT_UNIFIED_SETTINGS.browserAutoShowFloatingPreview,
       pullRequestLinksOpenInApp: DEFAULT_UNIFIED_SETTINGS.pullRequestLinksOpenInApp,
       enableAgentBrowserAccess: DEFAULT_UNIFIED_SETTINGS.enableAgentBrowserAccess,
@@ -1514,6 +1517,31 @@ export function AppearanceSettingsPanel() {
                 </SelectPopup>
               </Select>
             </div>
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("math-rendering")}
+          description={currentTranslator()("settingsC.mathRenderingDescription")}
+          resetAction={
+            settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled ? (
+              <SettingResetButton
+                label={currentTranslator()("settingsC.mathRenderingReset")}
+                onClick={() =>
+                  updateSettings({
+                    mathRenderingEnabled: DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.mathRenderingEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ mathRenderingEnabled: Boolean(checked) })
+              }
+              aria-label={currentTranslator()("settingsC.renderMath")}
+            />
           }
         />
       </SettingsSection>
@@ -3712,7 +3740,7 @@ export function ArchivedThreadsPanel() {
                   <Button
                     type="button"
                     variant="outline"
-                    size="xs"
+                    size="sm"
                     className="shrink-0"
                     onClick={() => {
                       void (async () => {

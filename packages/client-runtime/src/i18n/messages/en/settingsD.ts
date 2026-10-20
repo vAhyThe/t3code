@@ -51,7 +51,7 @@ export const settingsD = {
   searchBackgroundActivity: "Background activity",
   searchNewThreads: "New threads",
   searchWorktreeSubmodules: "Submodules",
-  searchStartFromOrigin: "Start from origin",
+  searchStartFromOrigin: "Start from remote",
   searchAddProjectStartsIn: "Add project starts in",
   searchUnpinConfirmation: "Unpin confirmation",
   searchArchiveConfirmation: "Archive confirmation",

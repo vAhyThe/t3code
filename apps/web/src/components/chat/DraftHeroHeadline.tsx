@@ -40,6 +40,7 @@ import {
 } from "../ui/combobox";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { InlineButton } from "../ui/button";
+import { DraftProjectName } from "./DraftProjectName";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import { useT } from "~/i18n/I18nProvider";
 import { Trans } from "~/i18n/Trans";
@@ -256,15 +257,18 @@ export function DraftHeroHeadline({
             <ComboboxTrigger
               render={<InlineButton tone="picker" />}
               data-draft-project-trigger=""
-              className="pointer-events-auto max-w-64 align-baseline"
+              // Leaves room for the trailing "?" so a truncated name keeps it on its line.
+              className="pointer-events-auto max-w-[calc(100%-1em)] align-baseline"
             />
           }
         >
-          <span className="min-w-0 truncate">
-            {isScratchDraft
-              ? t("chat.draftHeroNoProject")
-              : (activeProjectDisplayName ?? t("chat.draftHeroChooseProject"))}
-          </span>
+          <DraftProjectName
+            value={
+              isScratchDraft
+                ? t("chat.draftHeroNoProject")
+                : (activeProjectDisplayName ?? t("chat.draftHeroChooseProject"))
+            }
+          />
         </TooltipTrigger>
         {activeProjectDisplayName && !isScratchDraft ? (
           <TooltipPopup side="top">{activeProjectDisplayName}</TooltipPopup>
@@ -289,8 +293,8 @@ export function DraftHeroHeadline({
                   <ProjectFavicon project={entry.group} className="size-4 shrink-0" />
                 ) : null}
                 <Tooltip>
-                  <TooltipTrigger render={<span className="min-w-0 flex-1 truncate text-sm" />}>
-                    {item.label}
+                  <TooltipTrigger render={<span className="min-w-0 flex-1 text-sm" />}>
+                    <DraftProjectName value={item.label} />
                   </TooltipTrigger>
                   <TooltipPopup side="top">{item.label}</TooltipPopup>
                 </Tooltip>
@@ -316,16 +320,6 @@ export function DraftHeroHeadline({
       {activeProjectTitle ?? t("chat.draftHeroAddAProject")}
     </button>
   );
-
-  const headingLabel = isScratchDraft
-    ? t("chat.draftHeroWorkOnQuestion")
-    : hasResolvedProject
-      ? t("chat.draftHeroBuildInQuestionLabel", { project: activeProjectDisplayName ?? "" })
-      : canChooseProject
-        ? t("chat.draftHeroToStartLabel", {
-            project: activeProjectDisplayName ?? t("chat.draftHeroChooseProject"),
-          })
-        : t("chat.draftHeroAddProjectToStart");
 
   const noProjectShortcut = shortcutLabelForCommand(keybindings, "chat.newWithoutProject");
   const orStartWithoutProject =
@@ -354,16 +348,16 @@ export function DraftHeroHeadline({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
-      <h1
-        aria-label={headingLabel}
-        className="w-full text-center font-normal text-2xl text-foreground tracking-tight sm:text-3xl"
-      >
+      {/* An explicit heading label hides the inline project picker in NVDA browse mode. */}
+      <h1 className="w-full text-center font-normal text-2xl text-foreground tracking-tight sm:text-3xl">
         {isScratchDraft ? (
           <>{t("chat.draftHeroWorkOnQuestion")}</>
         ) : hasResolvedProject ? (
           <Trans
             k="chat.draftHeroBuildInQuestion"
-            components={{ project: () => projectSelector }}
+            components={{
+              project: () => <span className="whitespace-nowrap">{projectSelector}</span>,
+            }}
           />
         ) : canChooseProject ? (
           <Trans k="chat.draftHeroToStart" components={{ project: () => projectSelector }} />
@@ -373,7 +367,7 @@ export function DraftHeroHeadline({
       </h1>
       {}
       {scratchWorkspaceRoot === null ? null : (
-        <p className="mt-2 flex h-6 items-center text-sm">
+        <p className="mt-2 flex h-6 w-full items-center justify-center text-sm">
           {isScratchDraft ? projectSelector : orStartWithoutProject}
         </p>
       )}

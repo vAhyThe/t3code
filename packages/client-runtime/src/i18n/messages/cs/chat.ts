@@ -1,6 +1,23 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const chat = {
+  workflowShowScript: "Zobrazit celý skript",
+  workflowShowLess: "Zobrazit méně",
+  workflowOpen: "Otevřít {title}",
+  workflowPhase: "Fáze {title}",
+  workflowStartedTitle: "Pracovní postup spuštěn: {title}",
+  workflowStarted: "Pracovní postup spuštěn",
+  scrollInlineEquation: "Posunout rovnici v textu",
+  scrollDisplayEquation: "Posunout samostatnou rovnici",
+  inlineEquation: "Rovnice v textu",
+  displayEquation: "Samostatná rovnice",
+  pdfDocument: "Dokument PDF",
+  tokenUnit: "tokenů",
+  couldNotChangeResume: "Automatické pokračování se nepodařilo změnit",
+  couldNotSnooze: "Vlákno se nepodařilo odložit",
+  contextCompacted: "Kontext zkomprimován",
+  markdownRelativePath: "Relativní cesta",
+  markdownFullPath: "Úplná cesta",
   promptHiddenCharactersTitle: "Tento prompt obsahoval skryté znaky a může být škodlivý",
   promptHiddenCharactersDescription: {
     one: "T3 Code odstranil {count} skrytý znak. Před odesláním si prompt přečtěte.",

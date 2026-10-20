@@ -1,6 +1,12 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const shellDevice = {
+  deviceDiscoveryWarning: "Upozornění při hledání zařízení · {label}",
+  usingResetCredit: "Používá se kredit pro obnovení…",
+  evenPace: "Rovnoměrné tempo",
+  dismissDeviceWarning: "Zavřít upozornění zařízení",
+  starting: "Spouští se",
+  usagePoolPaceSuffix: ", zbývá {timeLeft} % časového okna",
   browserResponsive: "Responzivní",
   browserDeviceToolbar: "Panel zařízení prohlížeče",
   browserDimensions: "Rozměry",

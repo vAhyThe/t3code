@@ -1,6 +1,15 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const pullRequest = {
+  diffLoadFailedDescription:
+    "The environment couldn't load this pull request's diff. Try again, or view the changes on {providerName}.",
+  diffChangesLoadFailed: "Couldn't load the changes",
+  diffRateLimitedDescription:
+    "{providerName} is temporarily limiting requests, so this diff couldn't be loaded. Try again after the limit resets, or view the changes on {providerName}.",
+  diffRateLimited: "{providerName} rate limit reached",
+  diffTechnicalDetails: "Technical details",
+  diffOpenOn: "Open on {providerName}",
+  diffRetry: "Try again",
   diffLoading: "Loading diff…",
   diffRetryLoading: "Retry loading diff",
   diffPartialPreview: "Partial diff preview",

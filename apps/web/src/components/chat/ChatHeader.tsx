@@ -79,7 +79,9 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenProjectSettings,
 }: ChatHeaderProps) {
   const t = useT();
-  const activeProjectName = activeProject?.title;
+  const activeProjectName = activeProject?.isScratch
+    ? t("chat.draftHeroNoProject")
+    : activeProject?.title;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);
   const breadcrumbContainerRef = useRef<HTMLDivElement>(null);
@@ -245,10 +247,13 @@ export const ChatHeader = memo(function ChatHeader({
       const api = readLocalApi();
       if (!api) return;
       void api.contextMenu
-        .show([{ id: "project-settings", label: t("chat.headerProjectSettings"), icon: "settings" }], {
-          x: event.clientX,
-          y: event.clientY,
-        })
+        .show(
+          [{ id: "project-settings", label: t("chat.headerProjectSettings"), icon: "settings" }],
+          {
+            x: event.clientX,
+            y: event.clientY,
+          },
+        )
         .then((action) => {
           if (action === "project-settings") onOpenProjectSettings?.();
         });

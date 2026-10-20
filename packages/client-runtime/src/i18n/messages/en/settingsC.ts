@@ -1,6 +1,10 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const settingsC = {
+  renderMath: "Render math",
+  mathRenderingReset: "math rendering",
+  mathRenderingDescription:
+    "Typeset LaTeX math, such as $x^2$ or \\[x^2\\], in messages and Markdown previews. The composer keeps TeX source editable.",
   breadcrumbSettings: "Settings",
   breadcrumbAria: "Settings breadcrumb",
   breadcrumbDiagnostics: "Diagnostics",
@@ -573,8 +577,8 @@ export const settingsC = {
   configureBackground: "Configure background activity",
   projectsAndThreads: "Projects & threads",
   worktreeFromOrigin:
-    "Creates the worktree from the latest matching branch on origin instead of your local branch.",
-  startWorktreesFromOrigin: "Start new worktrees from origin by default",
+    "Uses the latest commit of the base branch’s tracked remote branch, even if its name differs. Otherwise uses the same-named branch on origin. Uses your local branch if that remote branch is missing.",
+  startWorktreesFromOrigin: "Start new worktrees from remote by default",
   leaveEmptyHomeDir: 'Leave empty to use "~/" when the Add Project browser opens.',
   mixed: "Mixed",
   addProjectBaseDir: "Add project base directory",
@@ -643,7 +647,7 @@ export const settingsC = {
   labelProviderUpdateChecks: "provider update checks",
   labelContinueAfterRestarts: "continue threads after restarts",
   labelBackgroundActivity: "background activity",
-  labelWorktreesFromOrigin: "new worktrees start from origin",
+  labelWorktreesFromOrigin: "new worktrees start from remote",
   labelProjectBaseDir: "add project base directory",
   labelUnpinConfirmation: "unpin confirmation",
   labelArchiveConfirmation: "archive confirmation",
@@ -699,7 +703,7 @@ export const settingsC = {
   restoreProjectGrouping: "Project Grouping",
   restoreProactivePanels: "Proactive panels",
   restorePanelAnimations: "Panel animations",
-  restoreWorktreesFromOrigin: "New worktrees start from origin",
+  restoreWorktreesFromOrigin: "New worktrees start from remote",
   restoreNewThreadMode: "New thread mode",
   restoreLanguage: "Language",
   restoreKeepPrThreads: "Keep threads with a PR",

@@ -274,6 +274,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["wide full width column layout messages composer monitor"],
   },
   {
+    id: "math-rendering",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Render math",
+    titleKey: "settingsC.renderMath",
+    to: "/settings/appearance",
+    searchTerms: ["latex tex katex equations formulas markdown"],
+  },
+  {
     id: "panel-animations",
     // i18n-ignore: English search source, shown through titleKey
     title: "Panel animations",
@@ -589,11 +597,11 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "start-from-origin",
     // i18n-ignore: English search source, shown through titleKey
-    title: "Start from origin",
+    title: "Start from remote",
     titleKey: "settingsD.searchStartFromOrigin",
     to: "/settings/general",
     scope: "project-defaults",
-    searchTerms: ["new worktrees latest matching remote branch local"],
+    searchTerms: ["new worktrees start remote origin latest fetched branch local"],
   },
   {
     id: "add-project-starts-in",
@@ -951,6 +959,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     titleKey: "settingsD.searchBrowserLinkTarget",
     to: "/settings/integrations",
     searchTerms: ["links default browser in-app browser external open"],
+  },
+  {
+    id: "browser-search-engine",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Search engine",
+    titleKey: "settingsB.browserSearchEngine",
+    to: "/settings/integrations",
+    searchTerms: ["address bar duckduckgo google bing brave kagi ecosia custom"],
   },
   {
     id: "pull-request-links-open-in-app",

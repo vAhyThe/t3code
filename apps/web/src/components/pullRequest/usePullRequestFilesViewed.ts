@@ -111,6 +111,7 @@ export function usePullRequestFilesViewed(options: {
             type: "error",
             title: currentTranslator()("pullRequest.filesViewedUpdateFailed"),
           });
+          refresh();
         }
         return;
       }

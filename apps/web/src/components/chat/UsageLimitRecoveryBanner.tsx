@@ -6,6 +6,7 @@ import {
 import { GaugeIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { toastManager } from "../ui/toast";
 import type { ComposerBannerStackItem } from "./ComposerBannerStack";
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
@@ -38,7 +39,6 @@ export function usageLimitRecoveryBannerItem(props: RecoveryProps): ComposerBann
 function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: RecoveryProps) {
   const t = useT();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     const delay = Date.parse(resetAt ?? "") - Math.max(nowMs, Date.now());
@@ -59,12 +59,15 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
   async function toggle(action: "resume" | "snooze") {
     if (resetAt === null) return;
     if (action === "snooze" && !snoozed && Date.parse(resetAt) <= Date.now()) {
-      setError(currentTranslator()("chat.usageLimitRecoveryResetPassed"));
+      toastManager.add({
+        type: "error",
+        title: currentTranslator()("chat.couldNotSnooze"),
+        description: currentTranslator()("chat.usageLimitRecoveryResetPassed"),
+      });
       setNowMs(Date.now());
       return;
     }
     setPending(true);
-    setError(null);
     try {
       await onChange({
         runId,
@@ -72,16 +75,22 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
         ...(action === "resume" ? { autoResume: !scheduled } : { snooze: !snoozed }),
       });
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : currentTranslator()("chat.usageLimitRecoveryChangeFailed"),
-      );
+      toastManager.add({
+        type: "error",
+        title:
+          action === "resume"
+            ? currentTranslator()("chat.couldNotChangeResume")
+            : currentTranslator()("chat.couldNotSnooze"),
+        description:
+          cause instanceof Error ? cause.message : currentTranslator()("shellRest.genericError"),
+      });
     }
     setPending(false);
   }
+  // Failures go to a toast: the actions column is auto-sized, so inline error
+  // text would widen it and crush the title.
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       <Button size="xs" variant="ghost" disabled={pending} onClick={() => void toggle("resume")}>
         {pending
           ? t("chat.usageLimitRecoverySaving")
@@ -99,11 +108,6 @@ function RecoveryActions({ runId, resetAt, recovery, snoozedUntil, onChange }: R
           {pending ? t("chat.usageLimitRecoverySaving") : t("chat.usageLimitRecoverySnooze")}
         </Button>
       ) : null}
-      {error ? (
-        <p role="alert" className="basis-full text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    </>
   );
 }

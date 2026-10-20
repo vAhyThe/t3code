@@ -1,6 +1,8 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const shellRest = {
+  threadUnreadable:
+    "Vlákno je na jiném počítači a zdejší agent ho nemůže přečíst. Odeberte ho nebo před odesláním přepněte zpět.",
   justNow: "právě teď",
   justNowCompact: "teď",
   ago: "před",
@@ -68,10 +70,10 @@ export const shellRest = {
   createNewRef: 'Vytvořit novou referenci "{ref}"',
   searchRefs: "Hledat reference...",
   noRefsFound: "Žádné reference nenalezeny.",
-  startFromOrigin: "Začít z originu",
-  startWorktreeFromOrigin: "Začít worktree z originu",
+  startFromOrigin: "Začít ze vzdálené větve",
+  startWorktreeFromOrigin: "Začít worktree ze vzdálené větve",
   startWorktreeFromOriginHint:
-    "Vytvoří worktree z nejnovější odpovídající větve na originu místo vaší lokální větve.",
+    "Použije nejnovější commit sledované vzdálené větve, i když má jiné jméno. Jinak použije stejnojmennou větev na originu. Pokud vzdálená větev chybí, použije místní větev.",
   toggleMainSidebar: "Přepnout hlavní postranní panel",
   toggleMainSidebarShortcut: "Přepnout hlavní postranní panel ({shortcut})",
   settingsNavLabel: "Nastavení",

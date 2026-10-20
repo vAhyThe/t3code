@@ -51,7 +51,7 @@ export const settingsD = {
   searchBackgroundActivity: "Činnost na pozadí",
   searchNewThreads: "Nová vlákna",
   searchWorktreeSubmodules: "Submoduly",
-  searchStartFromOrigin: "Začít z origin",
+  searchStartFromOrigin: "Začít ze vzdálené větve",
   searchAddProjectStartsIn: "Přidaný projekt se otevře v",
   searchUnpinConfirmation: "Potvrzení odepnutí",
   searchArchiveConfirmation: "Potvrzení archivace",

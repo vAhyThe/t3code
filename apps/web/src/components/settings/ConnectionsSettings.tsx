@@ -47,6 +47,7 @@ import {
   RelayConnectionRegistration,
   RelayConnectionTarget,
   connectionRoutes,
+  hasSavedBearerRoute,
   connectionStatusText,
   environmentMcpUrl,
 } from "@t3tools/client-runtime/connection";
@@ -69,6 +70,7 @@ import {
   canRevokeOtherClients,
   isQrShareableEndpoint,
   isWslSettingsRowVisible,
+  missingTailscaleEndpointDescription,
   selectQrEndpointOption,
   togglePairingScopeSelection,
 } from "./ConnectionsSettings.logic";
@@ -1078,7 +1080,10 @@ const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHeaderActio
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsCreatePairingUrlFailed");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsCreatePairingUrlFailed");
       toastManager.add(
         stackedThreadToast({
           type: "error",
@@ -1517,6 +1522,7 @@ function SavedBackendListRow({
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const environmentId = environment.environmentId;
   const unsupported = environment.connection.phase === "unsupported";
+  const blocked = unsupported && !hasSavedBearerRoute(environment.entry);
   const enabled = environment.entry.enabled && !unsupported;
   const isConnected = environment.connection.phase === "connected";
   const isRemoving = removingEnvironmentId === environmentId;
@@ -1767,7 +1773,7 @@ function SavedBackendListRow({
             <Switch
               size="sm"
               checked={enabled}
-              disabled={isRemoving || unsupported}
+              disabled={isRemoving || blocked}
               aria-label={
                 enabled
                   ? t("settingsA.connectionsSwitchOffAria", { name: environment.label })
@@ -1778,7 +1784,7 @@ function SavedBackendListRow({
           }
         />
         <TooltipPopup side="top">
-          {unsupported
+          {blocked
             ? t("settingsA.connectionsStatusUnsupported")
             : enabled
               ? t("settingsA.connectionsSwitchOff")
@@ -2160,7 +2166,7 @@ export function ConnectionsSettings() {
   const loadBalancingEnvironments = [
     ...(primaryEnvironment ? [primaryEnvironment] : []),
     ...savedEnvironments.filter((environment) => environment.entry.enabled),
-  ];
+  ].filter((environment) => environment.connection.phase !== "unsupported");
   const savedDesktopSshEnvironmentKeys = (() => {
     const keys = new Set<string>();
     for (const environment of savedEnvironments) {
@@ -2363,7 +2369,10 @@ export function ConnectionsSettings() {
       setIsDesktopServerExposureDialogOpen(false);
       setIsUpdatingDesktopServerExposure(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedUpdateExposure");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedUpdateExposure");
       setIsDesktopServerExposureDialogOpen(false);
       setDesktopServerExposureMutationError(message);
       toastManager.add(
@@ -2445,7 +2454,10 @@ export function ConnectionsSettings() {
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedDisableTailscale");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedDisableTailscale");
       setDesktopServerExposureMutationError(message);
       toastManager.add(
         stackedThreadToast({
@@ -2475,7 +2487,10 @@ export function ConnectionsSettings() {
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedRevokePairingLink");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedRevokePairingLink");
       setDesktopAccessManagementMutationError(message);
       toastManager.add(
         stackedThreadToast({
@@ -2503,7 +2518,10 @@ export function ConnectionsSettings() {
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedRevokeClient");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedRevokeClient");
       setDesktopAccessManagementMutationError(message);
       toastManager.add(
         stackedThreadToast({
@@ -2536,7 +2554,10 @@ export function ConnectionsSettings() {
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedRevokeOthers");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedRevokeOthers");
       setDesktopAccessManagementMutationError(message);
       toastManager.add(
         stackedThreadToast({
@@ -2573,7 +2594,9 @@ export function ConnectionsSettings() {
     setAddBackendDialogOpen(false);
     toastManager.add({
       type: "success",
-      title: routeTarget ? currentTranslator()("settingsA.connectionsRouteAdded") : currentTranslator()("settingsA.connectionsEnvironmentConnected"),
+      title: routeTarget
+        ? currentTranslator()("settingsA.connectionsRouteAdded")
+        : currentTranslator()("settingsA.connectionsEnvironmentConnected"),
       description: routeTarget
         ? currentTranslator()("settingsA.connectionsRouteReachableOverSsh", {
             label: routeTarget.label,
@@ -2773,7 +2796,10 @@ export function ConnectionsSettings() {
     setRemovingSavedEnvironmentId(null);
     if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedRemoveBackend");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedRemoveBackend");
       setSavedBackendError(message);
       toastManager.add(
         stackedThreadToast({
@@ -3167,7 +3193,10 @@ export function ConnectionsSettings() {
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
-      const message = error instanceof Error ? error.message : currentTranslator()("settingsA.connectionsFailedUpdateWsl");
+      const message =
+        error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.connectionsFailedUpdateWsl");
       setDesktopWslMutationError(message);
       toastManager.add(
         stackedThreadToast({
@@ -3407,7 +3436,7 @@ export function ConnectionsSettings() {
           ? tailscaleHttpsEndpoint.status === "available"
             ? tailscaleHttpsEndpoint.httpBaseUrl
             : t("settingsA.connectionsTailscaleServeHint")
-          : t("settingsA.connectionsTailscaleStartHint")
+          : missingTailscaleEndpointDescription(desktopServerExposureState)
       }
       control={
         tailscaleHttpsEndpoint ? (

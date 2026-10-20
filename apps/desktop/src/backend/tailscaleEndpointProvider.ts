@@ -3,9 +3,10 @@ import type { AdvertisedEndpoint, AdvertisedEndpointProvider } from "@t3tools/co
 import {
   buildTailscaleHttpsBaseUrl,
   isTailscaleIpv4Address,
-  parseTailscaleMagicDnsName,
+  parseTailscaleStatus,
   probeTailscaleHttpsEndpoint,
   readTailscaleStatus,
+  type TailscaleStatus,
 } from "@t3tools/tailscale";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -28,17 +29,32 @@ function resolveTailscaleIpAdvertisedEndpoints(input: {
   readonly port: number;
   readonly networkInterfaces: NetworkInterfaces;
   readonly translate: Translate;
+  readonly status: TailscaleStatus | null;
 }): readonly AdvertisedEndpoint[] {
   const seen = new Set<string>();
   const endpoints: AdvertisedEndpoint[] = [];
 
-  for (const interfaceAddresses of Object.values(input.networkInterfaces)) {
+  for (const [interfaceName, interfaceAddresses] of Object.entries(input.networkInterfaces)) {
     if (!interfaceAddresses) continue;
+
+    // CGNAT space is shared with other VPNs. Native adapter identity also
+    // works when the CLI is missing or its cached status predates a connection.
+    const isTailscaleInterface =
+      /^tailscale(?:\d+|ipv[46])?$/iu.test(interfaceName) ||
+      interfaceAddresses.some(
+        (address) =>
+          !address.internal &&
+          address.family === "IPv6" &&
+          /^fd7a:115c:a1e0:/iu.test(address.address),
+      );
 
     for (const address of interfaceAddresses) {
       if (address.internal) continue;
       if (address.family !== "IPv4") continue;
       if (!isTailscaleIpv4Address(address.address)) continue;
+      if (!isTailscaleInterface && !input.status?.tailnetIpv4Addresses.includes(address.address)) {
+        continue;
+      }
       if (seen.has(address.address)) continue;
       seen.add(address.address);
 
@@ -108,8 +124,8 @@ export const resolveTailscaleAdvertisedEndpoints = Effect.fn("resolveTailscaleAd
     readonly servePort?: number;
     readonly networkInterfaces: NetworkInterfaces;
     readonly statusJson?: string | null;
-    readonly readMagicDnsName?: Effect.Effect<
-      string | null,
+    readonly readStatus?: Effect.Effect<
+      TailscaleStatus | null,
       never,
       ChildProcessSpawner.ChildProcessSpawner
     >;
@@ -122,23 +138,17 @@ export const resolveTailscaleAdvertisedEndpoints = Effect.fn("resolveTailscaleAd
     ChildProcessSpawner.ChildProcessSpawner | HttpClient.HttpClient
   > {
     const translate = input.translate ?? createTranslator("en");
-    const ipEndpoints = resolveTailscaleIpAdvertisedEndpoints({ ...input, translate });
-    const readDnsName =
-      input.readMagicDnsName ??
-      readTailscaleStatus.pipe(
-        Effect.map((status) => status.magicDnsName),
-        Effect.orElseSucceed((): string | null => null),
-      );
-    const dnsName =
+    const readStatus =
+      input.readStatus ?? readTailscaleStatus.pipe(Effect.orElseSucceed(() => null));
+    const status =
       input.statusJson === undefined
-        ? yield* readDnsName
+        ? yield* readStatus
         : input.statusJson
-          ? yield* parseTailscaleMagicDnsName(input.statusJson).pipe(
-              Effect.orElseSucceed(() => null),
-            )
+          ? yield* parseTailscaleStatus(input.statusJson).pipe(Effect.orElseSucceed(() => null))
           : null;
+    const ipEndpoints = resolveTailscaleIpAdvertisedEndpoints({ ...input, status, translate });
     const magicDnsEndpoint = yield* resolveTailscaleMagicDnsAdvertisedEndpoint({
-      dnsName,
+      dnsName: status?.magicDnsName ?? null,
       translate,
       serveEnabled: input.serveEnabled === true,
       ...(input.servePort === undefined ? {} : { servePort: input.servePort }),

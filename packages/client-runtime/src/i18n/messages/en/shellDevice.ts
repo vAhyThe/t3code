@@ -1,6 +1,12 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const shellDevice = {
+  deviceDiscoveryWarning: "Device discovery warning · {label}",
+  usingResetCredit: "Using reset credit…",
+  evenPace: "Even pace",
+  dismissDeviceWarning: "Dismiss device warning",
+  starting: "Starting",
+  usagePoolPaceSuffix: ", {timeLeft}% of the window left",
   browserResponsive: "Responsive",
   browserDeviceToolbar: "Browser device toolbar",
   browserDimensions: "Dimensions",

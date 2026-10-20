@@ -1,6 +1,23 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const chat = {
+  workflowShowScript: "Show full script",
+  workflowShowLess: "Show less",
+  workflowOpen: "Open {title}",
+  workflowPhase: "{title} phase",
+  workflowStartedTitle: "Workflow started: {title}",
+  workflowStarted: "Workflow started",
+  scrollInlineEquation: "Scroll inline equation",
+  scrollDisplayEquation: "Scroll display equation",
+  inlineEquation: "Inline equation",
+  displayEquation: "Display equation",
+  pdfDocument: "PDF document",
+  tokenUnit: "tokens",
+  couldNotChangeResume: "Could not change auto-resume",
+  couldNotSnooze: "Could not snooze thread",
+  contextCompacted: "Context compacted",
+  markdownRelativePath: "Relative path",
+  markdownFullPath: "Full path",
   promptHiddenCharactersTitle: "This prompt had hidden characters, it may be malicious",
   promptHiddenCharactersDescription: {
     one: "T3 Code removed {count} hidden character. Read the prompt before you send it.",

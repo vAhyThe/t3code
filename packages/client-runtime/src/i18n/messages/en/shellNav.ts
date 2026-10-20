@@ -1,6 +1,17 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const shellNav = {
+  autoUpdatesUnavailable: "Automatic updates are not available in this build.",
+  updatesUnavailable: "Updates unavailable",
+  strandedThread:
+    "This machine's agent can't read \"{title}\". Remove it, or switch back to {owner} to send.",
+  couldNotStartThread: "Could not start thread",
+  attachedThreadOtherMachine: "Attached thread is on another machine",
+  noMachineReadsThreads:
+    "No machine can read every attached thread. Choose a machine in the composer or remove the threads.",
+  serverUpdate: "Server update",
+  pillFailed: "Failed",
+  showSubagent: "Show subagent {name}",
   untitledThread: "Untitled thread",
   linkedThread: "Linked thread",
   archivedThread: "Archived thread",

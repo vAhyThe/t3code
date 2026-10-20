@@ -1,6 +1,15 @@
 import type { CzechNamespace } from "../en/index.ts";
 
 export const pullRequest = {
+  diffLoadFailedDescription:
+    "Prostředí nemohlo načíst změny tohoto pull requestu. Zkuste to znovu nebo si změny zobrazte na {providerName}.",
+  diffChangesLoadFailed: "Změny se nepodařilo načíst",
+  diffRateLimitedDescription:
+    "Služba {providerName} dočasně omezuje požadavky, a proto se změny nepodařilo načíst. Zkuste to po obnovení limitu nebo si změny zobrazte na {providerName}.",
+  diffRateLimited: "Dosažen limit požadavků na {providerName}",
+  diffTechnicalDetails: "Technické podrobnosti",
+  diffOpenOn: "Otevřít na {providerName}",
+  diffRetry: "Zkusit znovu",
   diffLoading: "Načítání diffu…",
   diffRetryLoading: "Zkusit načíst diff znovu",
   diffPartialPreview: "Částečný náhled diffu",
