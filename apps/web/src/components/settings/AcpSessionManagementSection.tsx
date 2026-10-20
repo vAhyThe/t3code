@@ -46,6 +46,34 @@ function reportFailure(title: string, result: AtomCommandResult<unknown, unknown
   });
 }
 
+function parseProviderHeaders(
+  text: string,
+):
+  | { readonly ok: true; readonly headers: Record<string, string> | undefined }
+  | { readonly ok: false; readonly error: string } {
+  if (text.trim().length === 0) return { ok: true, headers: undefined };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error
+          ? error.message
+          : currentTranslator()("settingsA.acpHeadersMustBeValidJson"),
+    };
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    Array.isArray(parsed) ||
+    !Object.values(parsed).every((value) => typeof value === "string")
+  ) {
+    return { ok: false, error: currentTranslator()("settingsA.acpHeadersMustBeObject") };
+  }
+  return { ok: true, headers: parsed as Record<string, string> };
+}
+
 export function AcpSessionManagementSection(props: {
   readonly environmentId: EnvironmentId;
   readonly instanceId: ProviderInstanceId;
@@ -226,29 +254,16 @@ export function AcpSessionManagementSection(props: {
       return;
     const draft = providerDrafts[provider.providerId];
     if (draft === undefined || draft.apiType.length === 0 || draft.baseUrl.length === 0) return;
-    let headers: Record<string, string> | undefined;
-    if (draft.headers.trim().length > 0) {
-      try {
-        const parsed: unknown = JSON.parse(draft.headers);
-        if (
-          typeof parsed !== "object" ||
-          parsed === null ||
-          Array.isArray(parsed) ||
-          !Object.values(parsed).every((value) => typeof value === "string")
-        ) {
-          throw new Error(t("settingsA.acpHeadersMustBeObject"));
-        }
-        headers = parsed as Record<string, string>;
-      } catch (error) {
-        toastManager.add({
-          type: "error",
-          title: t("settingsA.acpInvalidProviderHeaders"),
-          description:
-            error instanceof Error ? error.message : t("settingsA.acpHeadersMustBeValidJson"),
-        });
-        return;
-      }
+    const parsedHeaders = parseProviderHeaders(draft.headers);
+    if (!parsedHeaders.ok) {
+      toastManager.add({
+        type: "error",
+        title: t("settingsA.acpInvalidProviderHeaders"),
+        description: parsedHeaders.error,
+      });
+      return;
     }
+    const headers = parsedHeaders.headers;
     setSavingProviderId(provider.providerId);
     const result = await setProvider({
       environmentId: props.environmentId,

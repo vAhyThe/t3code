@@ -2,7 +2,7 @@ import type { Translate } from "@t3tools/client-runtime/i18n";
 import { useT } from "~/i18n/I18nProvider";
 import { useAuth, useClerk } from "@clerk/react";
 import { readConnectAuthorizeRequest } from "@t3tools/shared/connectAuth";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   buildConnectCliClerkAuthorizeUrl,
@@ -41,12 +41,6 @@ function invalidLinkMessage(t: Translate) {
   };
 }
 
-/**
- * /connect: the URL the CLI prints for the loopback flow. Waits for a Clerk
- * session, then forwards the CLI's PKCE request to Clerk's authorize endpoint
- * with the loopback redirect URI so the code returns straight to the waiting
- * CLI. Headless hosts use Clerk's device authorization page instead.
- */
 export function ConnectCliAuthorizeSurface() {
   const t = useT();
   const [request] = useState(() => readConnectAuthorizeRequest(new URL(window.location.href)));
@@ -55,7 +49,7 @@ export function ConnectCliAuthorizeSurface() {
   const signInOpened = useRef(false);
   const redirecting = useRef(false);
 
-  const openSignIn = useCallback(() => {
+  const openSignIn = () => {
     if (!request) {
       return;
     }
@@ -65,7 +59,8 @@ export function ConnectCliAuthorizeSurface() {
         isElectron,
       ),
     );
-  }, [clerk, request]);
+  };
+  const openSignInOnLoad = useEffectEvent(openSignIn);
 
   useEffect(() => {
     if (!request || !isLoaded || redirecting.current) {
@@ -74,7 +69,7 @@ export function ConnectCliAuthorizeSurface() {
     if (!isSignedIn) {
       if (!signInOpened.current) {
         signInOpened.current = true;
-        openSignIn();
+        openSignInOnLoad();
       }
       return;
     }
@@ -84,7 +79,7 @@ export function ConnectCliAuthorizeSurface() {
     }
     redirecting.current = true;
     window.location.assign(authorizeUrl);
-  }, [isLoaded, isSignedIn, openSignIn, request]);
+  }, [isLoaded, isSignedIn, request]);
 
   if (!request) {
     return (

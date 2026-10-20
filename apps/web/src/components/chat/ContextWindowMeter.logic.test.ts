@@ -303,7 +303,12 @@ describe("shouldReserveContextWindowMeter", () => {
 
 describe("formatContextWindowCost", () => {
   it("keeps ordinary and sub-cent ACP costs readable", () => {
-    expect(formatContextWindowCost({ amount: 0.42, currency: "USD" })).toBe("USD 0.42");
-    expect(formatContextWindowCost({ amount: 0.0042, currency: "USD" })).toBe("USD 0.0042");
+    expect(formatContextWindowCost({ amount: 0.42, currency: "USD" }, null)).toBe("USD 0.42");
+    expect(formatContextWindowCost({ amount: 0.0042, currency: "USD" }, null)).toBe("USD 0.0042");
+  });
+
+  it("converts only USD costs when a CZK rate is given", () => {
+    expect(formatContextWindowCost({ amount: 0.42, currency: "USD" }, 21.622)).toBe("9,08\u00a0Kč");
+    expect(formatContextWindowCost({ amount: 0.42, currency: "EUR" }, 21.622)).toBe("EUR 0.42");
   });
 });

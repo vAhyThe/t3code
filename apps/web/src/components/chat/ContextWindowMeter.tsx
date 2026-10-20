@@ -8,6 +8,7 @@ import {
 import { Minimize2Icon } from "lucide-react";
 import { composerFloatingLayerProps } from "./composerEventScope";
 import { useT } from "~/i18n/I18nProvider";
+import { useDisplayCzkPerUsd } from "~/hooks/useFormatMoney";
 
 function formatPercentage(value: number | null): string | null {
   if (value === null || !Number.isFinite(value)) {
@@ -27,6 +28,7 @@ export function ContextWindowMeter(props: {
   compactDisabledReason?: string | null | undefined;
 }) {
   const t = useT();
+  const czkPerUsd = useDisplayCzkPerUsd();
   const { usage, modelDisplayName, onCompact, compactDisabled, compactDisabledReason } = props;
   const usedPercentage = formatPercentage(usage.usedPercentage);
   const normalizedPercentage = Math.max(0, Math.min(100, usage.usedPercentage ?? 0));
@@ -146,7 +148,7 @@ export function ContextWindowMeter(props: {
             <div className="flex items-center justify-between gap-3 text-2xs leading-4">
               <span className="text-secondary-label">{t("chat.contextWindowCost")}</span>
               <span className="font-medium tabular-nums text-secondary-label">
-                {formatContextWindowCost(usage.cost)}
+                {formatContextWindowCost(usage.cost, czkPerUsd)}
               </span>
             </div>
           ) : null}
@@ -180,7 +182,6 @@ export function ContextWindowMeter(props: {
   );
 }
 
-/** Holds the meter's footprint while a thread's activities are still loading. */
 export function ContextWindowMeterPlaceholder() {
   return <span aria-hidden="true" className="size-7 shrink-0" />;
 }

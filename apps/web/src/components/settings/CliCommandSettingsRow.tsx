@@ -1,5 +1,5 @@
 import type { DesktopCliCommandState } from "@t3tools/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "../ui/button";
 import { stackedThreadToast, toastManager } from "../ui/toast";
@@ -7,10 +7,6 @@ import { SettingsRow } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { useT } from "../../i18n/I18nProvider";
 
-/**
- * Settings → `t3` command: puts the desktop app's bundled CLI on PATH, or takes
- * it off again. Hidden where the desktop build has no launcher to install.
- */
 export function CliCommandSettingsRow() {
   const t = useT();
   const bridge = typeof window === "undefined" ? undefined : window.desktopBridge?.cliCommand;
@@ -31,29 +27,26 @@ export function CliCommandSettingsRow() {
     };
   }, [bridge]);
 
-  const change = useCallback(
-    (action: "install" | "uninstall") => {
-      if (!bridge || pending) return;
-      setPending(true);
-      void bridge[action]()
-        .then(setState)
-        .catch((error: unknown) => {
-          toastManager.add(
-            stackedThreadToast({
-              type: "error",
-              title:
-                action === "install"
-                  ? t("settingsA.cliCommandInstallFailed")
-                  : t("settingsA.cliCommandRemoveFailed"),
-              description:
-                error instanceof Error ? error.message : t("settingsA.cliCommandFallbackError"),
-            }),
-          );
-        })
-        .finally(() => setPending(false));
-    },
-    [bridge, pending, t],
-  );
+  const change = (action: "install" | "uninstall") => {
+    if (!bridge || pending) return;
+    setPending(true);
+    void bridge[action]()
+      .then(setState)
+      .catch((error: unknown) => {
+        toastManager.add(
+          stackedThreadToast({
+            type: "error",
+            title:
+              action === "install"
+                ? t("settingsA.cliCommandInstallFailed")
+                : t("settingsA.cliCommandRemoveFailed"),
+            description:
+              error instanceof Error ? error.message : t("settingsA.cliCommandFallbackError"),
+          }),
+        );
+      })
+      .finally(() => setPending(false));
+  };
 
   if (!bridge || !state?.supported) return null;
   const installed = state.installedPath !== null;

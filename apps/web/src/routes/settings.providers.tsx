@@ -5,11 +5,6 @@ import { ProviderSettingsPanel } from "../components/settings/ProviderSettingsPa
 import { useSettingsScope } from "../components/settings/SettingsScopeContext";
 import { useT } from "../i18n/I18nProvider";
 
-/**
- * Providers are machine state, so the page shows one environment at a time:
- * the chosen one from the settings scope selector.
- * A project crumb narrows candidates to where that project is registered.
- */
 function SettingsProvidersRoute() {
   const t = useT();
   const target = Route.useSearch();

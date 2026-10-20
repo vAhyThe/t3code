@@ -20,10 +20,6 @@ function settingsBreadcrumbLabel(pathname: string, t: ReturnType<typeof useT>): 
   return SETTINGS_SECTION_LABELS[normalizedPathname as SettingsPath] ?? null;
 }
 
-/**
- * `Settings / Section`. The scope a change applies to lives at the top of the
- * page content, see `SettingsScopeSentence`.
- */
 export function SettingsBreadcrumb({ pathname }: { pathname: string }) {
   const t = useT();
   const sectionLabel = settingsBreadcrumbLabel(pathname, t);

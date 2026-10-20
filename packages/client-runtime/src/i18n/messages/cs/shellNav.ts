@@ -757,4 +757,11 @@ export const shellNav = {
     "Na tomto počítači zapněte T3 Connect, pak zde otevřete Připojení a přihlaste se stejným účtem. Počítač můžete přidat i pomocí párovacího odkazu.",
   openConnectionsPairing:
     "Otevřete Připojení a přidejte tento počítač pomocí jeho párovacího odkazu. Tato aplikace se na něj musí dostat.",
+  archiveThreadsCountQuestion: {
+    one: "Archivovat {count} vlákno?",
+    few: "Archivovat {count} vlákna?",
+    many: "Archivovat {count} vláken?",
+    other: "Archivovat {count} vláken?",
+  },
+  unsettlingNow: "Ruším vyřízení...",
 } satisfies CzechNamespace<"shellNav">;

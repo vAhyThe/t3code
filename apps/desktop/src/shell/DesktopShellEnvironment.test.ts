@@ -98,7 +98,9 @@ function runShellEnvironment(input: {
 
   const program = Effect.gen(function* () {
     const shellEnvironment = yield* DesktopShellEnvironment.DesktopShellEnvironment;
-    yield* shellEnvironment.installIntoProcess;
+    const prepared = yield* shellEnvironment.installIntoProcess;
+    assert.equal(yield* shellEnvironment.installIntoProcess, prepared);
+    return prepared;
   }).pipe(
     Effect.provide(
       DesktopShellEnvironment.layer.pipe(
@@ -125,7 +127,7 @@ describe("DesktopShellEnvironment", () => {
       const env: NodeJS.ProcessEnv = { SHELL: "/bin/failing", PATH: "/usr/bin" };
       const commands: string[] = [];
 
-      yield* runShellEnvironment({
+      const prepared = yield* runShellEnvironment({
         env,
         platform: "linux",
         userShell: "/usr/local/bin/fish",
@@ -140,6 +142,7 @@ describe("DesktopShellEnvironment", () => {
 
       assert.deepEqual(commands, ["/bin/failing", "/usr/local/bin/fish"]);
       assert.equal(env.PATH, "/home/test/.local/bin:/usr/bin");
+      assert.isTrue(prepared);
     }),
   );
 
@@ -422,7 +425,7 @@ describe("DesktopShellEnvironment", () => {
       };
       const commands: string[] = [];
 
-      yield* runShellEnvironment({
+      const prepared = yield* runShellEnvironment({
         env,
         platform: "darwin",
         handler: (command) => {
@@ -434,6 +437,7 @@ describe("DesktopShellEnvironment", () => {
 
       assert.deepEqual(commands, ["/opt/homebrew/bin/nu", "/bin/zsh", "/bin/launchctl"]);
       assert.equal(env.PATH, "/opt/homebrew/bin:/usr/bin");
+      assert.isFalse(prepared);
     }),
   );
 
@@ -446,7 +450,7 @@ describe("DesktopShellEnvironment", () => {
         USERPROFILE: "C:\\Users\\testuser",
       };
 
-      yield* runShellEnvironment({
+      const prepared = yield* runShellEnvironment({
         env,
         platform: "win32",
         handler: (command) => {
@@ -462,6 +466,7 @@ describe("DesktopShellEnvironment", () => {
         },
       });
 
+      assert.isTrue(prepared);
       assert.equal(
         env.PATH,
         [
@@ -483,6 +488,47 @@ describe("DesktopShellEnvironment", () => {
         env.FNM_MULTISHELL_PATH,
         "C:\\Users\\testuser\\AppData\\Local\\fnm_multishells\\123",
       );
+    }),
+  );
+
+  it.effect.each([false, true])(
+    "leaves Windows preparation incomplete when loadProfile=%s fails",
+    (loadProfile) =>
+      Effect.gen(function* () {
+        const env: NodeJS.ProcessEnv = { PATH: "C:\\Windows\\System32" };
+        let calls = 0;
+        const prepared = yield* runShellEnvironment({
+          env,
+          platform: "win32",
+          handler: (command) => {
+            calls++;
+            if (command._tag !== "StandardCommand") return "";
+            return !command.args.includes("-NoProfile") === loadProfile
+              ? { output: "", exitCode: 1 }
+              : envOutput({ PATH: "C:\\Working" });
+          },
+        }).pipe(Effect.provide(Logger.layer([])));
+        assert.isFalse(prepared);
+        assert.equal(calls, 3);
+        assert.include(env.PATH, "C:\\Working");
+        assert.include(env.PATH, "C:\\Windows\\System32");
+      }),
+  );
+
+  it.effect("replaces a Path-spelled Windows PATH instead of adding a second key", () =>
+    Effect.gen(function* () {
+      const env: NodeJS.ProcessEnv = { Path: "C:\\Windows\\System32" };
+
+      yield* runShellEnvironment({
+        env,
+        platform: "win32",
+        handler: (command) =>
+          command._tag === "StandardCommand" && command.args.includes("-NoProfile")
+            ? envOutput({ PATH: "C:\\Shell\\Bin" })
+            : "",
+      });
+
+      assert.deepEqual(env, { PATH: "C:\\Shell\\Bin;C:\\Windows\\System32" });
     }),
   );
 

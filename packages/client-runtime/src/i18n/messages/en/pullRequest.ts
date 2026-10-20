@@ -780,4 +780,6 @@ export const pullRequest = {
   unreadableHost: "This host could not be read.",
   selectPullRequestFirst: "Select a pull request first",
   pullRequestsBreadcrumb: "Pull requests breadcrumb",
+  noProjectCanRead: "No project in this environment can read {host}/{repository}.",
+  pasteFullUrlUnknownHost: "Paste a full URL; this project's host has no known pull request URL.",
 } as const satisfies CatalogNamespace;

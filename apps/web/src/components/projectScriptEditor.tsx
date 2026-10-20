@@ -22,7 +22,6 @@ import {
 import React, {
   type FormEvent,
   type KeyboardEvent,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -122,14 +121,11 @@ export interface NewProjectScriptInput {
   command: string;
   icon: ProjectScriptIcon;
   runOnWorktreeCreate: boolean;
-  /** Setup scripts only: hold the agent until the script exits. */
   waitForSetup: boolean;
   runOnSettle: boolean;
   /** Omit to preserve the current shortcut when the form did not edit it. */
   keybinding?: string | null;
-  /** Optional URL to open in the in-app preview when this script runs. */
   previewUrl: string | null;
-  /** When true, automatically open the preview panel pointed at `previewUrl`. */
   autoOpenPreview: boolean;
 }
 
@@ -147,11 +143,9 @@ export const EMPTY_PROJECT_SCRIPT_INPUT: NewProjectScriptInput = {
   autoOpenPreview: false,
 };
 
-/** What the editor dialog should open with. `scriptId: null` means "add". */
 export interface ProjectScriptEditorRequest {
   scriptId: string | null;
   initial: NewProjectScriptInput;
-  /** Validation error to show immediately (e.g. a failed t3.json import). */
   error?: string;
 }
 
@@ -175,11 +169,6 @@ export function editorRequestForScript(
   };
 }
 
-/**
- * Add/edit dialog for a project script, shared by the chat-header scripts menu
- * and the project settings page. The parent owns which script (if any) is
- * being edited via `request`; the dialog owns the form state and validation.
- */
 export function ProjectScriptEditorDialog({
   environmentId,
   editScope = AuthOrchestrationOperateScope,
@@ -192,13 +181,120 @@ export function ProjectScriptEditorDialog({
   environmentId: EnvironmentId;
   editScope?: typeof AuthOrchestrationOperateScope | typeof AuthSettingsWriteScope;
   request: ProjectScriptEditorRequest | null;
-  /** Existing scripts, used to derive a unique id for new scripts. */
   scripts: ReadonlyArray<ProjectScript>;
   onSubmit: (
     scriptId: string | null,
     input: NewProjectScriptInput,
   ) => Promise<ProjectScriptActionResult>;
   onDelete: (scriptId: string) => void;
+  onClose: () => void;
+}) {
+  const t = useT();
+  const canEditActions = useEnvironmentScope(environmentId, editScope);
+  // Keyed by the request it belongs to: a new request starts from its own error,
+  // and a late save from the previous request can't overwrite it.
+  const [errorState, setErrorState] = useState<{
+    readonly request: ProjectScriptEditorRequest;
+    readonly message: string | null;
+  } | null>(null);
+  const validationError =
+    request === null
+      ? null
+      : errorState?.request === request
+        ? errorState.message
+        : (request.error ?? null);
+  const setValidationError = (message: string | null) => {
+    if (request !== null) setErrorState({ request, message });
+  };
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useComposerMenuState(!canEditActions);
+  const [deleteName, setDeleteName] = useState("");
+
+  return (
+    <>
+      <Dialog
+        open={request !== null}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
+        {/* The form owns its fields so a keystroke re-renders it, not the dialog chrome. */}
+        <DialogPopup>
+          <ProjectScriptEditorForm
+            environmentId={environmentId}
+            editScope={editScope}
+            request={request}
+            scripts={scripts}
+            validationError={validationError}
+            onValidationError={setValidationError}
+            onSubmit={onSubmit}
+            onRequestDelete={(name) => {
+              setDeleteName(name);
+              setDeleteConfirmOpen(true);
+            }}
+            onClose={onClose}
+          />
+        </DialogPopup>
+      </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen && canEditActions} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("shellRest.deleteActionTitle", { name: deleteName })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("shellRest.actionCannotBeUndone")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              disabled={!canEditActions}
+              onClick={() => {
+                if (!request?.scriptId) return;
+                if (!readEnvironmentScope(environmentId, editScope)) {
+                  setValidationError(
+                    currentTranslator()("shellRest.connectionCannotChangeProjectActions"),
+                  );
+                  return;
+                }
+                setDeleteConfirmOpen(false);
+                onClose();
+                onDelete(request.scriptId);
+              }}
+            >
+              {t("shellRest.deleteActionButton")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
+    </>
+  );
+}
+
+function ProjectScriptEditorForm({
+  environmentId,
+  editScope,
+  request,
+  scripts,
+  validationError,
+  onValidationError: setValidationError,
+  onSubmit,
+  onRequestDelete,
+  onClose,
+}: {
+  environmentId: EnvironmentId;
+  editScope: typeof AuthOrchestrationOperateScope | typeof AuthSettingsWriteScope;
+  request: ProjectScriptEditorRequest | null;
+  scripts: ReadonlyArray<ProjectScript>;
+  validationError: string | null;
+  onValidationError: (error: string | null) => void;
+  onSubmit: (
+    scriptId: string | null,
+    input: NewProjectScriptInput,
+  ) => Promise<ProjectScriptActionResult>;
+  onRequestDelete: (name: string) => void;
   onClose: () => void;
 }) {
   const t = useT();
@@ -215,16 +311,12 @@ export function ProjectScriptEditorDialog({
   const [keybinding, setKeybinding] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [autoOpenPreview, setAutoOpenPreview] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useComposerMenuState(!canEditActions);
   const [savingRequest, setSavingRequest] = useState<ProjectScriptEditorRequest | null>(null);
   const pendingSubmissionRef = useRef<{ request: ProjectScriptEditorRequest } | null>(null);
 
-  const isOpen = request !== null;
   const isEditing = request?.scriptId != null;
   const isSaving = request !== null && savingRequest === request;
 
-  // A save completion must not affect a replacement request or an unmounted editor.
   useLayoutEffect(
     () => () => {
       if (pendingSubmissionRef.current?.request === request) {
@@ -234,22 +326,23 @@ export function ProjectScriptEditorDialog({
     [request],
   );
 
-  // Hydrate the form whenever a new request opens the dialog.
-  useEffect(() => {
-    if (!request) return;
-    setName(request.initial.name);
-    setCommand(request.initial.command);
-    setIcon(request.initial.icon);
-    setIconPickerOpen(false);
-    setRunOnWorktreeCreate(request.initial.runOnWorktreeCreate);
-    setWaitForSetup(request.initial.waitForSetup);
-    setRunOnSettle(request.initial.runOnSettle);
-    setKeybinding(request.initial.keybinding ?? "");
-    setPreviewUrl(request.initial.previewUrl ?? "");
-    setAutoOpenPreview(request.initial.autoOpenPreview);
-    setValidationError(request.error ?? null);
-    setSavingRequest(null);
-  }, [request, setIconPickerOpen]);
+  const [formRequest, setFormRequest] = useState<ProjectScriptEditorRequest | null>(null);
+  if (request !== formRequest) {
+    setFormRequest(request);
+    if (request) {
+      setName(request.initial.name);
+      setCommand(request.initial.command);
+      setIcon(request.initial.icon);
+      setIconPickerOpen(false);
+      setRunOnWorktreeCreate(request.initial.runOnWorktreeCreate);
+      setWaitForSetup(request.initial.waitForSetup);
+      setRunOnSettle(request.initial.runOnSettle);
+      setKeybinding(request.initial.keybinding ?? "");
+      setPreviewUrl(request.initial.previewUrl ?? "");
+      setAutoOpenPreview(request.initial.autoOpenPreview);
+      setSavingRequest(null);
+    }
+  }
 
   const close = () => {
     pendingSubmissionRef.current = null;
@@ -370,210 +463,167 @@ export function ProjectScriptEditorDialog({
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            close();
-          }
-        }}
-      >
-        <DialogPopup>
-          <DialogHeader>
-            <DialogTitle>
-              {isEditing ? t("shellRest.editAction") : t("shellRest.addAction")}
-            </DialogTitle>
-            <DialogDescription>{t("shellRest.actionsDescription")}</DialogDescription>
-          </DialogHeader>
-          <DialogPanel>
-            <form id={formId} onSubmit={submit}>
-              <fieldset className="space-y-4" disabled={isSaving || !canEditActions}>
-                <div className="space-y-1.5">
-                  <Label htmlFor="script-name">{t("shellRest.scriptNameLabel")}</Label>
-                  <div className="flex items-center gap-2">
-                    <Popover onOpenChange={setIconPickerOpen} open={iconPickerOpen}>
-                      <PopoverTrigger
-                        render={
-                          <Button
+      <DialogHeader>
+        <DialogTitle>
+          {isEditing ? t("shellRest.editAction") : t("shellRest.addAction")}
+        </DialogTitle>
+        <DialogDescription>{t("shellRest.actionsDescription")}</DialogDescription>
+      </DialogHeader>
+      <DialogPanel>
+        <form id={formId} onSubmit={submit}>
+          <fieldset className="space-y-4" disabled={isSaving || !canEditActions}>
+            <div className="space-y-1.5">
+              <Label htmlFor="script-name">{t("shellRest.scriptNameLabel")}</Label>
+              <div className="flex items-center gap-2">
+                <Popover onOpenChange={setIconPickerOpen} open={iconPickerOpen}>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="size-9 shrink-0"
+                        aria-label={t("shellRest.chooseIcon")}
+                      />
+                    }
+                  >
+                    <ScriptIcon icon={icon} className="size-4.5" />
+                  </PopoverTrigger>
+                  <PopoverPopup align="start">
+                    <div className="grid grid-cols-3 gap-2">
+                      {SCRIPT_ICONS.map((entry) => {
+                        const isSelected = entry.id === icon;
+                        return (
+                          <button
+                            key={entry.id}
                             type="button"
-                            variant="outline"
-                            className="size-9 shrink-0"
-                            aria-label={t("shellRest.chooseIcon")}
-                          />
-                        }
-                      >
-                        <ScriptIcon icon={icon} className="size-4.5" />
-                      </PopoverTrigger>
-                      <PopoverPopup align="start">
-                        <div className="grid grid-cols-3 gap-2">
-                          {SCRIPT_ICONS.map((entry) => {
-                            const isSelected = entry.id === icon;
-                            return (
-                              <button
-                                key={entry.id}
-                                type="button"
-                                className={`relative flex flex-col items-center gap-2 rounded-md border px-2 py-2 text-xs dark:border-transparent ${
-                                  isSelected
-                                    ? "border-primary/70 bg-primary/10 ring-inset dark:ring-1 dark:ring-primary/30"
-                                    : "border-border/70 hover:bg-accent/60 dark:bg-white/[0.035]"
-                                }`}
-                                onClick={() => {
-                                  setIcon(entry.id);
-                                  setIconPickerOpen(false);
-                                }}
-                              >
-                                <ScriptIcon icon={entry.id} className="size-4" />
-                                <span>{entry.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </PopoverPopup>
-                    </Popover>
-                    <Input
-                      id="script-name"
-                      autoFocus
-                      placeholder={t("shellRest.scriptNamePlaceholder")}
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="script-keybinding">{t("shellRest.keybindingLabel")}</Label>
-                  <Input
-                    disabled={!canWriteSettings}
-                    id="script-keybinding"
-                    placeholder={t("shellRest.pressShortcutPlaceholder")}
-                    value={keybinding}
-                    readOnly
-                    onKeyDown={captureKeybinding}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <Trans
-                      k="shellRest.keybindingHint"
-                      components={{ code: (children) => <code>{children}</code> }}
-                    />
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="script-command">{t("shellRest.commandLabel")}</Label>
-                  <Textarea
-                    id="script-command"
-                    placeholder="bun test" // i18n-ignore: command sample, not translated
-                    value={command}
-                    onChange={(event) => setCommand(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="script-preview-url">{t("shellRest.previewUrlLabel")}</Label>
-                  <Input
-                    id="script-preview-url"
-                    placeholder="http://localhost:5173" // i18n-ignore: URL sample
-                    value={previewUrl}
-                    onChange={(event) => setPreviewUrl(event.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">{t("shellRest.previewUrlHint")}</p>
-                </div>
-                <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>{t("shellRest.runOnWorktreeCreation")}</span>
-                  <Switch
-                    checked={runOnWorktreeCreate}
-                    onCheckedChange={(checked) => setRunOnWorktreeCreate(Boolean(checked))}
-                  />
-                </label>
-                <label
-                  className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
-                    runOnWorktreeCreate ? "" : "opacity-60"
-                  }`}
-                >
-                  <span>{t("shellRest.waitBeforeAgent")}</span>
-                  <Switch
-                    checked={waitForSetup}
-                    disabled={!runOnWorktreeCreate}
-                    onCheckedChange={(checked) => setWaitForSetup(Boolean(checked))}
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
-                  <span>{t("shellRest.runWhenThreadSettles")}</span>
-                  <Switch
-                    checked={runOnSettle}
-                    onCheckedChange={(checked) => setRunOnSettle(Boolean(checked))}
-                  />
-                </label>
-                <label
-                  className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
-                    previewUrl.trim().length === 0 ? "opacity-60" : ""
-                  }`}
-                >
-                  <span>{t("shellRest.openPreviewAutomatically")}</span>
-                  <Switch
-                    checked={autoOpenPreview}
-                    disabled={previewUrl.trim().length === 0}
-                    onCheckedChange={(checked) => setAutoOpenPreview(Boolean(checked))}
-                  />
-                </label>
-                {validationError && <p className="text-sm text-destructive">{validationError}</p>}
-              </fieldset>
-            </form>
-          </DialogPanel>
-          <DialogFooter variant="bare">
-            {isEditing && (
-              <Button
-                type="button"
-                variant="destructive-outline"
-                className="mr-auto"
-                disabled={isSaving || !canEditActions}
-                onClick={() => setDeleteConfirmOpen(true)}
-              >
-                {t("shellRest.deleteButton")}
-              </Button>
-            )}
-            <Button type="button" variant="outline" onClick={close}>
-              {t("common.cancel")}
-            </Button>
-            <Button form={formId} type="submit" disabled={isSaving || !canEditActions}>
-              {isSaving
-                ? t("shellRest.savingChanges")
-                : isEditing
-                  ? t("shellRest.saveChanges")
-                  : t("shellRest.saveAction")}
-            </Button>
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
-
-      <AlertDialog open={deleteConfirmOpen && canEditActions} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogPopup>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("shellRest.deleteActionTitle", { name })}</AlertDialogTitle>
-            <AlertDialogDescription>{t("shellRest.actionCannotBeUndone")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>
-              {t("common.cancel")}
-            </AlertDialogClose>
-            <Button
-              variant="destructive"
-              disabled={isSaving || !canEditActions}
-              onClick={() => {
-                if (!request?.scriptId) return;
-                if (!readEnvironmentScope(environmentId, editScope)) {
-                  setValidationError(
-                    currentTranslator()("shellRest.connectionCannotChangeProjectActions"),
-                  );
-                  return;
-                }
-                setDeleteConfirmOpen(false);
-                close();
-                onDelete(request.scriptId);
-              }}
+                            className={`relative flex flex-col items-center gap-2 rounded-md border px-2 py-2 text-xs dark:border-transparent ${
+                              isSelected
+                                ? "border-primary/70 bg-primary/10 ring-inset dark:ring-1 dark:ring-primary/30"
+                                : "border-border/70 hover:bg-accent/60 dark:bg-white/[0.035]"
+                            }`}
+                            onClick={() => {
+                              setIcon(entry.id);
+                              setIconPickerOpen(false);
+                            }}
+                          >
+                            <ScriptIcon icon={entry.id} className="size-4" />
+                            <span>{entry.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverPopup>
+                </Popover>
+                <Input
+                  id="script-name"
+                  autoFocus
+                  placeholder={t("shellRest.scriptNamePlaceholder")}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="script-keybinding">{t("shellRest.keybindingLabel")}</Label>
+              <Input
+                disabled={!canWriteSettings}
+                id="script-keybinding"
+                placeholder={t("shellRest.pressShortcutPlaceholder")}
+                value={keybinding}
+                readOnly
+                onKeyDown={captureKeybinding}
+              />
+              <p className="text-xs text-muted-foreground">
+                <Trans
+                  k="shellRest.keybindingHint"
+                  components={{ code: (children) => <code>{children}</code> }}
+                />
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="script-command">{t("shellRest.commandLabel")}</Label>
+              <Textarea
+                id="script-command"
+                placeholder="bun test" // i18n-ignore: command sample, not translated
+                value={command}
+                onChange={(event) => setCommand(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="script-preview-url">{t("shellRest.previewUrlLabel")}</Label>
+              <Input
+                id="script-preview-url"
+                placeholder="http://localhost:5173" // i18n-ignore: URL sample
+                value={previewUrl}
+                onChange={(event) => setPreviewUrl(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t("shellRest.previewUrlHint")}</p>
+            </div>
+            <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
+              <span>{t("shellRest.runOnWorktreeCreation")}</span>
+              <Switch
+                checked={runOnWorktreeCreate}
+                onCheckedChange={(checked) => setRunOnWorktreeCreate(Boolean(checked))}
+              />
+            </label>
+            <label
+              className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
+                runOnWorktreeCreate ? "" : "opacity-60"
+              }`}
             >
-              {t("shellRest.deleteActionButton")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogPopup>
-      </AlertDialog>
+              <span>{t("shellRest.waitBeforeAgent")}</span>
+              <Switch
+                checked={waitForSetup}
+                disabled={!runOnWorktreeCreate}
+                onCheckedChange={(checked) => setWaitForSetup(Boolean(checked))}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
+              <span>{t("shellRest.runWhenThreadSettles")}</span>
+              <Switch
+                checked={runOnSettle}
+                onCheckedChange={(checked) => setRunOnSettle(Boolean(checked))}
+              />
+            </label>
+            <label
+              className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
+                previewUrl.trim().length === 0 ? "opacity-60" : ""
+              }`}
+            >
+              <span>{t("shellRest.openPreviewAutomatically")}</span>
+              <Switch
+                checked={autoOpenPreview}
+                disabled={previewUrl.trim().length === 0}
+                onCheckedChange={(checked) => setAutoOpenPreview(Boolean(checked))}
+              />
+            </label>
+            {validationError && <p className="text-sm text-destructive">{validationError}</p>}
+          </fieldset>
+        </form>
+      </DialogPanel>
+      <DialogFooter variant="bare">
+        {isEditing && (
+          <Button
+            type="button"
+            variant="destructive-outline"
+            className="mr-auto"
+            disabled={isSaving || !canEditActions}
+            onClick={() => onRequestDelete(name)}
+          >
+            {t("shellRest.deleteButton")}
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={close}>
+          {t("common.cancel")}
+        </Button>
+        <Button form={formId} type="submit" disabled={isSaving || !canEditActions}>
+          {isSaving
+            ? t("shellRest.savingChanges")
+            : isEditing
+              ? t("shellRest.saveChanges")
+              : t("shellRest.saveAction")}
+        </Button>
+      </DialogFooter>
     </>
   );
 }

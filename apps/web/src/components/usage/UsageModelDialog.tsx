@@ -1,8 +1,8 @@
 import { useT } from "~/i18n/I18nProvider";
-import { formatPercent, formatTokens, formatUsd } from "@t3tools/shared/usageFormat";
+import { formatPercent, formatTokens } from "@t3tools/shared/usageFormat";
 import { isModelCostUnknown, type ModelTotals } from "@t3tools/shared/usageMerge";
-import { useMemo } from "react";
 
+import { useFormatMoney } from "../../hooks/useFormatMoney";
 import { mergeAnsweredUsage, type EnvironmentUsageStatus } from "../../state/usage";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { Button } from "../ui/button";
@@ -34,11 +34,6 @@ export interface UsageChartWindow {
   readonly referenceTime: string | undefined;
 }
 
-/**
- * One model's usage in the current window, opened from the Breakdown list.
- * The trend and mixes come from the same merge as the page, narrowed to this
- * model's buckets.
- */
 export function UsageModelDialog({
   model,
   environments,
@@ -55,15 +50,12 @@ export function UsageModelDialog({
   readonly onClose: () => void;
 }) {
   const t = useT();
-  const usage = useMemo(
-    () =>
-      mergeAnsweredUsage(
-        environments,
-        (bucket) => bucket.provider === model.provider && bucket.model === model.model,
-      ),
-    [environments, model.provider, model.model],
+  const formatMoney = useFormatMoney();
+  const usage = mergeAnsweredUsage(
+    environments,
+    (bucket) => bucket.provider === model.provider && bucket.model === model.model,
   );
-  const providers = useMemo(() => [model.provider], [model.provider]);
+  const providers = [model.provider];
   const presentation = PROVIDER_PRESENTATION[model.provider];
   const costUnknown = isModelCostUnknown(model);
   const hitRate = cacheHitRate(model);
@@ -71,12 +63,12 @@ export function UsageModelDialog({
   const stats = [
     {
       label: t("shellDevice.usageMetricCost"),
-      value: costUnknown ? t("shellDevice.usageUnpriced") : formatUsd(model.costUsd),
+      value: costUnknown ? t("shellDevice.usageUnpriced") : formatMoney(model.costUsd),
     },
     { label: t("shellDevice.usageMetricTokens"), value: formatTokens(model.totalTokens) },
     perMillion === null
       ? null
-      : { label: t("shellDevice.usagePerMillionTokens"), value: formatUsd(perMillion) },
+      : { label: t("shellDevice.usagePerMillionTokens"), value: formatMoney(perMillion) },
     hitRate === null
       ? null
       : { label: t("shellDevice.usageCacheHit"), value: formatPercent(hitRate) },
@@ -133,7 +125,7 @@ export function UsageModelDialog({
                 <UsageShareBar
                   label={t("shellDevice.usageCostByType")}
                   segments={costTypeSegments(usage.categoryCost, t)}
-                  format={formatUsd}
+                  format={formatMoney}
                 />
               )}
               <UsageShareBar
@@ -145,7 +137,7 @@ export function UsageModelDialog({
                 <UsageShareBar
                   label={t("shellDevice.usageCostBySpeed")}
                   segments={speedCostSegments(usage.speedCost, t)}
-                  format={formatUsd}
+                  format={formatMoney}
                   aside={<SpeedPremium premiumUsd={usage.speedCost.premium} />}
                 />
               ) : null}
@@ -167,13 +159,13 @@ export function UsageModelDialog({
   );
 }
 
-/** What the faster speeds cost above standard rates, beside the speed bar. */
 export function SpeedPremium({ premiumUsd }: { readonly premiumUsd: number }) {
   const t = useT();
+  const formatMoney = useFormatMoney();
   return (
     <span className="text-xs text-muted-foreground">
       {t("shellDevice.usagePremium")}{" "}
-      <span className="text-foreground tabular-nums">{formatUsd(premiumUsd)}</span>
+      <span className="text-foreground tabular-nums">{formatMoney(premiumUsd)}</span>
     </span>
   );
 }

@@ -631,4 +631,6 @@ export const shellRest = {
   androidPlatformName: "Android",
   matchCaseGlyph: "Aa",
   desktopSecureStorageUnavailable: "Desktop secure storage is unavailable in this system context.",
+  onlyThreadLinkedToWorktree: "This thread is the only one linked to this worktree:",
+  deleteWorktreeToo: "Delete the worktree too?",
 } as const satisfies CatalogNamespace;

@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import { Check as CheckGlyph, CircleAlert } from "lucide";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import type { Translate } from "@t3tools/client-runtime/i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { DialogClose } from "~/components/ui/dialog";
@@ -34,26 +34,48 @@ function AgentDeviceDescriptionText() {
 export const deviceHubDescription = <DeviceHubDescriptionText />;
 export const agentDeviceDescription = <AgentDeviceDescriptionText />;
 
+/**
+ * `hostStatus` only tracks this machine. A machine without simulator tooling never
+ * starts its own hub, so setup and the panel must also count remote device hosts.
+ */
+export function deviceHubReadiness(state: DeviceServiceState) {
+  const statuses = Object.values(state.hostStatuses).map((host) => host.status);
+  const ready = state.hostStatus === "ready" || statuses.includes("ready");
+  const busy =
+    !ready &&
+    [state.hostStatus, ...statuses].some(
+      (status) => status === "installing" || status === "starting",
+    );
+  return { ready, busy };
+}
+
 export function platformSetupStatus(
   state: DeviceServiceState,
   platform: DevicePlatform,
   t: Translate = currentTranslator(),
 ) {
-  const availability = state.hosts
-    .flatMap((host) => host.platforms)
-    .find((candidate) => candidate.platform === platform);
-  if (!availability?.available) {
+  const availabilities = state.hosts.flatMap((host) =>
+    host.platforms
+      .filter((candidate) => candidate.platform === platform)
+      .map((candidate) => ({ ...candidate, host })),
+  );
+  const supportingHosts = availabilities
+    .filter((candidate) => candidate.available)
+    .map((candidate) => candidate.host);
+  if (supportingHosts.length === 0) {
     return {
       ready: false,
       message:
-        availability?.reason ??
+        availabilities[0]?.reason ??
         t("shellDevice.devicePlatformSupportNotDetected", { platform: platformName(platform) }),
     };
   }
-  if (
-    state.hostStatus === "ready" &&
-    !state.devices.some((device) => device.platform === platform)
-  ) {
+  const readyHosts = supportingHosts.filter(
+    (host) =>
+      state.hostStatuses[host.id]?.status === "ready" ||
+      (host.kind === "local" && state.hostStatus === "ready"),
+  );
+  if (readyHosts.length > 0 && !state.devices.some((device) => device.platform === platform)) {
     return {
       ready: false,
       message:
@@ -62,10 +84,18 @@ export function platformSetupStatus(
           : t("shellDevice.deviceAndroidNoDevice"),
     };
   }
+  const remoteHost = supportingHosts.every((host) => host.kind !== "local")
+    ? supportingHosts[0]
+    : undefined;
   return {
     ready: true,
-    message:
-      platform === "ios" ? t("shellDevice.deviceIosReady") : t("shellDevice.deviceAndroidReady"),
+    message: remoteHost
+      ? platform === "ios"
+        ? t("shellDevice.deviceIosReadyOnHost", { host: remoteHost.label })
+        : t("shellDevice.deviceAndroidReadyOnHost", { host: remoteHost.label })
+      : platform === "ios"
+        ? t("shellDevice.deviceIosReady")
+        : t("shellDevice.deviceAndroidReady"),
   };
 }
 
@@ -81,10 +111,15 @@ export function DeviceSetup(props: {
   const [pending, setPending] = useState<"hub" | "check" | "agent" | "complete" | null>(null);
   const [step, setStep] = useState(0);
   const enabled = props.state.hostStatus !== "disabled";
-  const busy = props.state.hostStatus === "installing" || props.state.hostStatus === "starting";
+  const { ready, busy } = deviceHubReadiness(props.state);
   const localPlatformsUnavailable = props.state.hosts.some(
     (host) => host.kind === "local" && !host.platforms.some((platform) => platform.available),
   );
+
+  // Remote hosts report platforms only after a probe, like the Device panel's refresh on open.
+  useEffect(() => {
+    if (enabled) void list({ environmentId: props.environmentId, input: {} });
+  }, [enabled, list, props.environmentId]);
 
   const update = async (
     kind: NonNullable<typeof pending>,
@@ -92,12 +127,9 @@ export function DeviceSetup(props: {
   ) => {
     if (!readEnvironmentScope(props.environmentId, AuthSettingsWriteScope)) return;
     setPending(kind);
-    try {
-      const result = await configure({ environmentId: props.environmentId, input });
-      if (kind === "complete" && result._tag === "Success") props.onComplete?.();
-    } finally {
-      setPending(null);
-    }
+    const result = await configure({ environmentId: props.environmentId, input });
+    setPending(null);
+    if (kind === "complete" && result._tag === "Success") props.onComplete?.();
   };
 
   return (
@@ -199,15 +231,12 @@ export function DeviceSetup(props: {
           </Button>
         )}
         {step < 2 ? (
-          <Button
-            disabled={props.state.hostStatus !== "ready" || pending !== null}
-            onClick={() => setStep(step + 1)}
-          >
+          <Button disabled={!ready || pending !== null} onClick={() => setStep(step + 1)}>
             {t("common.continue")}
           </Button>
         ) : (
           <Button
-            disabled={!canConfigure || props.state.hostStatus !== "ready" || pending !== null}
+            disabled={!canConfigure || !ready || pending !== null}
             onClick={() => void update("complete", { onboardingCompleted: true })}
           >
             {pending === "complete" ? t("shellDevice.deviceSaving") : t("common.done")}
@@ -228,7 +257,7 @@ export function DeviceHubSetupStatus({
   readonly compact?: boolean;
 }) {
   const t = useT();
-  if (!pending && state.hostStatus !== "ready") return null;
+  if (!pending && !deviceHubReadiness(state).ready) return null;
   return (
     <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
       {pending ? <Spinner size="xs" /> : <Check className="size-3 text-success" />}
@@ -297,7 +326,7 @@ export function AgentDeviceSetupStatus(props: {
   }
   if (
     props.state.agentAccessEnabled &&
-    props.state.hostStatus === "ready" &&
+    deviceHubReadiness(props.state).ready &&
     props.state.hosts.some((host) => host.agentDeviceInstalled)
   ) {
     return (

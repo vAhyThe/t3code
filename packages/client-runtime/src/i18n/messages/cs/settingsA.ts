@@ -696,4 +696,9 @@ export const settingsA = {
   connectionsRemoteLink: "Vzdálený odkaz",
   connectionsRemoteLinkDescription: "Zadejte hostitele backendu a párovací kód.",
   connectionsSshDescription: "Pro backend použijte místní konfiguraci SSH, agenta a tunely.",
+  displayCurrency: "Měna",
+  displayCurrencyDescription: "Měna, ve které se zobrazují náklady na používání. Ceny, které zadáváte, zůstávají v USD.",
+  displayCurrencyRate: "Kurz ČNB {rate} Kč/USD ze dne {date}.",
+  displayCurrencyRateUnavailable: "Kurz ČNB teď není k dispozici, náklady se proto zobrazují v USD.",
+  displayCurrencyResetLabel: "měnu",
 } satisfies CzechNamespace<"settingsA">;

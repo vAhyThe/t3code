@@ -5,7 +5,6 @@ import { useT } from "~/i18n/I18nProvider";
 import { deviceEnvironment } from "~/state/device";
 import { useAtomCommand } from "~/state/use-atom-command";
 
-/** Shared by setup, Settings, and the Device panel so automatic updates stay visible. */
 export function DeviceHostUpdates({
   state,
   environmentId,

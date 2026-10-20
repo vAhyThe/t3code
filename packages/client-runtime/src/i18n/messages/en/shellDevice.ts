@@ -400,6 +400,7 @@ export const shellDevice = {
   usageWindow7Days: "7 days",
   usageWindow30Days: "30 days",
   usageWindow90Days: "90 days",
+  usageWindowAllTime: "All time",
   usageTypeInput: "Input",
   usageTypeCacheRead: "Cache read",
   usageTypeCacheWrite: "Cache write",
@@ -780,4 +781,7 @@ export const shellDevice = {
   onboardingComputerFallback: "Computer",
   usagePriceFieldRequired: "{field} is required on {target}.",
   usagePriceNonNegative: "Use non-negative numbers for prices.",
+  deviceIosReadyOnHost: "Xcode and iOS Simulator are available on {host}.",
+  deviceAndroidReadyOnHost: "The Android SDK and Emulator are available on {host}.",
+  pagePickUnavailable: "Page didn't load — pick unavailable until the page renders",
 } as const satisfies CatalogNamespace;

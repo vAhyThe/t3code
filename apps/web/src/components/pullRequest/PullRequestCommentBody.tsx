@@ -6,7 +6,6 @@ import { PullRequestMarkdown } from "./PullRequestMarkdown";
 import { observeResize } from "~/lib/observeResize";
 import { useT } from "../../i18n/I18nProvider";
 
-/** Keep the complete markdown intact while limiting long reports to a readable preview. */
 export function PullRequestCommentBody({
   className,
   ...props

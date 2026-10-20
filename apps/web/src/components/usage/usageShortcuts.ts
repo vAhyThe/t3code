@@ -18,9 +18,9 @@ export const WINDOW_OPTIONS = [
   { days: 7, labelKey: "shellDevice.usageWindow7Days", command: "usage.period.week" },
   { days: 30, labelKey: "shellDevice.usageWindow30Days", command: "usage.period.month" },
   { days: 90, labelKey: "shellDevice.usageWindow90Days", command: "usage.period.quarter" },
+  { days: "all", labelKey: "shellDevice.usageWindowAllTime", command: "usage.period.all" },
 ] as const;
 
-/** Resolves page shortcuts without taking letters from fields or popup controls. */
 export function resolveUsageShortcut(
   event: ShortcutEventLike & { target: EventTarget | null },
   keybindings: ResolvedKeybindingsConfig,

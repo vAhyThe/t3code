@@ -8,8 +8,11 @@ import {
   type SnapShotShortcut,
 } from "@t3tools/contracts";
 import { PlayIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { settlePromise } from "@t3tools/client-runtime/state/runtime";
+import * as Cause from "effect/Cause";
+import { useEffect, useRef, useState } from "react";
 
+import { useStableCallback } from "../../hooks/useStableCallback";
 import { useClientSettings, useUpdateClientSettings } from "../../hooks/useSettings";
 import { getDesktopSnapShotBridge } from "../../lib/desktopSnapShot";
 import { currentTranslator } from "~/i18n/I18nProvider";
@@ -67,16 +70,29 @@ function captureSettingsError(title: string, error: unknown) {
 
 type ShortcutCheck =
   | { readonly status: "idle"; readonly availability: null }
-  | { readonly status: "checking"; readonly availability: null }
+  | {
+      readonly status: "checking";
+      readonly availability: null;
+      readonly shortcut: SnapShotShortcut;
+    }
   | {
       readonly status: "checked";
+      readonly shortcut: SnapShotShortcut;
       readonly availability: DesktopSnapShotShortcutAvailability;
     };
 
 export function SnapShotSettings() {
   // Tests render this page through a React hook harness without a store subscription.
   const t = currentTranslator();
-  const settings = useClientSettings();
+  const settings = useClientSettings((current) => ({
+    snapShotAnimations: current.snapShotAnimations,
+    snapShotEnabled: current.snapShotEnabled,
+    snapShotFlash: current.snapShotFlash,
+    snapShotIncludeAccessibility: current.snapShotIncludeAccessibility,
+    snapShotPlaySound: current.snapShotPlaySound,
+    snapShotShortcut: current.snapShotShortcut,
+    snapShotSound: current.snapShotSound,
+  }));
   const updateSettings = useUpdateClientSettings();
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const bridge = getDesktopSnapShotBridge();
@@ -90,10 +106,17 @@ export function SnapShotSettings() {
     wasEnabled: boolean;
   } | null>(null);
   const [candidate, setCandidate] = useState<SnapShotShortcut>(settings.snapShotShortcut);
-  const [shortcutCheck, setShortcutCheck] = useState<ShortcutCheck>({
+  const [latestShortcutCheck, setShortcutCheck] = useState<ShortcutCheck>({
     status: "idle",
     availability: null,
   });
+  // A check answers for one shortcut; once the candidate moves on (an edit, or hydration
+  // resetting it) a late answer for the old one no longer shows.
+  const shortcutCheck: ShortcutCheck =
+    latestShortcutCheck.status === "idle" ||
+    sameSnapShotShortcut(latestShortcutCheck.shortcut, candidate)
+      ? latestShortcutCheck
+      : { status: "idle", availability: null };
   const shortcutCheckIdRef = useRef(0);
   const stateRequestIdRef = useRef(0);
   const unavailableMessage = snapShotUnavailableMessage(Boolean(bridge));
@@ -116,7 +139,8 @@ export function SnapShotSettings() {
         ? t("settingsD.soundWhooshDefault")
         : t("settingsD.soundClick");
 
-  const refreshState = useCallback(async () => {
+  // Registered as a window focus listener, so it keeps one identity.
+  const refreshState = useStableCallback(async () => {
     const requestId = ++stateRequestIdRef.current;
     try {
       if (bridge) {
@@ -126,50 +150,52 @@ export function SnapShotSettings() {
       }
     } catch (error) {
       if (requestId === stateRequestIdRef.current)
-        setSetupError(captureSettingsError("Couldn't check capture setup", error));
-    }
-  }, [bridge]);
-
-  const setup = useCallback(
-    async (action: DesktopSnapShotSetupAction) => {
-      if (!bridge?.setupSnapShot || setupBusy) return;
-      setSetupBusy(true);
-      setSetupError(null);
-      try {
-        if (
-          state?.macPermissions &&
-          wizard &&
-          (action === "allow-screen-recording" || action === "allow-accessibility")
-        ) {
-          // macOS can quit the app from its permission prompt.
-          saveSnapShotSetupResume(wizard.wasEnabled);
-        }
-        await bridge.setupSnapShot(action);
-        await refreshState();
-      } catch (error) {
         setSetupError(
-          captureSettingsError(
-            action === "retry-shortcut"
-              ? "Couldn't open shortcut permissions"
-              : "Couldn't complete capture setup",
-            error,
-          ),
+          captureSettingsError(currentTranslator()("settingsD.captureErrCheckSetup"), error),
         );
-      } finally {
-        setSetupBusy(false);
-      }
-    },
-    [bridge, refreshState, setupBusy, state, wizard],
-  );
+    }
+  });
 
+  const setup = async (action: DesktopSnapShotSetupAction) => {
+    if (!bridge?.setupSnapShot || setupBusy) return;
+    setSetupBusy(true);
+    setSetupError(null);
+    const result = await settlePromise(async () => {
+      if (
+        state?.macPermissions &&
+        wizard &&
+        (action === "allow-screen-recording" || action === "allow-accessibility")
+      ) {
+        // macOS can quit the app from its permission prompt.
+        saveSnapShotSetupResume(wizard.wasEnabled);
+      }
+      await bridge.setupSnapShot!(action);
+      await refreshState();
+    });
+    if (result._tag === "Failure") {
+      setSetupError(
+        captureSettingsError(
+          action === "retry-shortcut"
+            ? currentTranslator()("settingsD.captureErrShortcutPermissions")
+            : currentTranslator()("settingsD.captureErrCompleteSetup"),
+          Cause.squash(result.cause),
+        ),
+      );
+    }
+    setSetupBusy(false);
+  };
+
+  // Outside the wizard there is nowhere to show an error inline, so it goes to a toast,
+  // once. The error stays in state until the next action clears it.
+  const toastedErrorRef = useRef<typeof setupError>(null);
   useEffect(() => {
-    if (!setupError || wizard) return;
+    if (!setupError || wizard || toastedErrorRef.current === setupError) return;
+    toastedErrorRef.current = setupError;
     toastManager.add({
       type: "error",
       title: setupError.title,
       description: setupError.message,
     });
-    setSetupError(null);
   }, [setupError, wizard]);
 
   useEffect(() => {
@@ -195,66 +221,71 @@ export function SnapShotSettings() {
     [bridge, refreshState],
   );
 
-  useEffect(() => {
-    shortcutCheckIdRef.current++;
+  // Hydration can hand back an equal shortcut object; only a different shortcut resets the edit.
+  const [renderedSavedShortcut, setRenderedSavedShortcut] = useState(savedShortcut);
+  if (!sameSnapShotShortcut(renderedSavedShortcut, savedShortcut)) {
+    setRenderedSavedShortcut(savedShortcut);
     setCandidate(savedShortcut);
     setShortcutCheck({ status: "idle", availability: null });
+  }
+  // A check still in flight was for the shortcut being replaced.
+  const checkedForSavedShortcutRef = useRef(savedShortcut);
+  useEffect(() => {
+    if (sameSnapShotShortcut(checkedForSavedShortcutRef.current, savedShortcut)) return;
+    checkedForSavedShortcutRef.current = savedShortcut;
+    shortcutCheckIdRef.current++;
   }, [savedShortcut]);
 
-  const save = useCallback(
-    async (patch: ClientSettingsPatch) => {
-      setSetupError(null);
-      try {
-        await updateSettings(patch);
-        return await refreshState();
-      } catch (error) {
-        setSetupError(captureSettingsError("Couldn't save capture settings", error));
-      }
-    },
-    [refreshState, updateSettings],
-  );
+  const save = async (patch: ClientSettingsPatch) => {
+    setSetupError(null);
+    try {
+      await updateSettings(patch);
+      return await refreshState();
+    } catch (error) {
+      setSetupError(
+        captureSettingsError(currentTranslator()("settingsD.captureErrSaveSettings"), error),
+      );
+    }
+  };
 
-  const saveIncludeAccessibility = useCallback(
-    async (includeAccessibility: boolean) => {
-      try {
-        if (includeAccessibility && settings.snapShotEnabled)
-          await bridge?.requestSnapShotPermissions(true);
-        await save({ snapShotIncludeAccessibility: includeAccessibility });
-      } catch (error) {
-        setSetupError(captureSettingsError("Couldn't allow app text capture", error));
-      }
-    },
-    [bridge, save, settings.snapShotEnabled],
-  );
+  const saveIncludeAccessibility = async (includeAccessibility: boolean) => {
+    try {
+      if (includeAccessibility && settings.snapShotEnabled)
+        await bridge?.requestSnapShotPermissions(true);
+      await save({ snapShotIncludeAccessibility: includeAccessibility });
+    } catch (error) {
+      setSetupError(
+        captureSettingsError(currentTranslator()("settingsD.captureErrAllowTextCapture"), error),
+      );
+    }
+  };
 
-  const checkShortcut = useCallback(
-    async (shortcut: SnapShotShortcut) => {
-      const checkId = ++shortcutCheckIdRef.current;
-      setCandidate(shortcut);
-      const conflict = snapShotKeybindingConflict(shortcut, keybindings);
-      if (conflict || !bridge) return;
-      setShortcutCheck({ status: "checking", availability: null });
-      try {
-        const availability = await bridge.checkSnapShotShortcut(shortcut);
-        if (checkId === shortcutCheckIdRef.current) {
-          setShortcutCheck({ status: "checked", availability });
-        }
-      } catch (error) {
-        if (checkId !== shortcutCheckIdRef.current) return;
-        setShortcutCheck({
-          status: "checked",
-          availability: {
-            available: false,
-            message:
-              error instanceof Error
-                ? error.message
-                : currentTranslator()("settingsD.couldNotCheckShortcut"),
-          },
-        });
+  const checkShortcut = async (shortcut: SnapShotShortcut) => {
+    const checkId = ++shortcutCheckIdRef.current;
+    setCandidate(shortcut);
+    const conflict = snapShotKeybindingConflict(shortcut, keybindings);
+    if (conflict || !bridge) return;
+    setShortcutCheck({ status: "checking", availability: null, shortcut });
+    try {
+      const availability = await bridge.checkSnapShotShortcut(shortcut);
+      if (checkId === shortcutCheckIdRef.current) {
+        setShortcutCheck({ status: "checked", availability, shortcut });
       }
-    },
-    [bridge, keybindings],
-  );
+    } catch (error) {
+      if (checkId !== shortcutCheckIdRef.current) return;
+      setShortcutCheck({
+        status: "checked",
+        shortcut,
+        availability: {
+          available: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("settingsD.couldNotCheckShortcut"),
+        },
+      });
+    }
+  };
 
   const {
     recording,
@@ -271,7 +302,11 @@ export function SnapShotSettings() {
       setShortcutCheck({ status: "idle", availability: null });
     },
     onError: (message) =>
-      setShortcutCheck({ status: "checked", availability: { available: false, message } }),
+      setShortcutCheck({
+        status: "checked",
+        shortcut: candidate,
+        availability: { available: false, message },
+      }),
   });
 
   const shortcutStatus = recording
@@ -298,35 +333,33 @@ export function SnapShotSettings() {
     setShortcutCheck({ status: "idle", availability: null });
     setSetupError(null);
     setSetupBusy(true);
-    try {
-      let current = await refreshState();
-      if (!current) return;
-      if (current.macPermissions) requested = "access";
-      if (!settings.snapShotEnabled && captureSetupInitialStep(current, requested) !== "access") {
-        // Opening setup is the opt-in. Restore registration before resuming a
-        // later step, just as Continue does on the access step.
-        current = await save({ snapShotEnabled: true });
-        if (!current) {
-          // A settings write can succeed even if the following status check
-          // fails. Keep Finish later available to turn capture back off.
-          setWizard({ initialStep: "access", wasEnabled: false });
-          return;
-        }
+    await prepareSetup(requested).finally(() => setSetupBusy(false));
+  };
+
+  const prepareSetup = async (requested: CaptureSetupStep | "resume") => {
+    let current = await refreshState();
+    if (!current) return;
+    if (current.macPermissions) requested = "access";
+    if (!settings.snapShotEnabled && captureSetupInitialStep(current, requested) !== "access") {
+      current = await save({ snapShotEnabled: true });
+      if (!current) {
+        // A settings write can succeed even if the following status check
+        // fails. Keep Finish later available to turn capture back off.
+        setWizard({ initialStep: "access", wasEnabled: false });
+        return;
       }
-      setWizard({
-        initialStep: captureSetupInitialStep(current, requested),
-        wasEnabled: settings.snapShotEnabled,
-      });
-    } finally {
-      setSetupBusy(false);
     }
+    setWizard({
+      initialStep: captureSetupInitialStep(current, requested),
+      wasEnabled: settings.snapShotEnabled,
+    });
   };
 
   const enableForSetup = async () => {
     if (setupBusy) return false;
     setSetupBusy(true);
     setSetupError(null);
-    try {
+    const verified = await settlePromise(async () => {
       if (state?.macPermissions) {
         saveSnapShotSetupResume(wizard?.wasEnabled ?? settings.snapShotEnabled);
         if (!bridge?.setupSnapShot) throw new Error("Restart T3 Code to finish capture setup.");
@@ -339,18 +372,22 @@ export function SnapShotSettings() {
           ? await refreshState()
           : await save({ snapShotEnabled: true });
       return nextState !== undefined && captureSetupAccessReady(nextState);
-    } catch (error) {
-      setSetupError(captureSettingsError("Couldn't verify capture access", error));
-      return false;
-    } finally {
-      setSetupBusy(false);
-    }
+    });
+    setSetupBusy(false);
+    if (verified._tag === "Success") return verified.value;
+    setSetupError(
+      captureSettingsError(
+        currentTranslator()("settingsD.captureErrVerifyAccess"),
+        Cause.squash(verified.cause),
+      ),
+    );
+    return false;
   };
 
   const closeSetup = async (completed: boolean) => {
     if (!wizard || setupBusy) return;
     setSetupBusy(true);
-    try {
+    const closed = await settlePromise(async () => {
       if (
         settings.snapShotEnabled &&
         captureSetupShouldDisableOnClose(wizard.wasEnabled, completed)
@@ -361,22 +398,23 @@ export function SnapShotSettings() {
       setSetupError(null);
       clearSnapShotSetupResume();
       setWizard(null);
-    } catch (error) {
-      setSetupError(captureSettingsError("Couldn't close capture setup", error));
-    } finally {
-      setSetupBusy(false);
+    });
+    if (closed._tag === "Failure") {
+      setSetupError(
+        captureSettingsError(
+          currentTranslator()("settingsD.captureErrCloseSetup"),
+          Cause.squash(closed.cause),
+        ),
+      );
     }
+    setSetupBusy(false);
   };
 
   const saveShortcut = async () => {
     if (!canSaveShortcut || setupBusy) return false;
     setSetupBusy(true);
-    try {
-      const saved = await save({ snapShotShortcut: candidate });
-      return Boolean(saved?.shortcutRegistered || saved?.shortcutPending);
-    } finally {
-      setSetupBusy(false);
-    }
+    const saved = await save({ snapShotShortcut: candidate }).finally(() => setSetupBusy(false));
+    return Boolean(saved?.shortcutRegistered || saved?.shortcutPending);
   };
 
   return (

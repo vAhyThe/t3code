@@ -209,9 +209,7 @@ const resolveDesktopCoreAdvertisedEndpoints = (
           input.translate,
         ),
       );
-    } catch {
-      // Ignore malformed user-configured endpoints without dropping valid endpoints.
-    }
+    } catch {}
   }
 
   return endpoints;

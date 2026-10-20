@@ -696,4 +696,9 @@ export const shellNav = {
     "Enable T3 Connect on that machine, then open Connections here to sign in with the same account. You can also add the machine using a pairing link.",
   openConnectionsPairing:
     "Open Connections and add that machine using its pairing link. This app must be able to reach it.",
+  archiveThreadsCountQuestion: {
+    one: "Archive {count} thread?",
+    other: "Archive {count} threads?",
+  },
+  unsettlingNow: "Un-settling...",
 } as const satisfies CatalogNamespace;

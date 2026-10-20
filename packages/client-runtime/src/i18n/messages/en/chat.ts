@@ -964,4 +964,7 @@ export const chat = {
   traitsOff: "Off",
   traitsBooleanOn: "{label} On",
   traitsBooleanOff: "{label} Off",
+  automationsNextRunPrefix: "next",
+  fileBreadcrumbPathLabel: "File path",
+  inspectorEarlierOutputHidden: "Earlier output not shown",
 } as const satisfies CatalogNamespace;

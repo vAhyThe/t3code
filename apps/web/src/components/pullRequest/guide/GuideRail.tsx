@@ -4,18 +4,8 @@ import { CheckIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 import { Badge } from "../../ui/badge";
-import { stopFilePaths } from "@t3tools/client-runtime/review-guide-tour";
-import type { Translate } from "@t3tools/client-runtime/i18n";
+import { stopSubline } from "@t3tools/client-runtime/review-guide-tour";
 import { useT } from "../../../i18n/I18nProvider";
-
-/**
- * The tour's table of contents: where the reader is and which stops they have read past. A stop
- * with a call to make is marked; that is the only sign of where to slow down.
- */
-function stopFilesLabel(t: Translate, stop: PullRequestReviewGuideStop): string {
-  const count = stopFilePaths(stop).length;
-  return count === 0 ? t("pullRequest.contextNoCode") : t("pullRequest.stopFilesCount", { count });
-}
 
 export function GuideRail({
   stops,
@@ -25,7 +15,6 @@ export function GuideRail({
 }: {
   stops: ReadonlyArray<PullRequestReviewGuideStop>;
   position: number;
-  /** Stops the reader has moved on from. */
   seen: ReadonlySet<number>;
   onSelect: (position: number) => void;
 }) {
@@ -45,7 +34,7 @@ export function GuideRail({
                 {t("pullRequest.lookClosely")}
               </Badge>
             ) : null}
-            <span>{stopFilesLabel(t, stop)}</span>
+            <span>{stopSubline(stop, t)}</span>
           </>
         }
       />
@@ -54,7 +43,6 @@ export function GuideRail({
 
   return (
     <nav aria-label={t("pullRequest.reviewTour")} className="flex min-h-0 flex-col gap-4">
-      {/* Beside the stop only; narrow, the stop's own header says where the reader is. */}
       <p className="text-xs text-muted-foreground tabular-nums @max-[56rem]/guide:hidden">
         {reviewed} of {stops.length} read
       </p>
@@ -65,7 +53,6 @@ export function GuideRail({
   );
 }
 
-/** A semantic row of the tour's list rather than a control styled as a button. */
 function RailRow({
   active,
   onClick,

@@ -41,11 +41,9 @@ export function costPerMillionTokens(model: ModelTotals): number | null {
     : (model.costUsd / pricedTokens) * 1_000_000;
 }
 
-/** A neutral step between background and foreground, so mixes never borrow a provider's color. */
 const ink = (percent: number) =>
   `color-mix(in oklab, var(--foreground) ${percent}%, var(--background))`;
 
-/** Adjacent segments stay above the 15 ΔE separation floor in both themes. */
 const TYPE_COLORS = {
   input: ink(60),
   cacheRead: ink(30),
@@ -68,8 +66,6 @@ export function costTypeSegments(cost: CategoryCost, t: Translate): readonly Sha
       color: TYPE_COLORS.cacheWrite,
     },
     { label: t("shellDevice.usageTypeOutput"), value: cost.output, color: TYPE_COLORS.output },
-    // Reported cost with no rates to split it, or from older servers. Below a
-    // cent it is rounding, not usage.
     {
       label: t("shellDevice.usageTypeOther"),
       value: cost.unsplit >= 0.005 ? cost.unsplit : 0,
@@ -106,7 +102,6 @@ export function tokenTypeSegments(
   ];
 }
 
-/** Speeds are ordered by price, so they brighten from standard to ultrafast. */
 export function speedCostSegments(cost: SpeedCost, t: Translate): readonly ShareSegment[] {
   return [
     { label: t("shellDevice.usageSpeedStandard"), value: cost.standard, color: ink(34) },

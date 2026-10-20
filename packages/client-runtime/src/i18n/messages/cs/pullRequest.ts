@@ -857,4 +857,7 @@ export const pullRequest = {
   unreadableHost: "Tento hostitel nešel načíst.",
   selectPullRequestFirst: "Nejdřív vyberte pull request",
   pullRequestsBreadcrumb: "Drobečková navigace pull requestů",
+  noProjectCanRead: "Žádný projekt v tomto prostředí nemá přístup k {host}/{repository}.",
+  pasteFullUrlUnknownHost:
+    "Vložte celou URL; hostitel tohoto projektu nemá známou URL pull requestů.",
 } satisfies CzechNamespace<"pullRequest">;

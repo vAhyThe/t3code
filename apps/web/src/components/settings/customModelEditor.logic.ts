@@ -7,7 +7,6 @@ import { type CustomModelDefinition, createModelCapabilities } from "@t3tools/sh
 
 import { currentTranslator } from "../../i18n/I18nProvider";
 
-/** Editable mirror of a `ProviderOptionChoice`. `key` is only a React key. */
 export interface EditorChoice {
   readonly key: string;
   readonly id: string;
@@ -16,7 +15,6 @@ export interface EditorChoice {
   readonly description?: string;
 }
 
-/** Editable mirror of a `ProviderOptionDescriptor`. `key` is only a React key. */
 export interface EditorDescriptor {
   readonly key: string;
   readonly type: "select" | "boolean";
@@ -47,11 +45,6 @@ const EFFORT_CHOICES = [
   { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
 ] as const;
 
-/**
- * Option ids each adapter actually reads off a turn's model selection, with
- * the usual choices pre-filled. Anything else the user types is stored
- * verbatim but will be ignored by the driver.
- */
 export const DESCRIPTOR_PRESETS_BY_KIND: Partial<
   Record<ProviderDriverKind, ReadonlyArray<DescriptorPreset>>
 > = {
@@ -206,10 +199,6 @@ export function descriptorsFromCapabilities(
     .map(descriptorToEditor);
 }
 
-/**
- * Validate the draft before saving. Returns the first problem in reading
- * order so the message is actionable, or `null` when the draft is sound.
- */
 export function validateDraft(draft: CustomModelDraft): string | null {
   const t = currentTranslator();
   const seenIds = new Set<string>();
@@ -237,7 +226,6 @@ export function validateDraft(draft: CustomModelDraft): string | null {
   return null;
 }
 
-/** Convert a validated draft back into a definition. Blank name → slug. */
 export function definitionFromDraft(draft: CustomModelDraft): CustomModelDefinition {
   const descriptors: ProviderOptionDescriptor[] = draft.descriptors.map((descriptor) => {
     const id = descriptor.id.trim();

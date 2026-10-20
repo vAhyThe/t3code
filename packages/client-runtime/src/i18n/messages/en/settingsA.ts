@@ -658,4 +658,9 @@ export const settingsA = {
   connectionsRemoteLink: "Remote link",
   connectionsRemoteLinkDescription: "Enter a backend host and pairing code.",
   connectionsSshDescription: "Use local SSH config, agent, and tunnels for the backend.",
+  displayCurrency: "Currency",
+  displayCurrencyDescription: "The currency usage costs are shown in. Prices you enter stay in USD.",
+  displayCurrencyRate: "ČNB rate {rate} CZK/USD from {date}.",
+  displayCurrencyRateUnavailable: "The ČNB rate is not available right now, so costs are shown in USD.",
+  displayCurrencyResetLabel: "currency",
 } as const satisfies CatalogNamespace;

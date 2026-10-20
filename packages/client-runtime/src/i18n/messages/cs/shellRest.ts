@@ -680,4 +680,6 @@ export const shellRest = {
   matchCaseGlyph: "Aa",
   desktopSecureStorageUnavailable:
     "Zabezpečené úložiště počítače není v tomto systémovém kontextu dostupné.",
+  onlyThreadLinkedToWorktree: "Toto vlákno je jediné propojené s tímto worktree:",
+  deleteWorktreeToo: "Smazat i worktree?",
 } satisfies CzechNamespace<"shellRest">;

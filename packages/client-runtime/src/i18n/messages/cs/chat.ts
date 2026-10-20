@@ -1059,4 +1059,7 @@ export const chat = {
   traitsOff: "Vypnuto",
   traitsBooleanOn: "{label}: zapnuto",
   traitsBooleanOff: "{label}: vypnuto",
+  automationsNextRunPrefix: "další",
+  fileBreadcrumbPathLabel: "Cesta k souboru",
+  inspectorEarlierOutputHidden: "Dřívější výstup není zobrazen",
 } satisfies CzechNamespace<"chat">;

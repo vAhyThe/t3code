@@ -1,9 +1,4 @@
 // @effect-diagnostics globalDate:off -- Usage windows are calendar days in the viewer's zone, derived from wall-clock "now" via Intl.
-/**
- * Display formatting for the usage page.
- *
- * @module usageFormat
- */
 import { UsageDay, type UsageResolution, type UsageSummaryInput } from "@t3tools/contracts";
 
 import type { UsageContractMismatch } from "./usageMerge.ts";
@@ -15,20 +10,37 @@ const CURRENCY = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const CZK_WITH_HALERU = new Intl.NumberFormat("cs-CZ", {
+  style: "currency",
+  currency: "CZK",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const CZK_WHOLE = new Intl.NumberFormat("cs-CZ", {
+  style: "currency",
+  currency: "CZK",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 const INTEGER = new Intl.NumberFormat("en-US");
 
 export function formatUsd(value: number): string {
   return CURRENCY.format(value);
 }
 
+/** Shows a USD amount in CZK at `czkPerUsd`, or in USD when there is no rate. */
+export function formatMoney(usd: number, czkPerUsd: number | null): string {
+  if (czkPerUsd === null) return formatUsd(usd);
+  const czk = usd * czkPerUsd;
+  return (Math.abs(czk) < 100 ? CZK_WITH_HALERU : CZK_WHOLE).format(czk);
+}
+
 export function formatCount(value: number): string {
   return INTEGER.format(Math.round(value));
 }
 
-/**
- * Compacts a token count to three significant figures with a unit suffix, so
- * columns of numbers line up at a glance (`19.9B`, `76.7M`, `804K`).
- */
 export function formatTokens(value: number): string {
   const abs = Math.abs(value);
   if (abs >= 1e12) return `${trim(value / 1e12)}T`;
@@ -60,8 +72,7 @@ export function formatUsageContractMismatch(
     : `This client is older than the server on ${environmentLabel}; its usage is excluded from totals.`;
 }
 
-/** `2026-08-07` to `Aug 7`. */
-export function formatDayShort(day: string): string {
+export function formatDayShort(day: string, withYear = false): string {
   const [year, month, dayOfMonth] = day.split("-").map((part) => Number(part));
   if (year === undefined || month === undefined || dayOfMonth === undefined) return day;
   const MONTHS = [
@@ -78,10 +89,15 @@ export function formatDayShort(day: string): string {
     "Nov",
     "Dec",
   ];
-  return `${MONTHS[month - 1] ?? ""} ${dayOfMonth}`;
+  const short = `${MONTHS[month - 1] ?? ""} ${dayOfMonth}`;
+  return withYear ? `${short}, ${year}` : short;
 }
 
-/** Inclusive day list between two `YYYY-MM-DD` bounds. */
+/** Short days drop the year, which is ambiguous once the shown days cross a new year. */
+export function spansYears(days: readonly string[]): boolean {
+  return (days[0]?.slice(0, 4) ?? "") !== (days.at(-1)?.slice(0, 4) ?? "");
+}
+
 export function enumerateDays(sinceDay: string, untilDay: string): readonly string[] {
   const days: string[] = [];
   const start = Date.parse(`${sinceDay}T00:00:00Z`);
@@ -113,7 +129,6 @@ function dateTimeFormatter(
   return formatter;
 }
 
-/** Every fixed-duration bucket start in an hourly rolling window. */
 export function enumerateHourStarts(sinceTime: string, untilTime: string): readonly string[] {
   const starts: string[] = [];
   const start = Date.parse(sinceTime);
@@ -127,10 +142,8 @@ export function enumerateHourStarts(sinceTime: string, untilTime: string): reado
 }
 
 /**
- * A rolling bucket start rendered in the viewer's requested time zone.
- *
- * Repeated wall-clock hours during a fall-back transition include their short
- * zone name so the two distinct buckets remain distinguishable.
+ * Repeated wall-clock hours during a fall-back transition include their short zone name so the
+ * two distinct buckets remain distinguishable.
  */
 export function formatHourShort(hourStart: string, timeZone?: string): string {
   const instant = new Date(hourStart);
@@ -161,7 +174,6 @@ export function formatHourShort(hourStart: string, timeZone?: string): string {
   }).format(instant);
 }
 
-/** `2026-08-11T14:37:00Z` to `Aug 11, 2 PM` in the requested zone. */
 export function formatDateTimeShort(instant: string, timeZone?: string): string {
   const date = new Date(instant);
   if (Number.isNaN(date.getTime())) return instant;
@@ -173,7 +185,6 @@ export function formatDateTimeShort(instant: string, timeZone?: string): string 
   }).format(date);
 }
 
-/** An hourly tooltip label relative to the rolling window's end date. */
 export function formatRelativeHourShort(
   hourStart: string,
   relativeTo: string,
@@ -202,11 +213,13 @@ export function formatRelativeHourShort(
 }
 
 /**
- * The window the page requests, expressed in the viewer's own time zone so days
- * line up with what they actually experienced.
+ * The first day an all-time window asks for, earlier than any supported
+ * agent's usage history. Callers trim the empty days before the first usage.
  */
+export const ALL_TIME_SINCE_DAY = UsageDay.make("2020-01-01");
+
 export function makeWindow(
-  days: number,
+  days: number | "all",
   now = new Date(),
   resolution: UsageResolution = "day",
 ): UsageSummaryInput {
@@ -220,7 +233,6 @@ export function makeWindow(
       day: "2-digit",
     });
   } catch {
-    // An unknown zone should degrade to UTC rather than crash the page.
     timeZone = "UTC";
     format = new Intl.DateTimeFormat("en-CA", {
       timeZone: "UTC",
@@ -231,9 +243,6 @@ export function makeWindow(
   }
   const untilDay = format.format(now);
   if (resolution === "hour") {
-    // Minute-aligned bounds keep labels readable while still representing an
-    // exact rolling 24-hour duration. Fixed-duration buckets remain correct
-    // across offset changes and daylight-saving transitions.
     const untilTimeMs = Math.floor(now.getTime() / 60_000) * 60_000;
     const sinceTimeMs = untilTimeMs - 24 * HOUR_MS;
     const sinceTime = new Date(sinceTimeMs);
@@ -245,6 +254,14 @@ export function makeWindow(
       resolution,
       sinceTime: sinceTime.toISOString(),
       untilTime: untilTime.toISOString(),
+    };
+  }
+  if (days === "all") {
+    return {
+      sinceDay: ALL_TIME_SINCE_DAY,
+      untilDay: UsageDay.make(untilDay),
+      timeZone,
+      resolution,
     };
   }
   // Subtracting fixed milliseconds from `now` lands on the wrong calendar day

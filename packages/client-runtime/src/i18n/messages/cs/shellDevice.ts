@@ -421,6 +421,7 @@ export const shellDevice = {
   usageWindow7Days: "7 dní",
   usageWindow30Days: "30 dní",
   usageWindow90Days: "90 dní",
+  usageWindowAllTime: "Celá doba",
   usageTypeInput: "Vstup",
   usageTypeCacheRead: "Čtení z cache",
   usageTypeCacheWrite: "Zápis do cache",
@@ -809,4 +810,7 @@ export const shellDevice = {
   onboardingComputerFallback: "Počítač",
   usagePriceFieldRequired: "Pole {field} je u {target} povinné.",
   usagePriceNonNegative: "Ceny musí být nezáporná čísla.",
+  deviceIosReadyOnHost: "Xcode a simulátor iOS jsou dostupné na hostiteli {host}.",
+  deviceAndroidReadyOnHost: "Android SDK a emulátor jsou dostupné na hostiteli {host}.",
+  pagePickUnavailable: "Stránka se nenačetla, výběr prvku není dostupný, dokud se nevykreslí",
 } satisfies CzechNamespace<"shellDevice">;

@@ -1,6 +1,6 @@
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { ChevronRightIcon, ExternalLinkIcon, SearchIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   decodeThirdPartyLicenseManifest,
@@ -222,11 +222,11 @@ export function OpenSourceLicensesPanel() {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [openEntryKey, setOpenEntryKey] = useState<string | null>(null);
-  const [requestVersion, setRequestVersion] = useState(0);
+  const loading = state.status === "loading";
 
   useEffect(() => {
+    if (!loading) return;
     let cancelled = false;
-    setState({ status: "loading" });
     void loadLicenseManifest().then(
       (manifest) => {
         if (!cancelled) setState({ status: "ready", manifest });
@@ -245,14 +245,11 @@ export function OpenSourceLicensesPanel() {
     return () => {
       cancelled = true;
     };
-  }, [requestVersion]);
+  }, [loading]);
 
   const entries = state.status === "ready" ? state.manifest.entries : [];
-  const filteredEntries = useMemo(
-    () => filterThirdPartyLicenseEntries(entries, query),
-    [entries, query],
-  );
-  const retry = useCallback(() => setRequestVersion((value) => value + 1), []);
+  const filteredEntries = filterThirdPartyLicenseEntries(entries, query);
+  const retry = () => setState({ status: "loading" });
 
   return (
     <SettingsPageContainer>

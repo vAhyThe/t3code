@@ -2,9 +2,12 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
+  ALL_TIME_SINCE_DAY,
   enumerateHourStarts,
   formatDateTimeShort,
+  formatDayShort,
   formatHourShort,
+  formatMoney,
   formatPercent,
   formatRelativeHourShort,
   makeWindow,
@@ -18,6 +21,18 @@ describe("formatPercent", () => {
     expect(formatPercent(0.001)).toBe("0.1%");
     expect(formatPercent(0.023)).toBe("2.3%");
     expect(formatPercent(0.00004, 2)).toBe("<0.01%");
+  });
+});
+
+describe("formatMoney", () => {
+  it("keeps the USD output without a rate", () => {
+    expect(formatMoney(1234.5, null)).toBe("$1,234.50");
+  });
+
+  it("converts to CZK with hellers under 100 Kč and whole crowns from 100 Kč", () => {
+    expect(formatMoney(0.42, 21.622)).toBe("9,08\u00a0Kč");
+    expect(formatMoney(4.62, 21.622)).toBe("99,89\u00a0Kč");
+    expect(formatMoney(100, 21.622)).toBe("2\u00a0162\u00a0Kč");
   });
 });
 
@@ -89,6 +104,19 @@ describe("hourly usage formatting", () => {
     expect(window.resolution).toBe("hour");
     expect(window.sinceTime).toBe("2026-08-10T12:37:00.000Z");
     expect(window.untilTime).toBe("2026-08-11T12:37:00.000Z");
+  });
+
+  it("builds an all-time day request that ends today", () => {
+    const window = makeWindow("all", new Date("2026-08-11T12:37:42.123Z"));
+
+    expect(window.sinceDay).toBe(ALL_TIME_SINCE_DAY);
+    expect(window.untilDay).toBe(makeWindow(1, new Date("2026-08-11T12:37:42.123Z")).untilDay);
+    expect(window.resolution).toBe("day");
+  });
+
+  it("adds the year to a short day only when asked", () => {
+    expect(formatDayShort("2025-03-01")).toBe("Mar 1");
+    expect(formatDayShort("2025-03-01", true)).toBe("Mar 1, 2025");
   });
 
   it("degrades an unknown resolved zone to UTC instead of crashing", () => {
