@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { CheckIcon, CircleDotIcon, CircleIcon, ListTodoIcon } from "lucide-react";
 import { memo, type ComponentProps } from "react";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
@@ -11,6 +12,7 @@ export interface ComposerTasksProgress {
   readonly step: string;
   readonly completedSteps: number;
   readonly totalSteps: number;
+  readonly live: boolean;
 }
 
 export interface ComposerTaskStep {
@@ -212,13 +214,13 @@ export const ComposerTasksContent = memo(function ComposerTasksContent({
                 </ComposerBanner.Content>
                 <ComposerBanner.Actions>
                   <span
-                    className="w-12 text-right text-3xs/4 text-muted-foreground/45 tabular-nums"
+                    className="min-w-12 text-right text-3xs/4 whitespace-nowrap text-muted-foreground/45 tabular-nums"
                     data-composer-task-duration="true"
                   >
                     {step.durationMs !== undefined
                       ? formatDuration(step.durationMs)
-                      : step.status === "inProgress"
-                        ? "now"
+                      : step.status === "inProgress" && progress.live
+                        ? currentTranslator()("shellRest.justNowCompact")
                         : null}
                   </span>
                 </ComposerBanner.Actions>

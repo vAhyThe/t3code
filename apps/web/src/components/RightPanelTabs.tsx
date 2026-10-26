@@ -1,10 +1,10 @@
-import { pullRequestHostOf, type SourceControlProviderKind } from "@t3tools/contracts";
+import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { useProjects, useServerConfigs, useThreadShells } from "~/state/entities";
 import {
   threadPullRequestKeysEqual,
   visibleThreadPullRequests,
-} from "@t3tools/shared/threadPullRequests";
+} from "@t3tools/client-runtime/thread-pull-requests";
 import type {
   ContextMenuItem,
   EnvironmentId,
@@ -95,7 +95,7 @@ import { observeResize } from "~/lib/observeResize";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
-interface RightPanelTabsProps {
+export interface RightPanelTabsProps {
   mode: PreviewPanelMode;
   maximized?: boolean;
   open?: boolean;
@@ -111,11 +111,7 @@ interface RightPanelTabsProps {
   pendingSurfaceIds: ReadonlySet<string>;
   previewSessions: Readonly<Record<string, PreviewSessionSnapshot>>;
   desktopByTabId: Readonly<Record<string, DesktopPreviewOverlay>>;
-  /**
-   * Maps a server session tab id to the desktop runtime tab id the Electron
-   * preview manager is keyed by. Session ids are only unique within one server
-   * process, so desktop operations must not be addressed with them.
-   */
+  /** Maps server-local session ids to desktop runtime ids; session ids cannot address desktop operations. */
   previewRuntimeTabId?: ((tabId: string) => string) | undefined;
   terminalLabelsById: ReadonlyMap<string, string>;
   onActivate: (surface: RightPanelSurface) => void;
@@ -127,11 +123,7 @@ interface RightPanelTabsProps {
   onMoveSurface?: (surfaceId: string, toIndex: number) => void;
   onCopyFilePath: (relativePath: string) => void;
   onAddBrowser: () => void;
-  /**
-   * Separate from `onAddBrowser` on purpose: that one is passed directly as a
-   * DOM click handler, and a `(profileId?: string)` signature would silently
-   * accept the MouseEvent as a profile id.
-   */
+  /** Keep separate from the DOM click handler so a MouseEvent cannot become a profile id. */
   onAddBrowserInProfile: (profileId: string) => void;
   onAddTerminal: () => void;
   onAddDiff: () => void;
@@ -160,9 +152,7 @@ export interface PullRequestTabStatus {
 
 export type PullRequestTabStatusSeed = Pick<PullRequestTabStatus, "state" | "isDraft">;
 
-export function shouldOpenDefaultBrowserProfileFromMenuClick(
-  pointerType: string | undefined,
-): boolean {
+function shouldOpenDefaultBrowserProfileFromMenuClick(pointerType: string | undefined): boolean {
   return pointerType !== "touch";
 }
 
@@ -229,7 +219,7 @@ function previewTabIdOf(
  * resolve while the preview manager's createTab is still in flight, and muting
  * then fails with a PreviewTabNotFoundError nothing surfaces to the user.
  */
-export function tabMuteMenuItem(input: {
+function tabMuteMenuItem(input: {
   overlay: DesktopPreviewOverlay | null;
   canResolveRuntimeTabId: boolean;
 }): { label: string; disabled: boolean } {
@@ -266,11 +256,7 @@ export function surfaceShortcutActionForKey<
   );
 }
 
-/**
- * The `:not` clause lets `closest` see past non-editable islands
- * (`contenteditable="false"`) to an editable host around them, matching
- * ComposerPendingUserInputPanel's typing guard.
- */
+/** Skip contenteditable=false islands to find their editable host, matching the composer typing guard. */
 export function surfaceShortcutTargetsTypingContext(
   target: { closest(selectors: string): unknown } | null,
 ): boolean {
@@ -335,7 +321,7 @@ function RightPanelEmptyState(props: {
 
   const actions = [
     {
-      label: "Browser", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsB.integrationsBrowser"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceBrowser" as const,
       icon: Globe2,
       shortcut: "B",
@@ -344,7 +330,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddBrowser,
     },
     {
-      label: "Terminal", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsB.keybindingGroupTerminal"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceTerminal" as const,
       icon: TerminalSquare,
       shortcut: "T",
@@ -353,7 +339,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddTerminal,
     },
     {
-      label: "Files", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("pullRequest.filesHeader"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceFiles" as const,
       icon: Files,
       shortcut: "F",
@@ -362,7 +348,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddFiles,
     },
     {
-      label: "Diff", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfaceDiff"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceDiff" as const,
       icon: FileDiff,
       shortcut: "D",
@@ -371,7 +357,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddDiff,
     },
     {
-      label: "Pull request", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfacePullRequest"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfacePullRequest" as const,
       icon: PullRequestGlyph.pullRequest,
       shortcut: "P",
@@ -380,7 +366,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddPullRequest,
     },
     {
-      label: "Linked pull requests", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfaceLinkedPullRequests"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceLinkedPullRequests" as const,
       icon: PullRequestGlyph.link,
       shortcut: "L",
@@ -389,7 +375,7 @@ function RightPanelEmptyState(props: {
       onClick: props.onAddPullRequests,
     },
     {
-      label: "Device", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsC.deviceLabel"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceDevice" as const,
       // i18n-ignore: field is not rendered
       description: "Watch an iOS Simulator or Android Emulator.",
@@ -736,7 +722,7 @@ function PullRequestSurfaceIcon({
   const host =
     surface.host ??
     (identity?.provider
-      ? pullRequestHostOf(identity, identity.provider as SourceControlProviderKind)
+      ? sourceControlClients.changeRequestHost(identity, identity.provider)
       : null);
   const configs = useServerConfigs();
   const capabilities =
@@ -759,6 +745,7 @@ function PullRequestSurfaceIcon({
               : {}),
             repository: surface.repository,
             number: surface.number,
+            allowStale: false,
           },
         }),
   ).data;
@@ -767,7 +754,7 @@ function PullRequestSurfaceIcon({
     repository: surface.repository,
     number: surface.number,
   };
-  const sharedSummary = useSharedPullRequestSummary(resolvedEnvironmentId, reference, null);
+  const sharedSummary = useSharedPullRequestSummary(resolvedEnvironmentId, reference);
   const status = linkedSnapshot ?? newestPullRequestSummary(detail, sharedSummary) ?? seed ?? null;
   if (status === null) {
     return <PullRequestGlyph.pullRequest className="size-3 shrink-0 text-muted-foreground" />;
@@ -779,8 +766,6 @@ function PullRequestSurfaceIcon({
   return <presentation.Icon className={cn("size-3 shrink-0", presentation.toneClassName)} />;
 }
 
-// Module-level so React only runs this callback ref on mount and unmount;
-// a fresh function would re-attach and re-focus on every render.
 function focusOnMount(node: HTMLDivElement | null) {
   node?.focus();
 }
@@ -821,14 +806,13 @@ interface RightPanelTabHandlers {
   onFinishRename: (surfaceId: string, title: string) => void;
 }
 
-function handleTabMouseDown(event: ReactMouseEvent) {
+// Chromium on Linux only suppresses primary-selection paste when mouseup is cancelled.
+function preventTabMiddleButtonDefault(event: ReactMouseEvent) {
   if (event.button !== 1) return;
   event.preventDefault();
 }
 
-// One tab owns its sortable state and receives only its own values, so the
-// compiled subtree is reused unless this tab's surface, title or state changed.
-// The handlers must be stable: the tab list re-renders on every parent render.
+// Stable handlers and per-tab values let the compiler reuse tabs across parent renders.
 function RightPanelTab(
   props: RightPanelTabHandlers & {
     surface: RightPanelSurface;
@@ -967,7 +951,8 @@ function RightPanelTab(
   return (
     <div
       data-active-tab={props.active}
-      onMouseDown={handleTabMouseDown}
+      onMouseDown={preventTabMiddleButtonDefault}
+      onMouseUp={preventTabMiddleButtonDefault}
       onAuxClick={(event) => onAuxClick(event, surface)}
       onContextMenu={(event) => onContextMenu(event, surface)}
       {...listeners}
@@ -1059,7 +1044,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
 
   const addSurfaceActions = [
     {
-      label: "Browser", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsB.integrationsBrowser"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceBrowser" as const,
       icon: Globe2,
       shortcut: "B",
@@ -1068,7 +1053,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddBrowser,
     },
     {
-      label: "Terminal", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsB.keybindingGroupTerminal"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceTerminal" as const,
       icon: TerminalSquare,
       shortcut: "T",
@@ -1077,7 +1062,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddTerminal,
     },
     {
-      label: "Files", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("pullRequest.filesHeader"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceFiles" as const,
       icon: Files,
       shortcut: "F",
@@ -1086,7 +1071,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddFiles,
     },
     {
-      label: "Diff", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfaceDiff"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceDiff" as const,
       icon: FileDiff,
       shortcut: "D",
@@ -1095,7 +1080,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddDiff,
     },
     {
-      label: "Pull request", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfacePullRequest"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfacePullRequest" as const,
       icon: PullRequestGlyph.pullRequest,
       shortcut: "P",
@@ -1104,7 +1089,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddPullRequest,
     },
     {
-      label: "Linked pull requests", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("shellNav.surfaceLinkedPullRequests"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceLinkedPullRequests" as const,
       icon: PullRequestGlyph.link,
       shortcut: "L",
@@ -1113,7 +1098,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       onClick: props.onAddPullRequests,
     },
     {
-      label: "Device", // i18n-ignore: surface id, translated at render
+      label: currentTranslator()("settingsC.deviceLabel"), // i18n-ignore: surface id, translated at render
       labelKey: "shellNav.surfaceDevice" as const,
       icon: Smartphone,
       shortcut: "M",
@@ -1221,8 +1206,6 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
     event.stopPropagation();
     props.onCloseSurface(surface);
   };
-  // Every tab receives these. Parents pass fresh closures on each render, so
-  // stable forwarders keep a tab's props equal unless its own surface changed.
   const onActivateTab = useStableCallback(props.onActivate);
   const onCloseTab = useStableCallback(props.onCloseSurface);
   const onTabAuxClick = useStableCallback(handleTabAuxClick);
@@ -1530,7 +1513,11 @@ function DeviceTabTooltip(props: {
           {host?.label ?? t("shellNav.deviceHost")} ·{" "}
           {
             device?.version ??
-              (target.platform === "ios" ? "iOS" : "Android") /* i18n-ignore: platform names */
+              (target.platform === "ios"
+                ? "iOS"
+                : currentTranslator()(
+                    "shellRest.androidPlatformName",
+                  )) /* i18n-ignore: platform names */
           }
         </span>
       ) : null}

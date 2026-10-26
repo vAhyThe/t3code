@@ -1,3 +1,4 @@
+import { updates } from "./updates.ts";
 import { chat } from "./chat.ts";
 import { common } from "./common.ts";
 import { desktop } from "./desktop.ts";
@@ -16,6 +17,7 @@ import { shellRest } from "./shellRest.ts";
  */
 export const enMessages = {
   common,
+  updates,
   settingsA,
   settingsB,
   settingsC,

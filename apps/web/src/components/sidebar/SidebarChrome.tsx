@@ -1,3 +1,5 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { ArrowLeftIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
@@ -129,7 +131,8 @@ function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
           onBackdrop ? "text-white/70" : "text-muted-foreground",
         )}
       >
-        {/* i18n-ignore: product name */}Code
+        {/* i18n-ignore: product name */}
+        {currentTranslator()("pullRequest.tabCode")}
       </span>
     </span>
   );
@@ -160,8 +163,7 @@ function SidebarUtilityItem({
   );
 }
 
-export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
-  const t = useT();
+const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   const navigate = useNavigate();
   const navigateToMainApp = useNavigateToMainApp();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -204,26 +206,26 @@ export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
         <SidebarMenuItem className="min-w-0 flex-1">
           <SidebarMenuButton onClick={handleBackClick}>
             <ArrowLeftIcon />
-            <span>{t("shellNav.back")}</span>
+            <span>{currentTranslator()("shellNav.back")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ) : (
         <>
           <SidebarUtilityItem
             icon={<SettingsIcon />}
-            label={t("shellNav.settingsNav")}
+            label={currentTranslator()("shellNav.settingsNav")}
             onClick={handleSettingsClick}
           />
           {pullRequestsSupported ? (
             <SidebarUtilityItem
               icon={<PullRequestGlyph.pullRequest />}
-              label={t("shellNav.pullRequestsNav")}
+              label={currentTranslator()("chat.commandMenuListPullRequests")}
               onClick={handlePullRequestsClick}
             />
           ) : null}
           <SidebarUtilityItem
             icon={<ChartNoAxesColumnIcon />}
-            label={t("shellNav.usageNav")}
+            label={currentTranslator()("shellNav.usageNav")}
             onClick={handleUsageClick}
           />
         </>

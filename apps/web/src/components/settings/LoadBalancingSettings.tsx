@@ -22,7 +22,7 @@ const preferences = [
 
 type LoadPreference = (typeof preferences)[number]["value"];
 
-export function loadPreferenceForWeight(weight: number | undefined): LoadPreference {
+function loadPreferenceForWeight(weight: number | undefined): LoadPreference {
   if (weight === undefined || weight === 50) return 50;
   if (weight === 0) return 0;
   return weight < 50 ? 25 : 100;
@@ -32,7 +32,7 @@ function preferenceLabel(preference: LoadPreference): string {
   return currentTranslator()(preferences.find((entry) => entry.value === preference)!.labelKey);
 }
 
-export function summarizeLoadPreferences(
+function summarizeLoadPreferences(
   environments: ReadonlyArray<Pick<EnvironmentPresentation, "environmentId" | "label">>,
   weights: Readonly<Record<string, number>>,
 ): string | null {

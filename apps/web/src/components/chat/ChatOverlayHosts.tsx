@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type {
   DeviceServiceState,
   EnvironmentId,
@@ -7,7 +8,7 @@ import type {
 } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { Trans } from "~/i18n/Trans";
 import { useT } from "~/i18n/I18nProvider";
@@ -27,20 +28,26 @@ import {
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
 import { WizardPopup } from "../ui/wizard";
+import { registerThreadOverlay } from "./threadOverlayRetention";
 
 /**
  * Open state for overlays the chat view hosts. It lives in atoms rather than
  * ChatView state so opening or closing one renders only its host, not the
  * whole chat chrome. Each entry carries the thread it was opened for; a host
- * shows only its own thread's entry and drops it when the thread changes.
+ * shows only its own thread's entry, and leaving that thread's route drops it.
  */
 type ThreadOverlayAtom<T> = Atom.Writable<{ readonly threadKey: string; readonly value: T } | null>;
 
 function makeThreadOverlayAtom<T>(label: string): ThreadOverlayAtom<T> {
-  return Atom.make<{ readonly threadKey: string; readonly value: T } | null>(null).pipe(
+  const atom = Atom.make<{ readonly threadKey: string; readonly value: T } | null>(null).pipe(
     Atom.keepAlive,
     Atom.withLabel(`chat:${label}`),
   );
+  registerThreadOverlay((threadKey) => {
+    const entry = appAtomRegistry.get(atom);
+    if (entry !== null && entry.threadKey !== threadKey) closeThreadOverlay(atom);
+  });
+  return atom;
 }
 
 function closeThreadOverlay<T>(atom: ThreadOverlayAtom<T>): void {
@@ -49,12 +56,6 @@ function closeThreadOverlay<T>(atom: ThreadOverlayAtom<T>): void {
 
 function useThreadOverlay<T>(atom: ThreadOverlayAtom<T>, threadKey: string | null): T | null {
   const entry = useAtomValue(atom);
-  useEffect(
-    () => () => {
-      if (appAtomRegistry.get(atom)?.threadKey === threadKey) closeThreadOverlay(atom);
-    },
-    [atom, threadKey],
-  );
   return threadKey !== null && entry?.threadKey === threadKey ? entry.value : null;
 }
 
@@ -221,15 +222,17 @@ export function RevertConfirmHost(props: {
     >
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t("shellNav.editFromHere")}</AlertDialogTitle>
-          <AlertDialogDescription>{t("shellNav.rewindChatDescription")}</AlertDialogDescription>
+          <AlertDialogTitle>{currentTranslator()("shellNav.editFromHere")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {currentTranslator()("updates.rewindChatToBeforeThisMessageYourPrompt")}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="outline" />}>
-            {t("common.cancel")}
+            {currentTranslator()("chat.approvalOptionCancel")}
           </AlertDialogClose>
-          <Button variant="destructive" onClick={() => confirm(true)}>
-            {t("shellNav.revertFilesToo")}
+          <Button variant="destructive-outline" onClick={() => confirm(true)}>
+            {currentTranslator()("shellNav.revertFilesToo")}
           </Button>
           <Button onClick={() => confirm(false)}>{t("shellNav.revertAndKeepChanges")}</Button>
         </AlertDialogFooter>

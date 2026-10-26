@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { formatPercent } from "@t3tools/shared/usageFormat";
 import type { ReactNode } from "react";
 
@@ -32,7 +33,10 @@ export function UsageShareBar({
       </div>
       <div
         role="img"
-        aria-label={`${label}: ${visible.map((segment) => `${segment.label} ${format(segment.value)}`).join(", ")}`}
+        aria-label={currentTranslator()("settingsD.modeWithLabel", {
+          mode: label,
+          label: visible.map((segment) => `${segment.label} ${format(segment.value)}`).join(", "),
+        })}
         className="flex h-2 gap-0.5"
       >
         {visible.map((segment) => (

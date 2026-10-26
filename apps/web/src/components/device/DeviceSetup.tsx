@@ -1,10 +1,12 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { DeviceHostUpdates } from "./DeviceHostUpdates";
 import type { DevicePlatform, DeviceServiceState, EnvironmentId } from "@t3tools/contracts";
 import { Check } from "lucide-react";
 import { Check as CheckGlyph, CircleAlert } from "lucide";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
-import type { Translate } from "@t3tools/client-runtime/i18n";
-import { useEffect, useState } from "react";
+
+import { useState } from "react";
+import { useAtomMount } from "@effect/atom-react";
 
 import { Button } from "~/components/ui/button";
 import { DialogClose } from "~/components/ui/dialog";
@@ -12,8 +14,9 @@ import { MorphIcon } from "~/components/MorphIcon";
 import { WizardHeader, WizardPanel, WizardSteps, WizardFooter } from "~/components/ui/wizard";
 import { Spinner } from "~/components/ui/spinner";
 import { Switch } from "~/components/ui/switch";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { useT } from "~/i18n/I18nProvider";
 import { deviceEnvironment } from "~/state/device";
+import { deviceHostProbeAtom, NO_DEVICE_PROBE_ATOM } from "~/state/device";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import { cn } from "~/lib/utils";
@@ -34,6 +37,11 @@ function AgentDeviceDescriptionText() {
 export const deviceHubDescription = <DeviceHubDescriptionText />;
 export const agentDeviceDescription = <AgentDeviceDescriptionText />;
 
+export const isAndroidDiscoveryUncertain = (state: DeviceServiceState) =>
+  Object.values(state.hostStatuses).some(
+    (status) => status.status === "ready" && status.androidDiscoveryIncomplete,
+  );
+
 /**
  * `hostStatus` only tracks this machine. A machine without simulator tooling never
  * starts its own hub, so setup and the panel must also count remote device hosts.
@@ -49,11 +57,45 @@ export function deviceHubReadiness(state: DeviceServiceState) {
   return { ready, busy };
 }
 
-export function platformSetupStatus(
-  state: DeviceServiceState,
-  platform: DevicePlatform,
-  t: Translate = currentTranslator(),
+/** A ready host keeps its devices usable but may still carry a discovery warning. */
+function deviceHostDiagnostics(
+  hosts: ReadonlyArray<Pick<DeviceServiceState["hosts"][number], "id" | "label">>,
+  hostStatuses: DeviceServiceState["hostStatuses"],
 ) {
+  return hosts.flatMap((host) => {
+    const status = hostStatuses[host.id];
+    return status?.status === "ready" && status.detail
+      ? [{ hostId: host.id, label: host.label, detail: status.detail }]
+      : [];
+  });
+}
+
+export function DeviceHostDiagnostics(props: {
+  readonly hosts: ReadonlyArray<Pick<DeviceServiceState["hosts"][number], "id" | "label">>;
+  readonly hostStatuses: DeviceServiceState["hostStatuses"];
+  readonly className?: string;
+}) {
+  const diagnostics = deviceHostDiagnostics(props.hosts, props.hostStatuses);
+  if (diagnostics.length === 0) return null;
+  return (
+    <div role="status" className={cn("space-y-1 text-xs text-muted-foreground", props.className)}>
+      {diagnostics.map(({ hostId, label, detail }) => (
+        <p key={hostId} className="whitespace-pre-line break-words">
+          {label}: {detail}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+export function platformSetupStatus(state: DeviceServiceState, platform: DevicePlatform) {
+  const hasDevices = state.devices.some((device) => device.platform === platform);
+  if (platform === "android" && !hasDevices && isAndroidDiscoveryUncertain(state)) {
+    return {
+      ready: false,
+      message: currentTranslator()("updates.theAndroidDeviceListMayBeIncompleteCheck"),
+    };
+  }
   const availabilities = state.hosts.flatMap((host) =>
     host.platforms
       .filter((candidate) => candidate.platform === platform)
@@ -67,7 +109,9 @@ export function platformSetupStatus(
       ready: false,
       message:
         availabilities[0]?.reason ??
-        t("shellDevice.devicePlatformSupportNotDetected", { platform: platformName(platform) }),
+        currentTranslator()("shellDevice.devicePlatformSupportNotDetected", {
+          platform: platformName(platform),
+        }),
     };
   }
   const readyHosts = supportingHosts.filter(
@@ -75,27 +119,35 @@ export function platformSetupStatus(
       state.hostStatuses[host.id]?.status === "ready" ||
       (host.kind === "local" && state.hostStatus === "ready"),
   );
-  if (readyHosts.length > 0 && !state.devices.some((device) => device.platform === platform)) {
+  if (readyHosts.length > 0 && !hasDevices) {
     return {
       ready: false,
       message:
         platform === "ios"
-          ? t("shellDevice.deviceXcodeNoSimulator")
-          : t("shellDevice.deviceAndroidNoDevice"),
+          ? currentTranslator()("shellDevice.deviceXcodeNoSimulator")
+          : currentTranslator()("shellDevice.deviceAndroidNoDevice"),
     };
   }
   const remoteHost = supportingHosts.every((host) => host.kind !== "local")
     ? supportingHosts[0]
     : undefined;
+  const location = remoteHost
+    ? " " + currentTranslator()("updates.onHost", { host: remoteHost.label })
+    : "";
   return {
     ready: true,
-    message: remoteHost
-      ? platform === "ios"
-        ? t("shellDevice.deviceIosReadyOnHost", { host: remoteHost.label })
-        : t("shellDevice.deviceAndroidReadyOnHost", { host: remoteHost.label })
-      : platform === "ios"
-        ? t("shellDevice.deviceIosReady")
-        : t("shellDevice.deviceAndroidReady"),
+    message:
+      remoteHost?.kind === "eas"
+        ? currentTranslator()("updates.hostStartsIOSSimulatorsInTheCloudWith", {
+            host: remoteHost.label,
+          })
+        : platform === "ios"
+          ? currentTranslator()("updates.xcodeAndIOSSimulatorAreAvailableLocation", {
+              location: location,
+            })
+          : currentTranslator()("updates.theAndroidSDKAndEmulatorAreAvailableLocation", {
+              location: location,
+            }),
   };
 }
 
@@ -116,10 +168,7 @@ export function DeviceSetup(props: {
     (host) => host.kind === "local" && !host.platforms.some((platform) => platform.available),
   );
 
-  // Remote hosts report platforms only after a probe, like the Device panel's refresh on open.
-  useEffect(() => {
-    if (enabled) void list({ environmentId: props.environmentId, input: {} });
-  }, [enabled, list, props.environmentId]);
+  useAtomMount(enabled ? deviceHostProbeAtom(props.environmentId) : NO_DEVICE_PROBE_ATOM);
 
   const update = async (
     kind: NonNullable<typeof pending>,
@@ -287,9 +336,12 @@ function DevicePlatformSetup(props: {
   const t = useT();
   return (
     <div className="space-y-3">
-      <PlatformStatus platform="iOS" status={platformSetupStatus(props.state, "ios", t)} />
-      <PlatformStatus platform="Android" status={platformSetupStatus(props.state, "android", t)} />
-      <p className="text-xs text-muted-foreground">{t("shellDevice.devicePlatformChoiceHint")}</p>
+      <PlatformStatus platform="iOS" status={platformSetupStatus(props.state, "ios")} />
+      <PlatformStatus platform="Android" status={platformSetupStatus(props.state, "android")} />
+      <DeviceHostDiagnostics hosts={props.state.hosts} hostStatuses={props.state.hostStatuses} />
+      <p className="text-xs text-muted-foreground">
+        {currentTranslator()("shellDevice.devicePlatformChoiceHint")}
+      </p>
       <Button size="compact" variant="outline" disabled={props.disabled} onClick={props.onCheck}>
         {props.checking ? <Spinner size="xs" /> : null}
         {props.checking ? t("shellDevice.deviceChecking") : t("shellDevice.deviceCheckAgain")}

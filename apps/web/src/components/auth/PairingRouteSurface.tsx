@@ -239,6 +239,7 @@ export function HostedPairingRouteSurface() {
             k="shellDevice.pairingHostLine"
             params={{ host: request.host }}
             components={{
+              // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
               host: (children) => <span className="font-mono text-foreground/80">{children}</span>,
             }}
           />

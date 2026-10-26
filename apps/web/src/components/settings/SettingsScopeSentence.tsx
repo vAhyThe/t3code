@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
 import { useLocation } from "@tanstack/react-router";
 import { CheckIcon, ChevronDownIcon, LayersIcon } from "lucide-react";
@@ -8,7 +9,8 @@ import { useEnvironments, type EnvironmentPresentation } from "../../state/envir
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { useT } from "~/i18n/I18nProvider";
-import { InlineButton } from "../ui/button";
+
+import { Button } from "../ui/button";
 import {
   Combobox,
   ComboboxEmpty,
@@ -71,7 +73,7 @@ export function SettingsScopeSentence() {
     onChange: scope.selectScope,
   };
   return (
-    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-base text-muted-foreground sm:px-4">
+    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-sm text-muted-foreground sm:px-4">
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="shrink-0">{t("settingsD.applyingSettingsFor")}</span>
         <ProjectScopeMenu {...props} />
@@ -139,13 +141,17 @@ function ScopeMenu({
   const Trigger = options.length > 6 ? ComboboxTrigger : MenuTrigger;
   const trigger = (
     <Trigger
-      aria-label={`${ariaLabel}: ${label}`}
-      render={<InlineButton tone="picker" />}
+      aria-label={currentTranslator()("settingsD.modeWithLabel", { mode: ariaLabel, label: label })}
+      render={<Button variant="outline" size="sm" />}
       className="min-w-0 max-w-72"
     >
       {icon}
       <span className="min-w-0 truncate">{label}</span>
-      <ChevronDownIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+      <ChevronDownIcon
+        aria-hidden
+        strokeWidth={1.75}
+        className="-me-0.5 size-3.5 shrink-0 text-muted-foreground opacity-70"
+      />
     </Trigger>
   );
   const choices = allOption ? [allOption, ...options] : options;
@@ -238,6 +244,13 @@ function EnvironmentScopeMenu({
   const selected = environments.find(
     (environment) => environment.environmentId === environmentValue,
   );
+  const project = groups.find((group) => group.projectKey === value.project);
+  const memberEnvironmentIds = project
+    ? new Set(project.memberProjects.map((member) => member.environmentId))
+    : null;
+  const options = memberEnvironmentIds
+    ? environments.filter((environment) => memberEnvironmentIds.has(environment.environmentId))
+    : environments;
   return (
     <ScopeMenu
       ariaLabel={t("settingsD.environmentScope")}
@@ -271,7 +284,7 @@ function EnvironmentScopeMenu({
               icon: <LayersIcon aria-hidden className="size-3.5 shrink-0" />,
             }
       }
-      options={environments.map((environment) => {
+      options={options.map((environment) => {
         const { primary, secondary } = settingsScopeEnvironmentLabels(environment, environments);
         return {
           value: environment.environmentId,

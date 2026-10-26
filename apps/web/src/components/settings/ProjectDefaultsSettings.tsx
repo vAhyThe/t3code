@@ -157,15 +157,13 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       title={t("settingsB.projectDefaultsModelTitle")}
       description={
         isProjectScope
-          ? t("settingsB.projectDefaultsModelDescProject")
-          : t("settingsB.projectDefaultsModelDesc")
-      }
-      status={
-        unavailable || mixedModel || modelSource === "project"
-          ? undefined
-          : settings.defaultModelSelection === null
-            ? "Automatic"
-            : undefined
+          ? currentTranslator()("settingsB.projectDefaultsModelDescProject")
+          : !unavailable &&
+              !mixedModel &&
+              modelSource !== "project" &&
+              settings.defaultModelSelection === null
+            ? currentTranslator()("updates.defaultModelForNewThreadsSelectedAutomaticallyProjects")
+            : currentTranslator()("settingsB.projectDefaultsModelDesc")
       }
       resetAction={
         settings.defaultModelSelection !== null ? (
@@ -204,8 +202,6 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                 provider={activeEntry.driverKind}
                 models={activeEntry.models}
                 model={selection.model}
-                prompt=""
-                onPromptChange={() => {}}
                 modelOptions={selection.options ?? []}
                 allowPromptInjectedEffort={false}
                 planModeEnabled={settings.planModeEnabled}
@@ -434,7 +430,9 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["removeAgentCreditsOnMerge"]}
             mixed={mixedAgentCredits}
             {...searchableSetting("remove-agent-credits-on-merge")}
-            description={t("settingsB.projectDefaultsAgentCreditsDesc")}
+            description={currentTranslator()(
+              "updates.removeRecognizedAgentCreditLinesFromMergeAnd",
+            )}
             resetAction={
               settings.removeAgentCreditsOnMerge ? (
                 <SettingResetButton

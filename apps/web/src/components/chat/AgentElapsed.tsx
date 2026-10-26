@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { RuntimeSubagent } from "@t3tools/client-runtime/state/subagentRuntime";
 import { isOrchestrationV2WorkActive } from "@t3tools/contracts";
 import { deriveSubagentElapsedMs } from "@t3tools/shared/orchestrationTiming";
@@ -7,22 +8,26 @@ function formatElapsedSeconds(totalSeconds: number): string {
   const seconds = Math.max(0, Math.floor(totalSeconds));
   const minutes = Math.floor(seconds / 60);
   if (minutes === 0) {
-    return `${seconds}s`;
+    return currentTranslator()("shellRest.unitSeconds", { count: seconds });
   }
   const hours = Math.floor(minutes / 60);
   if (hours === 0) {
     return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
   }
-  return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return currentTranslator()("shellNav.elapsedHoursMinutes", {
+    hours: hours,
+    minutes: String(minutes % 60).padStart(2, "0"),
+  });
 }
 
-export function formatCompactElapsedSeconds(totalSeconds: number): string {
+function formatCompactElapsedSeconds(totalSeconds: number): string {
   const seconds = Math.max(0, Math.floor(totalSeconds));
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return currentTranslator()("shellRest.unitSeconds", { count: seconds });
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes >= 600) return `${Math.floor(minutes / 60)}h`;
-  return `${Math.floor(minutes / 6) / 10}h`;
+  if (minutes < 60) return currentTranslator()("shellNav.elapsedMinutes", { minutes: minutes });
+  if (minutes >= 600)
+    return currentTranslator()("shellRest.unitHours", { count: Math.floor(minutes / 60) });
+  return currentTranslator()("shellRest.unitHours", { count: Math.floor(minutes / 6) / 10 });
 }
 
 export function AgentElapsed({

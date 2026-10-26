@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { cn } from "~/lib/utils";
 
@@ -61,7 +62,10 @@ export function PullRequestCopyableCode({
         </span>
       </TooltipTrigger>
       <TooltipPopup variant="code" side={tooltipSide}>
-        {`${isCopied ? t("pullRequest.copied") : copyLabel}: ${value}`}
+        {currentTranslator()("settingsD.modeWithLabel", {
+          mode: isCopied ? t("pullRequest.copied") : copyLabel,
+          label: value,
+        })}
       </TooltipPopup>
     </Tooltip>
   );

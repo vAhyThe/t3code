@@ -10,7 +10,7 @@ const selectInterfaceLanguage = (settings: ClientSettings) => settings.interface
 export function I18nSettingsSync({ children }: { readonly children: ReactNode }) {
   const hydrated = useClientSettingsHydrated();
   const preference = useClientSettings(selectInterfaceLanguage);
-  // Layout effect so a language change re-renders before paint.
+  // oxlint-disable-next-line t3code/react-effect-budget -- Synchronize persisted settings into the external locale store before paint.
   useLayoutEffect(() => {
     localeStore.sync({ hydrated, preference });
   }, [hydrated, preference]);

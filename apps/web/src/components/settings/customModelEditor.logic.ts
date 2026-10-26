@@ -49,66 +49,90 @@ export const DESCRIPTOR_PRESETS_BY_KIND: Partial<
   Record<ProviderDriverKind, ReadonlyArray<DescriptorPreset>>
 > = {
   [ProviderDriverKind.make("codex")]: [
-    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
+    {
+      id: "reasoningEffort",
+      label: currentTranslator()("chat.traitsSavedOptionReasoning"),
+      type: "select",
+      choices: EFFORT_CHOICES,
+    }, // i18n-ignore: preset label saved into the model definition
     {
       id: "serviceTier",
       label: "Speed", // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "default", label: "Standard", isDefault: true }, // i18n-ignore: preset label saved into the model definition
-        { id: "fast", label: "Fast" }, // i18n-ignore: preset label saved into the model definition
+        {
+          id: "default",
+          label: currentTranslator()("settingsA.connectionsStandard"),
+          isDefault: true,
+        }, // i18n-ignore: preset label saved into the model definition
+        { id: "fast", label: currentTranslator()("chat.traitsSpeedFast") }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
   [ProviderDriverKind.make("claudeAgent")]: [
     {
       id: "effort",
-      label: "Reasoning", // i18n-ignore: preset label saved into the model definition
+      label: currentTranslator()("chat.traitsSavedOptionReasoning"), // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
         { id: "low", label: "Low" }, // i18n-ignore: preset label saved into the model definition
         { id: "medium", label: "Medium" }, // i18n-ignore: preset label saved into the model definition
         { id: "high", label: "High", isDefault: true }, // i18n-ignore: preset label saved into the model definition
         { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
-        { id: "max", label: "Max" }, // i18n-ignore: preset label saved into the model definition
+        { id: "max", label: currentTranslator()("settingsB.diagnosticsColumnMax") }, // i18n-ignore: preset label saved into the model definition
       ],
     },
     { id: "fastMode", label: "Fast Mode", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
-    { id: "thinking", label: "Thinking", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
+    { id: "thinking", label: currentTranslator()("chat.timelineThinking"), type: "boolean" }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("cursor")]: [
-    { id: "reasoning", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
+    {
+      id: "reasoning",
+      label: currentTranslator()("chat.traitsSavedOptionReasoning"),
+      type: "select",
+      choices: EFFORT_CHOICES,
+    }, // i18n-ignore: preset label saved into the model definition
     { id: "fastMode", label: "Fast Mode", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
-    { id: "thinking", label: "Thinking", type: "boolean" }, // i18n-ignore: preset label saved into the model definition
+    { id: "thinking", label: currentTranslator()("chat.timelineThinking"), type: "boolean" }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("grok")]: [
-    { id: "reasoningEffort", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
+    {
+      id: "reasoningEffort",
+      label: currentTranslator()("chat.traitsSavedOptionReasoning"),
+      type: "select",
+      choices: EFFORT_CHOICES,
+    }, // i18n-ignore: preset label saved into the model definition
   ],
   [ProviderDriverKind.make("pi")]: [
     {
       id: "thinking",
-      label: "Thinking", // i18n-ignore: preset label saved into the model definition
+      label: currentTranslator()("chat.timelineThinking"), // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "off", label: "Off" }, // i18n-ignore: preset label saved into the model definition
+        { id: "off", label: currentTranslator()("chat.traitsOff") }, // i18n-ignore: preset label saved into the model definition
         { id: "minimal", label: "Minimal" }, // i18n-ignore: preset label saved into the model definition
         { id: "low", label: "Low" }, // i18n-ignore: preset label saved into the model definition
         { id: "medium", label: "Medium", isDefault: true }, // i18n-ignore: preset label saved into the model definition
         { id: "high", label: "High" }, // i18n-ignore: preset label saved into the model definition
         { id: "xhigh", label: "Extra High" }, // i18n-ignore: preset label saved into the model definition
-        { id: "max", label: "Max" }, // i18n-ignore: preset label saved into the model definition
+        { id: "max", label: currentTranslator()("settingsB.diagnosticsColumnMax") }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
   [ProviderDriverKind.make("opencode")]: [
-    { id: "variant", label: "Reasoning", type: "select", choices: EFFORT_CHOICES }, // i18n-ignore: preset label saved into the model definition
+    {
+      id: "variant",
+      label: currentTranslator()("chat.traitsSavedOptionReasoning"),
+      type: "select",
+      choices: EFFORT_CHOICES,
+    }, // i18n-ignore: preset label saved into the model definition
     {
       id: "agent",
-      label: "Agent", // i18n-ignore: preset label saved into the model definition
+      label: currentTranslator()("chat.traitsSavedOptionAgent"), // i18n-ignore: preset label saved into the model definition
       type: "select",
       choices: [
-        { id: "build", label: "Build", isDefault: true }, // i18n-ignore: preset label saved into the model definition
-        { id: "plan", label: "Plan" }, // i18n-ignore: preset label saved into the model definition
+        { id: "build", label: currentTranslator()("chat.composerModeBuild"), isDefault: true }, // i18n-ignore: preset label saved into the model definition
+        { id: "plan", label: currentTranslator()("chat.compactModePlan") }, // i18n-ignore: preset label saved into the model definition
       ],
     },
   ],
@@ -146,11 +170,8 @@ export function emptyEditorChoice(): EditorChoice {
   return { key: newEditorKey(), id: "", label: "", isDefault: false };
 }
 
-/**
- * Prompt-injected choices (Claude's `ultrathink`) are delivered as prompt text
- * by built-in runtime profiles a custom entry does not have, so they are
- * dropped rather than stored as a plain option value.
- */
+/** Custom entries lack runtime profiles for prompt-injected choices, so do not store them as ordinary
+ * options. */
 function descriptorToEditor(descriptor: ProviderOptionDescriptor): EditorDescriptor {
   const promptInjected = new Set(
     descriptor.type === "select" ? (descriptor.promptInjectedValues ?? []) : [],

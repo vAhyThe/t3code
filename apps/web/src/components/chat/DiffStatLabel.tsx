@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { memo } from "react";
 import { useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
@@ -14,7 +15,9 @@ function formatCompactDiffCount(value: number): string {
   }
   if (value < 1_000_000_000) {
     const m = value / 1_000_000;
-    return `${m < 10 ? m.toFixed(1).replace(/\.0$/, "") : Math.round(m)}m`;
+    return currentTranslator()("shellNav.elapsedMinutes", {
+      minutes: m < 10 ? m.toFixed(1).replace(/\.0$/, "") : Math.round(m),
+    });
   }
   const b = value / 1_000_000_000;
   return `${b < 10 ? b.toFixed(1).replace(/\.0$/, "") : Math.round(b)}b`;
@@ -42,10 +45,10 @@ export const DiffStatLabel = memo(function DiffStatLabel(props: {
           className,
         )}
       >
-        <span aria-hidden="true" className="font-mono text-diff-addition">
+        <span aria-hidden="true" className="font-mono text-diff-addition-foreground">
           +{formatCompactDiffCount(additions)}
         </span>
-        <span aria-hidden="true" className="font-mono text-diff-deletion">
+        <span aria-hidden="true" className="font-mono text-diff-deletion-foreground">
           -{formatCompactDiffCount(deletions)}
         </span>
       </span>

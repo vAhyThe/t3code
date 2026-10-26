@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { ProcessSignalActions } from "./ProcessSignalActions";
 import { AuthEnvironmentMaintainScope } from "@t3tools/contracts";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
@@ -28,7 +29,8 @@ import type {
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { RegistryContext } from "@effect/atom-react";
+import { useContext, useRef, useState, type ReactNode } from "react";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
@@ -58,7 +60,7 @@ import {
   visibleResourceTelemetryProcesses,
 } from "./ResourceTelemetryDiagnostics.logic";
 import { SettingsSection } from "./settingsLayout";
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { useT } from "../../i18n/I18nProvider";
 
 const HISTORY_WINDOWS = [
   { labelKey: "settingsC.interval5Min", windowMs: 5 * 60_000, bucketMs: 15_000 },
@@ -73,10 +75,16 @@ function formatRate(value: number): string {
 
 function formatCpuTime(valueMs: number): string {
   const seconds = valueMs / 1_000;
-  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 1 : 2)}s`;
+  if (seconds < 60)
+    return currentTranslator()("shellRest.unitSeconds", {
+      count: seconds.toFixed(seconds >= 10 ? 1 : 2),
+    });
   const minutes = seconds / 60;
-  if (minutes < 60) return `${minutes.toFixed(minutes >= 10 ? 1 : 2)}m`;
-  return `${(minutes / 60).toFixed(2)}h`;
+  if (minutes < 60)
+    return currentTranslator()("shellNav.elapsedMinutes", {
+      minutes: minutes.toFixed(minutes >= 10 ? 1 : 2),
+    });
+  return currentTranslator()("shellRest.unitHours", { count: (minutes / 60).toFixed(2) });
 }
 
 function formatDurationMicros(value: number): string {
@@ -546,7 +554,7 @@ function ProcessActions({
   onSignal: (process: ResourceTelemetryProcess, signal: ServerProcessSignal) => void;
 }) {
   if (!canSignalProcess(process)) {
-    return <span className="text-3xs text-muted-foreground/35">—</span>;
+    return <span className="text-3xs text-muted-foreground/35">-</span>;
   }
   const isSignaling = signalingKeys.has(processIdentityKey(process));
   return (
@@ -847,7 +855,18 @@ export function ResourceTelemetryDiagnostics({
 }: {
   environmentId: EnvironmentId | null;
 }) {
-  const t = useT();
+  // Pending signals and retries belong to one environment, so a switch starts fresh.
+  return (
+    <ResourceTelemetryDiagnosticsBody key={environmentId ?? ""} environmentId={environmentId} />
+  );
+}
+
+function ResourceTelemetryDiagnosticsBody({
+  environmentId,
+}: {
+  environmentId: EnvironmentId | null;
+}) {
+  const registry = useContext(RegistryContext);
   const [windowMs, setWindowMs] = useState(15 * 60_000);
   const selectedWindow =
     HISTORY_WINDOWS.find((option) => option.windowMs === windowMs) ?? HISTORY_WINDOWS[1];
@@ -866,19 +885,12 @@ export function ResourceTelemetryDiagnostics({
   });
   const [signalingKeys, setSignalingKeys] = useState<ReadonlySet<string>>(() => new Set());
   const signalingKeysRef = useRef<ReadonlySet<string>>(new Set());
-  const environmentIdRef = useRef(environmentId);
-  useEffect(() => {
-    environmentIdRef.current = environmentId;
-    return () => {
-      environmentIdRef.current = null;
-    };
-  }, [environmentId]);
   const [isRetrying, setIsRetrying] = useState(false);
   const snapshot = telemetry.data;
   const allT3 = snapshot?.groups.allT3;
 
   const signalProcess = async (process: ResourceTelemetryProcess, signal: ServerProcessSignal) => {
-    const targetEnvironmentId = environmentIdRef.current;
+    const targetEnvironmentId = environmentId;
     if (
       targetEnvironmentId === null ||
       !readEnvironmentScope(targetEnvironmentId, AuthEnvironmentMaintainScope)
@@ -900,16 +912,18 @@ export function ResourceTelemetryDiagnostics({
       let confirmed = false;
       try {
         confirmed = await ensureLocalApi().dialogs.confirm(
-          t("settingsB.diagnosticsConfirmSigkill", { pid: process.identity.pid }),
+          currentTranslator()("settingsB.diagnosticsConfirmSigkill", { pid: process.identity.pid }),
           { variant: "destructive" },
         );
       } catch (error) {
         clearSignaling();
         toastManager.add({
           type: "error",
-          title: t("settingsC.couldNotConfirmSignal"),
+          title: currentTranslator()("settingsC.couldNotConfirmSignal"),
           description:
-            error instanceof Error ? error.message : t("settingsC.failedToSendSignal", { signal }),
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("settingsC.failedToSendSignal", { signal }),
         });
         return;
       }
@@ -918,10 +932,7 @@ export function ResourceTelemetryDiagnostics({
         return;
       }
     }
-    if (
-      environmentIdRef.current !== targetEnvironmentId ||
-      !readEnvironmentScope(targetEnvironmentId, AuthEnvironmentMaintainScope)
-    ) {
+    if (!readEnvironmentScope(targetEnvironmentId, AuthEnvironmentMaintainScope)) {
       clearSignaling();
       return;
     }
@@ -941,18 +952,23 @@ export function ResourceTelemetryDiagnostics({
         if (result.value.signaled) return;
         toastManager.add({
           type: "error",
-          title: t("settingsC.couldNotSendSignal", { signal }),
+          title: currentTranslator()("settingsC.couldNotSendSignal", { signal }),
           description: Option.getOrElse(result.value.message, () =>
-            t("settingsC.failedToSendSignalToProcess", { signal, pid: process.identity.pid }),
+            currentTranslator()("settingsC.failedToSendSignalToProcess", {
+              signal,
+              pid: process.identity.pid,
+            }),
           ),
         });
       })
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: t("settingsC.couldNotSendSignal", { signal }),
+          title: currentTranslator()("settingsC.couldNotSendSignal", { signal }),
           description:
-            error instanceof Error ? error.message : t("settingsC.failedToSendSignal", { signal }),
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("settingsC.failedToSendSignal", { signal }),
         });
       })
       .finally(() => {
@@ -961,7 +977,6 @@ export function ResourceTelemetryDiagnostics({
   };
 
   const retryCollector = () => {
-    const environmentId = environmentIdRef.current;
     if (
       environmentId === null ||
       !readEnvironmentScope(environmentId, AuthEnvironmentMaintainScope)
@@ -969,11 +984,26 @@ export function ResourceTelemetryDiagnostics({
       return;
     setIsRetrying(true);
     void retryTelemetry()
+      .then(() => {
+        // The user can pick another window while the retry runs; refreshing every window
+        // re-reads the one on screen and only invalidates the rest.
+        for (const option of HISTORY_WINDOWS) {
+          registry.refresh(
+            serverEnvironment.resourceTelemetryHistory({
+              environmentId,
+              input: { windowMs: option.windowMs, bucketMs: option.bucketMs },
+            }),
+          );
+        }
+      })
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: t("settingsC.couldNotRestartMonitor"),
-          description: error instanceof Error ? error.message : t("settingsC.monitorRetryFailed"),
+          title: currentTranslator()("settingsC.couldNotRestartMonitor"),
+          description:
+            error instanceof Error
+              ? error.message
+              : currentTranslator()("settingsC.monitorRetryFailed"),
         });
       })
       .finally(() => {
@@ -997,13 +1027,13 @@ export function ResourceTelemetryDiagnostics({
   return (
     <>
       <SettingsSection
-        title={t("settingsC.resourceMonitor")}
+        title={currentTranslator()("settingsC.resourceMonitor")}
         icon={<ActivityIcon className="size-4 text-muted-foreground" />}
         headerAction={
           <div className="flex items-center gap-2">
             {snapshot ? (
               <SourceStatusBadge
-                label={t("settingsC.nativeLabel")}
+                label={currentTranslator()("settingsC.nativeLabel")}
                 status={snapshot.health.native.status}
               />
             ) : null}
@@ -1016,13 +1046,15 @@ export function ResourceTelemetryDiagnostics({
                     variant="ghost"
                     disabled={telemetry.isPending}
                     onClick={telemetry.refresh}
-                    aria-label={t("settingsC.refreshTelemetry")}
+                    aria-label={currentTranslator()("settingsC.refreshTelemetry")}
                   >
                     <RefreshIcon size="xs" refreshing={telemetry.isPending} />
                   </Button>
                 }
               />
-              <TooltipPopup side="top">{t("settingsC.refreshTelemetrySnapshot")}</TooltipPopup>
+              <TooltipPopup side="top">
+                {currentTranslator()("settingsC.refreshTelemetrySnapshot")}
+              </TooltipPopup>
             </Tooltip>
           </div>
         }
@@ -1031,15 +1063,15 @@ export function ResourceTelemetryDiagnostics({
           <div className="flex flex-col gap-3 border-b border-border/60 bg-linear-to-r from-muted/45 via-muted/20 to-transparent px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
               <div className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                {t("settingsC.systemFootprint")}
+                {currentTranslator()("settingsC.systemFootprint")}
               </div>
               <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">
-                {t("settingsC.liveCountersNote")}
+                {currentTranslator()("settingsC.liveCountersNote")}
               </p>
             </div>
             <div className="flex items-center gap-2 text-3xs text-muted-foreground/65">
               <span className="size-1.5 rounded-full bg-success" />
-              {t("settingsC.samplingEveryInterval", {
+              {currentTranslator()("settingsC.samplingEveryInterval", {
                 interval: snapshot ? formatSampleInterval(snapshot.sampleIntervalMs) : "...",
               })}
             </div>
@@ -1047,13 +1079,13 @@ export function ResourceTelemetryDiagnostics({
           <div className="grid grid-cols-2 divide-x divide-y divide-border/55 md:grid-cols-3">
             <IconStat
               icon={<CpuIcon className="size-3.5" />}
-              label={t("settingsC.currentCpu")}
+              label={currentTranslator()("settingsC.currentCpu")}
               value={allT3 ? `${allT3.currentCpuPercent.toFixed(1)}%` : "..."}
               detail={allT3 ? `${formatCpuTime(allT3.cpuTimeMs)} observed CPU time` : undefined}
             />
             <IconStat
               icon={<MemoryStickIcon className="size-3.5" />}
-              label={t("settingsC.residentMemory")}
+              label={currentTranslator()("settingsC.residentMemory")}
               value={allT3 ? formatBytes(allT3.currentRssBytes) : "..."}
               detail={
                 allT3 ? `${formatBytes(allT3.peakRssBytes)} combined process peaks` : undefined
@@ -1061,7 +1093,7 @@ export function ResourceTelemetryDiagnostics({
             />
             <IconStat
               icon={<ActivityIcon className="size-3.5" />}
-              label={t("settingsC.processCount")}
+              label={currentTranslator()("settingsC.processCount")}
               value={allT3 ? String(allT3.processCount) : "..."}
               detail={
                 allT3 ? `${allT3.processStarts} starts · ${allT3.processExits} exits` : undefined
@@ -1069,13 +1101,13 @@ export function ResourceTelemetryDiagnostics({
             />
             <IconStat
               icon={<HardDriveIcon className="size-3.5" />}
-              label={t("settingsC.readThroughput")}
+              label={currentTranslator()("settingsC.readThroughput")}
               value={allT3 ? formatRate(allT3.ioReadBytesPerSecond) : "..."}
               detail={allT3 ? `${formatBytes(allT3.ioReadBytes)} observed` : undefined}
             />
             <IconStat
               icon={<DatabaseIcon className="size-3.5" />}
-              label={t("settingsC.writeThroughput")}
+              label={currentTranslator()("settingsC.writeThroughput")}
               value={allT3 ? formatRate(allT3.ioWriteBytesPerSecond) : "..."}
               detail={allT3 ? `${formatBytes(allT3.ioWriteBytes)} observed` : undefined}
               tone={
@@ -1088,7 +1120,7 @@ export function ResourceTelemetryDiagnostics({
             />
             <IconStat
               icon={<GaugeIcon className="size-3.5" />}
-              label={t("settingsC.cpuSpeedLimit")}
+              label={currentTranslator()("settingsC.cpuSpeedLimit")}
               value={
                 snapshot
                   ? speedLimit === null
@@ -1109,17 +1141,17 @@ export function ResourceTelemetryDiagnostics({
           {snapshot ? (
             <div className="grid border-t border-border/60 bg-muted/10 md:grid-cols-3">
               <AggregateCard
-                label={t("settingsC.backendAgents")}
+                label={currentTranslator()("settingsC.backendAgents")}
                 accentClass="bg-success/80"
                 aggregate={snapshot.groups.backend}
               />
               <AggregateCard
-                label={t("settingsC.desktopLabel")}
+                label={currentTranslator()("settingsC.desktopLabel")}
                 accentClass="bg-info/80"
                 aggregate={snapshot.groups.electron}
               />
               <AggregateCard
-                label={t("settingsC.monitorOverhead")}
+                label={currentTranslator()("settingsC.monitorOverhead")}
                 accentClass="bg-warning/80"
                 aggregate={snapshot.groups.monitor}
               />
@@ -1129,13 +1161,13 @@ export function ResourceTelemetryDiagnostics({
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsC.hostCollection")}
+        title={currentTranslator()("settingsC.hostCollection")}
         icon={<GaugeIcon className="size-4 text-muted-foreground" />}
         headerAction={
           collectorNeedsRetry ? (
             <Button size="xs" variant="outline" disabled={isRetrying} onClick={retryCollector}>
               <RefreshIcon size="xs" refreshing={isRetrying} />
-              {t("settingsC.retryMonitor")}
+              {currentTranslator()("settingsC.retryMonitor")}
             </Button>
           ) : null
         }
@@ -1146,26 +1178,26 @@ export function ResourceTelemetryDiagnostics({
               <span className="flex size-6 items-center justify-center rounded-md bg-muted/60">
                 <BatteryIcon className="size-3.5" />
               </span>
-              {t("settingsC.hostState")}
+              {currentTranslator()("settingsC.hostState")}
             </div>
             {hasHostPowerSignal && snapshot ? (
               <>
                 <DetailRow
-                  label={t("settingsC.powerSource")}
+                  label={currentTranslator()("settingsC.powerSource")}
                   value={booleanStateLabel(snapshot.power.onBattery, {
                     true: currentTranslator()("settingsC.batteryLabel"),
                     false: currentTranslator()("settingsC.externalPower"),
                   })}
                 />
                 <DetailRow
-                  label={t("settingsC.lowPowerMode")}
+                  label={currentTranslator()("settingsC.lowPowerMode")}
                   value={booleanStateLabel(snapshot.power.lowPowerMode, {
                     true: "Enabled",
                     false: currentTranslator()("settingsC.disabledLabel"),
                   })}
                 />
                 <DetailRow
-                  label={t("settingsC.idle")}
+                  label={currentTranslator()("settingsC.idle")}
                   value={`${booleanStateLabel(snapshot.power.idle, {
                     true: "Idle",
                     false: currentTranslator()("settingsC.activeLabel"),
@@ -1176,7 +1208,7 @@ export function ResourceTelemetryDiagnostics({
                   }`}
                 />
                 <DetailRow
-                  label={t("settingsC.session")}
+                  label={currentTranslator()("settingsC.session")}
                   value={
                     snapshot.power.suspended
                       ? currentTranslator()("settingsC.suspended")
@@ -1187,7 +1219,7 @@ export function ResourceTelemetryDiagnostics({
                   }
                 />
                 <DetailRow
-                  label={t("settingsC.thermal")}
+                  label={currentTranslator()("settingsC.thermal")}
                   value={snapshot.power.thermalState}
                   valueClassName={
                     snapshot.power.thermalState === "serious" ||
@@ -1200,10 +1232,10 @@ export function ResourceTelemetryDiagnostics({
             ) : (
               <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-5">
                 <div className="text-sm font-medium text-foreground">
-                  {t("settingsC.desktopHostNotConnected")}
+                  {currentTranslator()("settingsC.desktopHostNotConnected")}
                 </div>
                 <p className="mt-1.5 max-w-sm text-2xs leading-relaxed text-muted-foreground/70">
-                  {t("settingsC.desktopHostSignalsNote")}
+                  {currentTranslator()("settingsC.desktopHostSignalsNote")}
                 </p>
               </div>
             )}
@@ -1213,28 +1245,28 @@ export function ResourceTelemetryDiagnostics({
               <span className="flex size-6 items-center justify-center rounded-md bg-muted/60">
                 <GaugeIcon className="size-3.5" />
               </span>
-              {t("settingsC.collectionHealth")}
+              {currentTranslator()("settingsC.collectionHealth")}
             </div>
             {snapshot ? (
               <>
                 <HealthSource
-                  label={t("settingsC.nativeProcessMonitor")}
+                  label={currentTranslator()("settingsC.nativeProcessMonitor")}
                   health={snapshot.health.native}
                 />
                 <HealthSource
-                  label={t("settingsC.electronMainProcess")}
+                  label={currentTranslator()("settingsC.electronMainProcess")}
                   health={snapshot.health.desktop}
                 />
                 <DetailRow
-                  label={t("settingsC.collectionTime")}
+                  label={currentTranslator()("settingsC.collectionTime")}
                   value={formatDurationMicros(snapshot.health.collectionDurationMicros)}
                 />
                 <DetailRow
-                  label={t("settingsC.processScan")}
+                  label={currentTranslator()("settingsC.processScan")}
                   value={`${snapshot.health.retainedProcessCount}/${snapshot.health.scannedProcessCount} retained`}
                 />
                 <DetailRow
-                  label={t("settingsC.inaccessible")}
+                  label={currentTranslator()("settingsC.inaccessible")}
                   value={String(snapshot.health.inaccessibleProcessCount)}
                   valueClassName={
                     snapshot.health.inaccessibleProcessCount > 0
@@ -1243,7 +1275,7 @@ export function ResourceTelemetryDiagnostics({
                   }
                 />
                 <DetailRow
-                  label={t("settingsC.sidecar")}
+                  label={currentTranslator()("settingsC.sidecar")}
                   value={Option.match(snapshot.health.sidecarVersion, {
                     onNone: () => currentTranslator()("settingsC.unavailableLabel"),
                     onSome: (version) =>
@@ -1254,13 +1286,13 @@ export function ResourceTelemetryDiagnostics({
                   })}
                 />
                 <DetailRow
-                  label={t("settingsC.restarts")}
+                  label={currentTranslator()("settingsC.restarts")}
                   value={String(snapshot.health.restartCount)}
                 />
               </>
             ) : (
               <div className="py-4 text-xs text-muted-foreground">
-                {t("settingsC.waitingCollectorHealth")}
+                {currentTranslator()("settingsC.waitingCollectorHealth")}
               </div>
             )}
           </div>
@@ -1268,7 +1300,7 @@ export function ResourceTelemetryDiagnostics({
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsC.resourceTimeline")}
+        title={currentTranslator()("settingsC.resourceTimeline")}
         icon={<HardDriveIcon className="size-4 text-muted-foreground" />}
         headerAction={
           <div className="flex items-center gap-2">
@@ -1278,7 +1310,7 @@ export function ResourceTelemetryDiagnostics({
               variant="ghost"
               disabled={history.isPending}
               onClick={history.refresh}
-              aria-label={t("settingsC.refreshResourceHistory")}
+              aria-label={currentTranslator()("settingsC.refreshResourceHistory")}
             >
               <RefreshIcon size="xs" refreshing={history.isPending} />
             </Button>
@@ -1298,13 +1330,13 @@ export function ResourceTelemetryDiagnostics({
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsC.liveProcessTree")}
+        title={currentTranslator()("settingsC.liveProcessTree")}
         icon={<CpuIcon className="size-4 text-muted-foreground" />}
         headerAction={
           snapshot ? (
             <span className="text-3xs text-muted-foreground/55">
-              {t("settingsC.identityLabel")}{" "}
-              <span className="font-mono">{t("settingsC.pidStartTime")}</span>
+              {currentTranslator()("settingsC.identityLabel")}{" "}
+              <span className="font-mono">{currentTranslator()("settingsC.pidStartTime")}</span>
             </span>
           ) : null
         }
@@ -1320,17 +1352,17 @@ export function ResourceTelemetryDiagnostics({
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsC.instrumentedIo")}
+        title={currentTranslator()("settingsC.instrumentedIo")}
         icon={<DatabaseIcon className="size-4 text-muted-foreground" />}
         headerAction={
           <span className="text-3xs text-muted-foreground/55">
-            {t("settingsC.logicalBytesByOperation")}
+            {currentTranslator()("settingsC.logicalBytesByOperation")}
           </span>
         }
       >
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs/5">
           <div className="bg-muted/15 px-4 py-3 text-2xs leading-relaxed text-muted-foreground sm:px-5">
-            {t("settingsC.instrumentedNote")}
+            {currentTranslator()("settingsC.instrumentedNote")}
           </div>
           <AttributionTable entries={snapshot?.attribution.entries ?? []} />
         </div>

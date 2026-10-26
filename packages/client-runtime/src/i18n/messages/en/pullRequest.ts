@@ -65,7 +65,7 @@ export const pullRequest = {
   rewritingGuide: "Rewriting this guide. You will be told when the new one is ready.",
   writtenBeforePush: "Written before the latest push.",
   discardComment: "Discard this comment",
-  pendingSentOnSubmit: "Pending — sent when you submit the review",
+  pendingSentOnSubmit: "Pending. sent when you submit the review",
   threadResolved: "Resolved",
   threadOpen: "Open",
   commentsCount: { one: "{count} comment", other: "{count} comments" },
@@ -258,8 +258,8 @@ export const pullRequest = {
   couldNotOpenThread: "Could not open a thread",
   openThreadFirst: "Try again from the project, or open a thread first.",
   askedInThread: "Asked in a thread",
-  questionInComposer: "The question is in the composer — read it over, then send.",
-  pullRequestInComposer: "The pull request is in the composer — type your question, then send.",
+  questionInComposer: "The question is in the composer. read it over, then send.",
+  pullRequestInComposer: "The pull request is in the composer. type your question, then send.",
   preparingCheckout: "Preparing the pull request checkout...",
   couldNotOpenThreadForCheckout: "Could not open a thread for the checkout",
   couldNotPrepareCheckout: "Could not prepare the pull request checkout",
@@ -274,7 +274,7 @@ export const pullRequest = {
   branchThreadOpen: "This repository is on the pull request's branch, with a thread open on it.",
   worktreeThreadOpen: "The pull request is in its own worktree, with a thread open on it.",
   checkoutReady: "Checkout ready",
-  taskInComposer: "The task is in the composer — read it over, then send.",
+  taskInComposer: "The task is in the composer. read it over, then send.",
   waitingForHostState: "Waiting for host state",
   watching: "Watching",
   watchingHint:
@@ -539,7 +539,7 @@ export const pullRequest = {
     "This change has more files than the host will report ticks for in one read, so the count is short and some boxes below start empty.",
   someNotShown: "Some of this diff was not shown",
   someNotShownHint:
-    "The host withheld part of this diff — a binary file, or a change too large to inline.",
+    "The host withheld part of this diff. a binary file, or a change too large to inline.",
   commentsWholeChange: "Line comments are written from the whole change",
   commentsWholeChangeHint:
     "A comment is anchored to the whole change, so switch to All commits to write one.",
@@ -727,7 +727,7 @@ export const pullRequest = {
   actionHintReopen:
     "The host refused it. Check that you have write access, and that the branch still exists.",
   actionHintUpdateBranch:
-    "The host refused it. Check that you have write access to the branch — one from a fork also needs its author to allow edits from maintainers — and that it does not conflict with the base.",
+    "The host refused it. Check that you have write access to the branch. one from a fork also needs its author to allow edits from maintainers. and that it does not conflict with the base.",
   actionHintEnableAutoMerge:
     "The host refused it. Check that this repository allows auto-merge, that you have write access, and that there is something left for it to wait on.",
   actionHintDisableAutoMerge:

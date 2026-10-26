@@ -198,7 +198,7 @@ export const settingsC = {
   runUpdateInTerminal: "Run it in a terminal when you are ready to update.",
   couldNotCopyUpdateCommand: "Could not copy {name} update command",
   authenticatedAs: "Authenticated as",
-  updateViewDetails: "{title} — view details",
+  updateViewDetails: "{title}. view details",
   updating: "Updating",
   installVersion: "Install {version}",
   updateNow: "Update now",
@@ -363,7 +363,7 @@ export const settingsC = {
   changeInConnections: "Change in Connections",
   editTask: "Edit task",
   runPromptAutomatically:
-    "Run a prompt automatically — on an interval, at a fixed time, or when a webhook is called.",
+    "Run a prompt automatically. on an interval, at a fixed time, or when a webhook is called.",
   reconnectBeforeSaving: "Reconnect this environment before saving.",
   runsOn: "Runs on",
   unavailableEnvironment: "Unavailable environment",

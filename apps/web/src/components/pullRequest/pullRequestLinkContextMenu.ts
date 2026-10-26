@@ -1,6 +1,6 @@
 import type { ContextMenuItem } from "@t3tools/contracts";
 import {
-  type SourceControlClientDefinition,
+  type SourceControlDefinition,
   UNKNOWN_SOURCE_CONTROL_CLIENT,
 } from "@t3tools/client-runtime/source-control-clients";
 
@@ -12,12 +12,10 @@ import { currentTranslator } from "../../i18n/I18nProvider";
 
 export type PullRequestLinkContextMenuAction = "copy-link" | "open-external";
 
-export const openOnHostLabel = (host: SourceControlClientDefinition): string => {
-  const t = currentTranslator();
-  return host === UNKNOWN_SOURCE_CONTROL_CLIENT
-    ? t("pullRequest.openOnHost")
-    : t("pullRequest.openOnHostNamed", { host: host.label });
-};
+export const openOnHostLabel = (host: SourceControlDefinition): string =>
+  host === UNKNOWN_SOURCE_CONTROL_CLIENT
+    ? "Open on host"
+    : currentTranslator()("pullRequest.diffOpenOn", { providerName: host.label });
 
 function pullRequestLinkContextMenuItems(
   openLabel: string,

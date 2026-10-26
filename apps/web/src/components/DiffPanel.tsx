@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { useAtomValue } from "@effect/atom-react";
 import type { FileDiffContentsLoader, FileDiffMetadata } from "@pierre/diffs";
@@ -29,9 +30,13 @@ import { type DraftId } from "../composerDraftStore";
 import { openDiffFilePrimaryAction } from "../diffFileActions";
 import { useCheckpointDiff } from "~/lib/checkpointDiffState";
 import { cn } from "~/lib/utils";
-import { selectThreadDiffPanelSelection, useDiffPanelStore } from "../diffPanelStore";
+import {
+  selectThreadDiffPanelSelection,
+  useDiffPanelSessionStore,
+  useDiffPanelStore,
+} from "../diffPanelStore";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useTheme } from "../hooks/useTheme";
+import { useRenderedAppearance } from "../hooks/useTheme";
 import { useStableCallback } from "../hooks/useStableCallback";
 import {
   buildFileDiffContentVersion,
@@ -89,7 +94,7 @@ import { createGitDiffFileContentsLoader } from "../lib/diffFileContents";
 import { useReviewFilePatches } from "./diffs/useReviewFilePatches";
 import { DiffFileLoadingBoundary } from "./diffs/DiffFileLoadingBoundary";
 import { DiffFileStatus } from "./diffs/DiffFileStatus";
-import { useT, currentTranslator } from "../i18n/I18nProvider";
+import { useT } from "../i18n/I18nProvider";
 import { useThreadRouteRef } from "../hooks/useThreadRouteTarget";
 
 type DiffThemeType = "light" | "dark";
@@ -110,11 +115,6 @@ function getCachedFileEntry(fileDiff: FileDiffMetadata) {
   };
   fileEntryCache.set(fileDiff, entry);
   return entry;
-}
-
-interface CollapsedDiffFilesState {
-  readonly scopeKey: string | null;
-  readonly fileKeys: ReadonlySet<string>;
 }
 
 const EMPTY_COLLAPSED_DIFF_FILE_KEYS: ReadonlySet<string> = new Set();
@@ -184,7 +184,9 @@ function DiffFileHeaderSuffix({
 }) {
   return (
     <>
-      <DiffFilePathCopyButton filePath={filePath} />
+      <span data-diff-copy-path className="inline-flex">
+        <DiffFilePathCopyButton filePath={filePath} />
+      </span>
       {hasStat ? (
         <DiffFileStatus error={error} truncated={truncated} retry={() => onRetry(filePath)} />
       ) : null}
@@ -196,15 +198,16 @@ interface DiffPanelProps {
   mode?: DiffPanelMode;
   composerDraftTarget: ScopedThreadRef | DraftId;
   workspaceMutationId: string | null;
+  visible: boolean;
 }
 
 export default function DiffPanel({
   mode = "inline",
   composerDraftTarget,
   workspaceMutationId,
+  visible,
 }: DiffPanelProps) {
-  const t = useT();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useRenderedAppearance();
   const settings = useClientSettings((settings) => ({
     diffFilesCollapsed: settings.diffFilesCollapsed,
     diffIgnoreWhitespace: settings.diffIgnoreWhitespace,
@@ -221,10 +224,6 @@ export default function DiffPanel({
     Schema.Boolean,
   );
   const [baseRefQuery, setBaseRefQuery] = useState("");
-  const [collapsedDiffFiles, setCollapsedDiffFiles] = useState<CollapsedDiffFilesState>(() => ({
-    scopeKey: null,
-    fileKeys: EMPTY_COLLAPSED_DIFF_FILE_KEYS,
-  }));
   const [codeViewRevision, setCodeViewRevision] = useState(0);
   const [codeView, setCodeView] = useState<AnnotatableCodeViewHandle | null>(null);
 
@@ -299,21 +298,23 @@ export default function DiffPanel({
   const selectedScopeLabel =
     selectedRunId === null
       ? selectedGitScope === "unstaged"
-        ? t("pullRequest.scopeUncommitted")
-        : t("pullRequest.scopeChanges")
+        ? currentTranslator()("pullRequest.scopeUncommitted")
+        : currentTranslator()("pullRequest.scopeChanges")
       : selectedTurn?.runId === latestTurn?.runId
-        ? t("pullRequest.latestTurn")
-        : t("pullRequest.turnNumber", { number: selectedCheckpointTurnCount ?? "?" });
+        ? currentTranslator()("pullRequest.latestTurn")
+        : currentTranslator()("pullRequest.turnNumber", {
+            number: selectedCheckpointTurnCount ?? "?",
+          });
   const reviewSectionId = selectedTurn ? `turn:${selectedTurn.runId}` : selectedGitScope;
   const collapseScopeKey = routeThreadRef
     ? `${routeThreadRef.environmentId}:${routeThreadRef.threadId}:${reviewSectionId}`
     : null;
   const codeViewMountKey = `${collapseScopeKey ?? reviewSectionId}:${codeViewRevision}`;
   const reviewSectionTitle = selectedTurn
-    ? t("pullRequest.turnNumber", { number: selectedCheckpointTurnCount ?? "?" })
+    ? currentTranslator()("pullRequest.turnNumber", { number: selectedCheckpointTurnCount ?? "?" })
     : selectedGitScope === "unstaged"
-      ? t("pullRequest.scopeUncommitted")
-      : t("pullRequest.scopeChanges");
+      ? currentTranslator()("pullRequest.scopeUncommitted")
+      : currentTranslator()("pullRequest.scopeChanges");
   const selectedCheckpointRange =
     typeof selectedCheckpointTurnCount === "number"
       ? {
@@ -397,7 +398,6 @@ export default function DiffPanel({
           cacheKey: selectedGitSource.diffHash,
         })
       : undefined;
-  // The code view keeps one loader for its lifetime; a new identity would remount it.
   const loadDiffFiles: FileDiffContentsLoader = useStableCallback(async (fileDiff) => {
     if (!currentLoadDiffFiles) {
       throw new Error(currentTranslator()("pullRequest.diffContentsUnavailable"));
@@ -475,6 +475,38 @@ export default function DiffPanel({
     preview: renderablePatch,
   });
   const refreshBranchDiffPreview = refreshPreviewQuery;
+  const previewOpenHandledRef = useRef(false);
+  const refreshDiffForWorkspaceMutation = useStableCallback(() => {
+    previewOpenHandledRef.current = true;
+    refreshBranchDiffPreview();
+  });
+
+  // A mutation refresh also satisfies revalidation for the current opening.
+  useWorkspaceMutationRefresh({
+    enabled: canRefreshGitDiff,
+    mutationId: workspaceMutationId,
+    refresh: refreshDiffForWorkspaceMutation,
+    resourceKey: `diff:${activeThreadRefreshKey ?? ""}`,
+  });
+
+  useEffect(() => {
+    if (!visible || !canReadFiles || !canRefreshGitDiff) {
+      previewOpenHandledRef.current = false;
+      return;
+    }
+    if (previewOpenHandledRef.current) return;
+    previewOpenHandledRef.current = true;
+    if (branchDiffPreview.data !== null && !branchDiffPreview.isPending) {
+      refreshBranchDiffPreview();
+    }
+  }, [
+    branchDiffPreview.data,
+    branchDiffPreview.isPending,
+    canReadFiles,
+    canRefreshGitDiff,
+    refreshBranchDiffPreview,
+    visible,
+  ]);
 
   useEffect(() => {
     if (!canRefreshGitDiff) return;
@@ -483,23 +515,24 @@ export default function DiffPanel({
     return () => window.removeEventListener("focus", refreshOnFocus);
   }, [canRefreshGitDiff, refreshBranchDiffPreview]);
 
-  useWorkspaceMutationRefresh({
-    enabled: canRefreshGitDiff,
-    mutationId: workspaceMutationId,
-    refresh: refreshBranchDiffPreview,
-    resourceKey: `diff:${activeThreadRefreshKey ?? ""}`,
-  });
-
   const isRefreshingDiff = branchDiffPreview.isPending || areFilePatchesPending;
   const renderableFileEntries = renderableFiles.map(getCachedFileEntry);
   const diffFileKeys = renderableFileEntries.map((file) => file.fileKey);
   const defaultCollapsedDiffFileKeys = settings.diffFilesCollapsed
     ? new Set(diffFileKeys)
     : EMPTY_COLLAPSED_DIFF_FILE_KEYS;
-  const collapsedDiffFileKeys =
-    collapsedDiffFiles.scopeKey === collapseScopeKey
-      ? collapsedDiffFiles.fileKeys
-      : defaultCollapsedDiffFileKeys;
+  const storedCollapsedDiffFileKeys = useDiffPanelSessionStore((state) =>
+    collapseScopeKey ? state.collapsedFileKeysByScopeKey[collapseScopeKey] : undefined,
+  );
+  const collapsedDiffFileKeys = storedCollapsedDiffFileKeys ?? defaultCollapsedDiffFileKeys;
+  const updateCollapsedDiffFiles = (
+    update: (current: ReadonlySet<string>) => ReadonlySet<string>,
+  ) => {
+    if (!collapseScopeKey) return;
+    useDiffPanelSessionStore
+      .getState()
+      .updateCollapsedFileKeys(collapseScopeKey, defaultCollapsedDiffFileKeys, update);
+  };
   const renderLoadingBoundary = () =>
     settledFileCount < renderableFiles.length ? (
       <DiffFileLoadingBoundary
@@ -521,19 +554,10 @@ export default function DiffPanel({
         collapsedDiffFileKeys.has(fileKey) || fileDiff.cacheKey?.endsWith(":pending") === true,
     }));
   const codeViewFileKeys = codeViewFiles.map((file) => file.fileKey);
+  const pendingFiles = renderableFiles.filter((file) => file.cacheKey?.endsWith(":pending"));
   const allDiffFilesCollapsed = areAllDiffFilesCollapsed(diffFileKeys, collapsedDiffFileKeys);
   const diffLineStat = sourceLineStat ?? getDiffLineStat(renderableFiles);
   const fileTreeEntries = diffFileTreeEntries(renderableFiles);
-  const selectedDiffFileKey = selectedFilePath
-    ? (codeViewFiles.find((candidate) => candidate.filePath === selectedFilePath)?.fileKey ?? null)
-    : null;
-
-  useEffect(() => {
-    if (!selectedDiffFileKey || !codeView?.getInstance()) return;
-    codeView.scrollTo({ type: "item", id: selectedDiffFileKey, align: "start" });
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- A remounted viewer or a repeated reveal request scrolls to the same file again.
-  }, [codeView, codeViewMountKey, selectedDiffFileKey, selectedFileRevealRequestId]);
-
   const treeRevealScope = { collapseScopeKey, diffSelection };
   const requestTreeReveal = useCodeViewFileReveal(codeView, treeRevealScope, codeViewFileKeys);
   const revealDiffFile = (filePath: string) => {
@@ -541,32 +565,31 @@ export default function DiffPanel({
       (candidate) => resolveFileDiffPath(candidate.fileDiff) === filePath,
     );
     const file = renderableFileEntries[index];
-    if (!file) return;
-    setCollapsedDiffFiles((current) => {
-      const next = new Set(
-        current.scopeKey === collapseScopeKey ? current.fileKeys : defaultCollapsedDiffFileKeys,
-      );
+    if (!file) return false;
+    updateCollapsedDiffFiles((current) => {
+      const next = new Set(current);
       next.delete(file.fileKey);
-      return { scopeKey: collapseScopeKey, fileKeys: next };
+      return next;
     });
     if (lazySource && index >= settledFileCount) {
       requestFile(index);
     }
     requestTreeReveal(file.fileKey);
+    return true;
   };
 
-  const externalRevealRef = useRef<{ cache: string; key: string } | null>(null);
+  const externalRevealRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!lazySource || !selectedFilePath) return;
-    const key = `${selectedFilePath}:${selectedFileRevealRequestId}`;
-    if (
-      externalRevealRef.current?.cache === filePatchScope &&
-      externalRevealRef.current.key === key
-    )
+    if (!selectedFilePath) {
+      externalRevealRef.current = null;
       return;
-    externalRevealRef.current = { cache: filePatchScope, key };
-    revealDiffFile(selectedFilePath);
-  }, [lazySource, selectedFilePath, selectedFileRevealRequestId, filePatchScope, revealDiffFile]);
+    }
+    const key = JSON.stringify([collapseScopeKey, selectedFilePath, selectedFileRevealRequestId]);
+    if (externalRevealRef.current === key) return;
+    if (revealDiffFile(selectedFilePath)) {
+      externalRevealRef.current = key;
+    }
+  }, [collapseScopeKey, selectedFilePath, selectedFileRevealRequestId, revealDiffFile]);
 
   const openDiffFile = (filePath: string) => {
     openDiffFilePrimaryAction({
@@ -593,43 +616,30 @@ export default function DiffPanel({
       },
     });
   };
-  // Every file header holds these; a new identity per collapse change would redraw them all.
   const toggleDiffFileCollapsed = useStableCallback((fileKey: string) => {
-    setCollapsedDiffFiles((current) => {
-      const next = new Set(
-        current.scopeKey === collapseScopeKey ? current.fileKeys : defaultCollapsedDiffFileKeys,
-      );
+    updateCollapsedDiffFiles((current) => {
+      const next = new Set(current);
       if (next.has(fileKey)) {
         next.delete(fileKey);
       } else {
         next.add(fileKey);
       }
-      return { scopeKey: collapseScopeKey, fileKeys: next };
+      return next;
     });
   });
   // Find can ask again before the unfolded file reaches the viewer, so this must never fold.
   const unfoldDiffFile = useStableCallback((fileKey: string) => {
-    setCollapsedDiffFiles((current) => {
-      const fileKeys =
-        current.scopeKey === collapseScopeKey ? current.fileKeys : defaultCollapsedDiffFileKeys;
-      if (!fileKeys.has(fileKey)) return current;
-      const next = new Set(fileKeys);
+    updateCollapsedDiffFiles((current) => {
+      if (!current.has(fileKey)) return current;
+      const next = new Set(current);
       next.delete(fileKey);
-      return { scopeKey: collapseScopeKey, fileKeys: next };
+      return next;
     });
   });
 
   const toggleDiffFileCollapse = () => {
     setCodeViewRevision((current) => current + 1);
-    setCollapsedDiffFiles((current) => {
-      const currentKeys =
-        current.scopeKey === collapseScopeKey ? current.fileKeys : defaultCollapsedDiffFileKeys;
-
-      return {
-        scopeKey: collapseScopeKey,
-        fileKeys: toggleAllDiffFiles(diffFileKeys, currentKeys),
-      };
-    });
+    updateCollapsedDiffFiles((current) => toggleAllDiffFiles(diffFileKeys, current));
   };
 
   const selectTurn = (runId: RunId) => {
@@ -664,12 +674,12 @@ export default function DiffPanel({
 
   const headerRow = (
     <>
-      <div className="flex min-w-0 flex-1 items-center gap-3 [-webkit-app-region:no-drag]">
+      <div className="@container/diff-refs flex min-w-0 flex-1 items-center gap-3 [-webkit-app-region:no-drag]">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button size="xs" variant="secondary" />}
             className="max-w-full"
-            aria-label={t("pullRequest.diffScope", { scope: selectedScopeLabel })}
+            aria-label={currentTranslator()("pullRequest.diffScope", { scope: selectedScopeLabel })}
           >
             <span className="truncate">{selectedScopeLabel}</span>
             <ChevronDownIcon className="size-3.5 shrink-0 opacity-70" />
@@ -677,17 +687,19 @@ export default function DiffPanel({
           <DropdownMenuContent align="start">
             <DropdownMenuRadioGroup value={selectedScopeValue} onValueChange={selectScopeValue}>
               <DropdownMenuRadioItem value="branch" closeOnClick>
-                <span>{t("pullRequest.scopeChanges")}</span>
+                <span>{currentTranslator()("pullRequest.scopeChanges")}</span>
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="unstaged" closeOnClick>
-                <span>{t("pullRequest.scopeUncommitted")}</span>
+                <span>{currentTranslator()("pullRequest.scopeUncommitted")}</span>
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="latest" closeOnClick>
-                <span>{t("pullRequest.latestTurn")}</span>
+                <span>{currentTranslator()("pullRequest.latestTurn")}</span>
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger>{t("pullRequest.turnLabel")}</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>
+                {currentTranslator()("pullRequest.turnLabel")}
+              </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup value={selectedTurnValue} onValueChange={selectScopeValue}>
                   {orderedTurnDiffSummaries.map((summary) => {
@@ -699,7 +711,9 @@ export default function DiffPanel({
                         closeOnClick
                       >
                         <span className="flex items-center gap-2">
-                          <span>{t("pullRequest.turnNumber", { number: turnCount })}</span>
+                          <span>
+                            {currentTranslator()("pullRequest.turnNumber", { number: turnCount })}
+                          </span>
                           <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                             {formatShortTimestamp(summary.completedAt, settings.timestampFormat)}
                           </span>
@@ -715,17 +729,17 @@ export default function DiffPanel({
         {selectedRunId === null && selectedGitScope === "branch" && selectedGitSource?.baseRef && (
           <div
             className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden text-xs text-muted-foreground"
-            aria-label={t("pullRequest.comparingAgainst", {
+            aria-label={currentTranslator()("pullRequest.comparingAgainst", {
               head: selectedGitSource.headRef ?? "HEAD",
               base: selectedGitSource.baseRef,
             })}
           >
-            {/* The head ref keeps 3rem while the row has room; below that the
-                base-ref button keeps 2.25rem so its menu stays reachable. */}
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span className="flex min-w-[min(3rem,calc(100%-2.75rem))] items-center gap-2 overflow-hidden" />
+                  // Too narrow for both refs, the New design keeps the target readable and drops
+                  // the head, which is the thread's own branch.
+                  <span className="flex min-w-[min(3rem,calc(100%-2.75rem))] items-center gap-2 overflow-hidden redesign:@max-[20rem]/diff-refs:hidden" />
                 }
               >
                 <span className="min-w-0 max-w-48 truncate">
@@ -733,6 +747,18 @@ export default function DiffPanel({
                   {selectedGitSource.headRef ?? "HEAD"}
                 </span>
                 <ArrowRightIcon className="size-3.5 shrink-0 opacity-70" />
+              </TooltipTrigger>
+              <TooltipPopup side="top">
+                {`${selectedGitSource.headRef ?? "HEAD"} → ${selectedGitSource.baseRef}`}
+              </TooltipPopup>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span aria-hidden className="hidden redesign:@max-[20rem]/diff-refs:inline" />
+                }
+              >
+                vs
               </TooltipTrigger>
               <TooltipPopup side="top">
                 {`${selectedGitSource.headRef ?? "HEAD"} → ${selectedGitSource.baseRef}`}
@@ -752,8 +778,8 @@ export default function DiffPanel({
             >
               <ComboboxTrigger
                 render={<Button variant="ghost-muted" size="xs" />}
-                className="min-w-9 max-w-48 shrink"
-                aria-label={t("pullRequest.comparisonTargetCurrently", {
+                className="min-w-9 max-w-48 shrink redesign:shrink-0"
+                aria-label={currentTranslator()("pullRequest.comparisonTargetCurrently", {
                   base: selectedGitSource.baseRef,
                 })}
               >
@@ -765,24 +791,28 @@ export default function DiffPanel({
                 className="w-72 min-w-0 max-w-[calc(100vw-1rem)] overflow-hidden"
               >
                 <ComboboxSearchInput
-                  placeholder={t("pullRequest.searchRefs")}
+                  placeholder={currentTranslator()("pullRequest.searchRefs")}
                   value={baseRefQuery}
                   onChange={(event) => setBaseRefQuery(event.target.value)}
                 />
                 <div className="grid shrink-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 border-b border-border/70 ps-3 pe-6.5 pt-2 pb-1.5 font-medium text-3xs text-muted-foreground uppercase tracking-wide">
                   <span aria-hidden="true" />
                   <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_2rem] items-center">
-                    <span>{t("pullRequest.gitBranch")}</span>
-                    <span className="text-right">{t("pullRequest.gitRemote")}</span>
+                    <span>{currentTranslator()("pullRequest.gitBranch")}</span>
+                    <span className="text-right">
+                      {currentTranslator()("pullRequest.gitRemote")}
+                    </span>
                   </div>
                 </div>
-                <ComboboxEmpty>{t("pullRequest.noMatchingRefs")}</ComboboxEmpty>
+                <ComboboxEmpty>{currentTranslator()("pullRequest.noMatchingRefs")}</ComboboxEmpty>
                 <ComboboxList className="max-h-64 min-w-0 overflow-x-hidden">
                   <ComboboxItem
                     className="w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)]"
                     value={AUTOMATIC_BASE_REF}
                   >
-                    <span className="block min-w-0 truncate">{t("pullRequest.automatic")}</span>
+                    <span className="block min-w-0 truncate">
+                      {currentTranslator()("pullRequest.automatic")}
+                    </span>
                   </ComboboxItem>
                   {baseRefChoices.map((choice) => {
                     const item = valueForBaseRefChoice(choice);
@@ -803,7 +833,7 @@ export default function DiffPanel({
                               onPointerDown={(event) => event.stopPropagation()}
                             >
                               <Switch
-                                aria-label={t("pullRequest.useRemoteVersion", {
+                                aria-label={currentTranslator()("pullRequest.useRemoteVersion", {
                                   label: choice.label,
                                 })}
                                 checked={useRemote}
@@ -823,13 +853,15 @@ export default function DiffPanel({
                                   <span className="flex justify-end text-muted-foreground">
                                     <CheckIcon
                                       role="img"
-                                      aria-label={t("pullRequest.remoteOnly")}
+                                      aria-label={currentTranslator()("pullRequest.remoteOnly")}
                                       className="size-3"
                                     />
                                   </span>
                                 }
                               />
-                              <TooltipPopup side="top">{t("pullRequest.remoteOnly")}</TooltipPopup>
+                              <TooltipPopup side="top">
+                                {currentTranslator()("pullRequest.remoteOnly")}
+                              </TooltipPopup>
                             </Tooltip>
                           ) : null}
                         </div>
@@ -861,8 +893,8 @@ export default function DiffPanel({
                   variant="ghost"
                   aria-label={
                     isRefreshingDiff
-                      ? t("pullRequest.refreshingDiff")
-                      : t("pullRequest.refreshDiff")
+                      ? currentTranslator()("pullRequest.refreshingDiff")
+                      : currentTranslator()("pullRequest.refreshDiff")
                   }
                   onClick={refreshDiffFromUserAction}
                 />
@@ -872,8 +904,8 @@ export default function DiffPanel({
             </TooltipTrigger>
             <TooltipPopup side="top">
               {isRefreshingDiff
-                ? t("pullRequest.refreshingDiffDots")
-                : t("pullRequest.refreshDiff")}
+                ? currentTranslator()("pullRequest.refreshingDiffDots")
+                : currentTranslator()("pullRequest.refreshDiff")}
             </TooltipPopup>
           </Tooltip>
         )}
@@ -887,8 +919,8 @@ export default function DiffPanel({
                   variant="ghost"
                   aria-label={
                     allDiffFilesCollapsed
-                      ? t("pullRequest.expandAllFiles")
-                      : t("pullRequest.collapseAllFiles")
+                      ? currentTranslator()("pullRequest.expandAllFiles")
+                      : currentTranslator()("pullRequest.collapseAllFiles")
                   }
                   onClick={toggleDiffFileCollapse}
                 />
@@ -901,13 +933,13 @@ export default function DiffPanel({
             </TooltipTrigger>
             <TooltipPopup side="top">
               {allDiffFilesCollapsed
-                ? t("pullRequest.expandAllFiles")
-                : t("pullRequest.collapseAllFiles")}
+                ? currentTranslator()("pullRequest.expandAllFiles")
+                : currentTranslator()("pullRequest.collapseAllFiles")}
             </TooltipPopup>
           </Tooltip>
         )}
         <ToggleGroup
-          aria-label={t("pullRequest.diffLayout")}
+          aria-label={currentTranslator()("pullRequest.diffLayout")}
           className="shrink-0"
           variant="segmented"
           value={[diffLayout]}
@@ -918,10 +950,10 @@ export default function DiffPanel({
             }
           }}
         >
-          <Toggle aria-label={t("pullRequest.stackedDiffView")} value="stacked">
+          <Toggle aria-label={currentTranslator()("pullRequest.stackedDiffView")} value="stacked">
             <Rows3Icon className="size-3.5" />
           </Toggle>
-          <Toggle aria-label={t("pullRequest.splitDiffView")} value="split">
+          <Toggle aria-label={currentTranslator()("pullRequest.splitDiffView")} value="split">
             <Columns2Icon className="size-3.5" />
           </Toggle>
         </ToggleGroup>
@@ -931,8 +963,8 @@ export default function DiffPanel({
               <Toggle
                 aria-label={
                   wordWrap
-                    ? t("pullRequest.disableDiffLineWrapping")
-                    : t("pullRequest.enableDiffLineWrapping")
+                    ? currentTranslator()("pullRequest.disableDiffLineWrapping")
+                    : currentTranslator()("pullRequest.enableDiffLineWrapping")
                 }
                 variant="ghost"
                 size="sm"
@@ -946,7 +978,9 @@ export default function DiffPanel({
             <TextWrapIcon className="size-3.5" />
           </TooltipTrigger>
           <TooltipPopup side="top">
-            {wordWrap ? t("pullRequest.disableLineWrapping") : t("pullRequest.enableLineWrapping")}
+            {wordWrap
+              ? currentTranslator()("pullRequest.disableLineWrapping")
+              : currentTranslator()("pullRequest.enableLineWrapping")}
           </TooltipPopup>
         </Tooltip>
         <Tooltip>
@@ -955,8 +989,8 @@ export default function DiffPanel({
               <Toggle
                 aria-label={
                   diffIgnoreWhitespace
-                    ? t("pullRequest.showWhitespaceChanges")
-                    : t("pullRequest.hideWhitespaceChanges")
+                    ? currentTranslator()("pullRequest.showWhitespaceChanges")
+                    : currentTranslator()("pullRequest.hideWhitespaceChanges")
                 }
                 variant="ghost"
                 size="sm"
@@ -971,8 +1005,8 @@ export default function DiffPanel({
           </TooltipTrigger>
           <TooltipPopup side="top">
             {diffIgnoreWhitespace
-              ? t("pullRequest.showWhitespaceChanges")
-              : t("pullRequest.hideWhitespaceChanges")}
+              ? currentTranslator()("pullRequest.showWhitespaceChanges")
+              : currentTranslator()("pullRequest.hideWhitespaceChanges")}
           </TooltipPopup>
         </Tooltip>
         {diffFileKeys.length > 0 && (
@@ -981,7 +1015,9 @@ export default function DiffPanel({
               render={
                 <Toggle
                   aria-label={
-                    fileTreeOpen ? t("pullRequest.hideFileTree") : t("pullRequest.showFileTree")
+                    fileTreeOpen
+                      ? currentTranslator()("pullRequest.hideFileTree")
+                      : currentTranslator()("pullRequest.showFileTree")
                   }
                   variant="ghost"
                   size="sm"
@@ -993,7 +1029,9 @@ export default function DiffPanel({
               <FolderTreeIcon className="size-3.5" />
             </TooltipTrigger>
             <TooltipPopup side="top">
-              {fileTreeOpen ? t("pullRequest.hideFileTree") : t("pullRequest.showFileTree")}
+              {fileTreeOpen
+                ? currentTranslator()("pullRequest.hideFileTree")
+                : currentTranslator()("pullRequest.showFileTree")}
             </TooltipPopup>
           </Tooltip>
         )}
@@ -1005,22 +1043,22 @@ export default function DiffPanel({
     <DiffPanelShell mode={mode} header={headerRow}>
       {!activeThread ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-          {t("pullRequest.selectThreadTurnDiffs")}
+          {currentTranslator()("pullRequest.selectThreadTurnDiffs")}
         </div>
       ) : !isGitRepo ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-          {t("pullRequest.turnDiffsUnavailable")}
+          {currentTranslator()("pullRequest.turnDiffsUnavailable")}
         </div>
       ) : selectedRunId !== null && orderedTurnDiffSummaries.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-          {t("pullRequest.noCompletedTurns")}
+          {currentTranslator()("pullRequest.noCompletedTurns")}
         </div>
       ) : selectedRunId === null && !canReadFiles ? (
         fileAccess.isPending ? (
-          <DiffPanelLoadingState label={t("pullRequest.checkingFileAccess")} />
+          <DiffPanelLoadingState label={currentTranslator()("pullRequest.checkingFileAccess")} />
         ) : (
           <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-            {fileAccess.error ?? t("pullRequest.connectionCannotReadDiffs")}
+            {fileAccess.error ?? currentTranslator()("pullRequest.connectionCannotReadDiffs")}
           </div>
         )
       ) : (
@@ -1028,8 +1066,10 @@ export default function DiffPanel({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
             {isSelectedPatchTruncated && !lazySource && (
               <p className="shrink-0 border-b border-border/70 bg-muted/40 px-3 py-1.5 text-2xs text-muted-foreground">
-                {t("pullRequest.previewExceedsLimit")}
-                {selectedGitSource?.files ? t("pullRequest.totalsIncludeAll") : ""}
+                {currentTranslator()("pullRequest.previewExceedsLimit")}
+                {selectedGitSource?.files
+                  ? currentTranslator()("pullRequest.totalsIncludeAll")
+                  : ""}
               </p>
             )}
             {selectedPatchError && !renderablePatch && (
@@ -1042,16 +1082,18 @@ export default function DiffPanel({
                 <DiffPanelLoadingState
                   label={
                     selectedTurn
-                      ? t("pullRequest.loadingCheckpointDiff")
+                      ? currentTranslator()("pullRequest.loadingCheckpointDiff")
                       : selectedGitScope === "unstaged"
-                        ? t("pullRequest.loadingUncommittedChanges")
-                        : t("pullRequest.loadingChanges")
+                        ? currentTranslator()("pullRequest.loadingUncommittedChanges")
+                        : currentTranslator()("pullRequest.loadingChanges")
                   }
                 />
               ) : (
                 <div className="flex h-full items-center justify-center px-3 py-2 text-xs text-muted-foreground/70">
                   <p>
-                    {hasNoNetChanges ? t("pullRequest.noNetChanges") : t("pullRequest.noPatch")}
+                    {hasNoNetChanges
+                      ? currentTranslator()("pullRequest.noNetChanges")
+                      : currentTranslator()("pullRequest.noPatch")}
                   </p>
                 </div>
               )
@@ -1063,8 +1105,7 @@ export default function DiffPanel({
                     const composedPath = event.nativeEvent.composedPath?.() ?? [];
                     for (const node of composedPath) {
                       if (!(node instanceof HTMLElement)) continue;
-                      // Header controls keep their own actions. In particular, the chevron must
-                      // not also trigger the row handler or the two toggles cancel each other.
+                      // Header buttons own their clicks; bubbling a chevron click would toggle twice.
                       if (node instanceof HTMLButtonElement || node instanceof HTMLAnchorElement) {
                         return;
                       }
@@ -1115,6 +1156,7 @@ export default function DiffPanel({
                     codeViewKey={`${codeViewMountKey}:${lazySource ? filePatchScope : "preview"}`}
                     className="h-full min-h-0 overflow-auto"
                     files={codeViewFiles}
+                    pendingFiles={pendingFiles}
                     renderCodeViewFooter={renderLoadingBoundary}
                     sectionId={reviewSectionId}
                     sectionTitle={reviewSectionTitle}
@@ -1176,7 +1218,9 @@ export default function DiffPanel({
                 {fileTreeOpen ? (
                   <aside className="flex w-[min(16rem,40%)] min-w-40 shrink-0 border-l border-border/60">
                     <DiffFileTree
-                      ariaLabel={`${reviewSectionTitle} files`}
+                      ariaLabel={currentTranslator()("chat.prRowChangedFiles", {
+                        files: reviewSectionTitle,
+                      })}
                       entries={fileTreeEntries}
                       selectedPath={selectedFilePath}
                       revealRequestId={selectedFileRevealRequestId}

@@ -293,7 +293,7 @@ function getThemePaintSnapshot(
   };
 }
 
-export function changedThemePaintKinds(
+function changedThemePaintKinds(
   before: ThemePaintSnapshot,
   after: ThemePaintSnapshot,
 ): ReadonlyArray<ThemePaintKind> {
@@ -307,8 +307,7 @@ function withThemeTokenProbeSession<Result>(run: () => Result): Result {
   try {
     return run();
   } finally {
-    // Flush every restored token while transitions are still suppressed. The
-    // browser never gets a paint opportunity between the probe and restore.
+    // Flush restored tokens before re-enabling transitions; no paint may occur during probing.
     void window.getComputedStyle(root).color;
     if (!wasAlreadyProbing) root.removeAttribute(THEME_TOKEN_PROBE_ATTRIBUTE);
   }
@@ -350,10 +349,7 @@ function themeInspectorCandidates(): ReadonlyArray<Element> {
   );
 }
 
-export function themeRoleFromUtilityClass(
-  className: string,
-  kind: ThemePaintKind,
-): ThemeColorRole | null {
+function themeRoleFromUtilityClass(className: string, kind: ThemePaintKind): ThemeColorRole | null {
   if (className.includes(":")) return null;
   for (const prefix of THEME_UTILITY_PREFIXES[kind]) {
     if (!className.startsWith(prefix)) continue;
@@ -446,9 +442,8 @@ export function inspectThemeRoleAtElement(initialElement: Element): ThemeElement
 
   const candidates = themeInspectionCandidates(initialElement);
 
-  // Most app paint comes from Tailwind's semantic color utilities. Those class
-  // names express the token dependency directly and avoid dozens of forced
-  // style recalculations on every pointer-down.
+  // Semantic Tailwind utilities reveal token dependencies without forced style recalculations per
+  // pointerdown.
   const utilityInspection = inspectThemeRoleFromUtilitiesAtElement(initialElement);
   if (utilityInspection) return utilityInspection;
 

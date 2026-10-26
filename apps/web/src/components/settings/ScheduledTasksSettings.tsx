@@ -1,5 +1,6 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useAtomValue } from "@effect/atom-react";
-import type { Translate } from "@t3tools/client-runtime/i18n";
+
 import { connectionStatusTitle } from "@t3tools/client-runtime/connection";
 import * as Option from "effect/Option";
 import { AsyncResult } from "effect/reactivity";
@@ -13,7 +14,7 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import type {
   EnvironmentId,
   ModelSelection,
@@ -23,13 +24,20 @@ import type {
   ScheduledTaskId,
   ScheduledTaskSchedule,
   ScheduledTaskUpsertInput,
-  ScheduledTaskWebhookDeliveryOutcome,
   ScheduledTaskWebhookDeliverySummary,
   ThreadId,
 } from "@t3tools/contracts";
-import { DEFAULT_WEBHOOK_PROMPT } from "@t3tools/client-runtime/scheduled-task-webhook";
+import {
+  DEFAULT_WEBHOOK_PROMPT,
+  emptyWebhookFilterDraft,
+  parseWebhookFilterDrafts,
+  removeWebhookFilterDraft,
+  WEBHOOK_FILTER_OPS,
+  type WebhookFilterDraft,
+} from "@t3tools/client-runtime/scheduled-task-webhook";
 import {
   MAX_WEBHOOK_DELIVERY_AGE_MINUTES,
+  MAX_WEBHOOK_FILTERS,
   MIN_SCHEDULED_TASK_INTERVAL_MS,
   ProviderInstanceId,
   resolveEnvironmentMachineKind,
@@ -50,7 +58,7 @@ import {
 import { usePrimaryCloudLinkState } from "../../cloud/primaryCloudLinkState";
 import { requestConfirmDialog } from "../../confirmDialog";
 import { webhookAddress } from "@t3tools/client-runtime/webhook-address";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useNowMinute } from "../../hooks/useNowMinute";
 import {
@@ -74,6 +82,8 @@ import { SettingsGroup } from "./SettingsGroup";
 import { settingsScopeEnvironmentLabel, settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
 import {
   WEBHOOK_SIGNATURE_DEFAULTS,
+  webhookDraftErrors,
+  webhookDeliveryLabel,
   matchesScheduledTaskScope,
   scheduleFromDraft,
   scheduledTaskDefaultModel,
@@ -111,7 +121,7 @@ import {
   SettingsSection,
   SETTINGS_PICKER_TRIGGER_CLASSNAME,
 } from "./settingsLayout";
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { useT } from "../../i18n/I18nProvider";
 
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 const WEEKDAY_LABELS: Readonly<Record<number, string>> = {
@@ -196,7 +206,111 @@ const EMPTY_DRAFT: DraftState = {
   ...WEBHOOK_SIGNATURE_DEFAULTS,
   signatureSecret: "",
   maxDeliveryAgeMinutes: "",
+  replayKey: "",
+  coalesceKey: "",
+  coalesceWindowSeconds: "",
+  filters: [],
+  savedFilters: [],
 };
+
+function WebhookFiltersField({
+  filters,
+  onChange,
+}: {
+  filters: ReadonlyArray<WebhookFilterDraft>;
+  onChange: (filters: ReadonlyArray<WebhookFilterDraft>) => void;
+}) {
+  const update = (index: number, patch: Partial<WebhookFilterDraft>) =>
+    onChange(filters.map((filter, at) => (at === index ? { ...filter, ...patch } : filter)));
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 space-y-1">
+          <Label>{currentTranslator()("pullRequest.filters")}</Label>
+          <p className="text-sm text-muted-foreground">
+            {currentTranslator()("updates.runOnlyWhenEveryFilterMatchesOtherRequests")}
+          </p>
+        </div>
+        <Button
+          className="shrink-0"
+          variant="outline"
+          size="sm"
+          disabled={filters.length >= MAX_WEBHOOK_FILTERS}
+          onClick={() => onChange([...filters, emptyWebhookFilterDraft()])}
+        >
+          <PlusIcon />
+          {currentTranslator()("updates.addFilter")}
+        </Button>
+      </div>
+      {filters.map((filter, index) => (
+        // Always stacked: the dialog stays narrow on wide windows, so a single line
+        // would cut off typical paths and values. The grid wrappers size each control
+        // without restyling it; a grid item stretches to its minmax(0, 1fr) track.
+        <div key={filter.id} className="space-y-2 pt-1">
+          <div className="flex items-center gap-2">
+            <div className="grid min-w-0 flex-1 grid-cols-1">
+              <Input
+                aria-label={currentTranslator()("updates.filterNumberPath", { number: index + 1 })}
+                placeholder="body.action"
+                value={filter.path}
+                onChange={(event) => update(index, { path: event.target.value })}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={currentTranslator()("updates.removeFilterNumber", { number: index + 1 })}
+              onClick={() => onChange(removeWebhookFilterDraft(filters, filter.id))}
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select
+              value={filter.op}
+              onValueChange={(op) => {
+                const known = WEBHOOK_FILTER_OPS.find((option) => option.op === op);
+                if (known) update(index, { op: known.op });
+              }}
+            >
+              <div className="grid w-44 shrink-0 grid-cols-1">
+                <SelectTrigger
+                  size="sm"
+                  aria-label={currentTranslator()("updates.filterNumberTest", {
+                    number: index + 1,
+                  })}
+                >
+                  <SelectValue>
+                    {WEBHOOK_FILTER_OPS.find((option) => option.op === filter.op)?.label}
+                  </SelectValue>
+                </SelectTrigger>
+              </div>
+              <SelectPopup>
+                {WEBHOOK_FILTER_OPS.map((option) => (
+                  <SelectItem key={option.op} value={option.op}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+            {filter.op === "exists" ? null : (
+              <div className="grid min-w-0 flex-1 grid-cols-1">
+                <Input
+                  aria-label={currentTranslator()("updates.filterNumberValue", {
+                    number: index + 1,
+                  })}
+                  placeholder={filter.op === "in" ? "opened, reopened" : "opened"}
+                  value={filter.value}
+                  onChange={(event) => update(index, { value: event.target.value })}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function Field({
   label,
@@ -249,68 +363,53 @@ export function scheduleLabel(schedule: ScheduledTaskSchedule): string {
   return `${days} at ${schedule.timeOfDay}`;
 }
 
-/**
- * `formatRelativeTime` only handles the past, and `nextRunAt` is a future
- * instant — render "in 5m" style labels for upcoming runs instead of a
- * misleading "just now".
- */
-function relativeLabel(value: string | null, nowMs: number, t: Translate): string {
-  if (!value) return t("settingsC.notScheduled");
+/** formatRelativeTime handles only the past; upcoming runs need future labels. */
+function relativeLabel(value: string | null, nowMs: number): string {
+  if (!value) return "Not scheduled";
   const diffMs = new Date(value).getTime() - nowMs;
   if (diffMs <= 0) {
     const relative = formatRelativeTime(value, nowMs);
-    if (!relative) return t("settingsC.notScheduled");
+    if (!relative) return currentTranslator()("settingsC.notScheduled");
     return relative.suffix ? `${relative.value} ${relative.suffix}` : relative.value;
   }
   const minutes = Math.ceil(diffMs / 60_000);
-  if (minutes < 2) return t("settingsC.scheduledInUnderMinute");
+  if (minutes < 2) return currentTranslator()("settingsC.scheduledInUnderMinute");
   if (minutes < 60) {
-    return t("settingsC.scheduledIn", { duration: t("shellRest.unitMinutes", { count: minutes }) });
+    return currentTranslator()("settingsC.scheduledIn", {
+      duration: currentTranslator()("shellRest.unitMinutes", { count: minutes }),
+    });
   }
   const hours = Math.round(minutes / 60);
   if (hours < 24) {
-    return t("settingsC.scheduledIn", { duration: t("shellRest.unitHours", { count: hours }) });
+    return currentTranslator()("settingsC.scheduledIn", {
+      duration: currentTranslator()("shellRest.unitHours", { count: hours }),
+    });
   }
-  return t("settingsC.scheduledIn", {
-    duration: t("shellRest.unitDays", { count: Math.round(hours / 24) }),
+  return currentTranslator()("settingsC.scheduledIn", {
+    duration: currentTranslator()("shellRest.unitDays", { count: Math.round(hours / 24) }),
   });
 }
 
-// The clock is the label's own minute tick: the React Compiler caches a
-// `Date.now()` read in render on the timestamp alone.
+// Use the label's minute tick because the compiler caches render-time Date.now() on the timestamp.
 export function ScheduledRelativeLabel(props: { value: string | null }) {
-  const t = useT();
+  useT();
   const nowMinute = useNowMinute();
-  return relativeLabel(props.value, Date.parse(`${nowMinute}:00.000Z`), t);
+  return relativeLabel(props.value, Date.parse(`${nowMinute}:00.000Z`));
 }
 
-const DELIVERY_OUTCOME_LABELS: Record<ScheduledTaskWebhookDeliveryOutcome, string> = {
-  get accepted() {
-    return currentTranslator()("settingsC.deliveryRan");
-  },
-  get dispatch_failed() {
-    return currentTranslator()("settingsC.deliveryRunFailed");
-  },
-  get rejected_signature() {
-    return currentTranslator()("settingsC.deliveryBadSignature");
-  },
-  get disabled() {
-    return currentTranslator()("settingsC.deliveryTaskPaused");
-  },
-  get rate_limited() {
-    return currentTranslator()("settingsC.deliveryRateLimited");
-  },
-  get expired() {
-    return currentTranslator()("settingsC.deliveryTooOld");
-  },
-};
-
-function deliveryOutcomeVariant(outcome: ScheduledTaskWebhookDeliveryOutcome) {
+function deliveryOutcomeVariant(outcome: string) {
   if (outcome === "accepted") return "success";
-  if (outcome === "disabled" || outcome === "rate_limited" || outcome === "expired") {
+  if (
+    outcome === "duplicate" ||
+    outcome === "coalesced" ||
+    outcome === "disabled" ||
+    outcome === "rate_limited" ||
+    outcome === "expired"
+  ) {
     return "warning";
   }
-  return "error";
+  if (outcome === "dispatch_failed" || outcome === "rejected_signature") return "error";
+  return "outline";
 }
 
 function statusVariant(status: ScheduledTask["lastRunStatus"]) {
@@ -334,6 +433,45 @@ export function ScheduledTasksSettings(target: {
     setEditor({ environmentId, task });
   };
   const defaultEnvironment = environment ?? connectedEnvironments[0];
+  const linkedEnvironmentId = target.environmentId ?? defaultEnvironment?.environmentId;
+  const linkedEnvironmentConnected = environments.some(
+    (entry) =>
+      entry.environmentId === linkedEnvironmentId &&
+      entry.connection.phase === "connected" &&
+      entry.serverConfig !== null,
+  );
+  const linkedTasksQuery = useEnvironmentQuery(
+    target.taskId !== undefined && linkedEnvironmentId !== undefined && linkedEnvironmentConnected
+      ? serverEnvironment.scheduledTasksLive({ environmentId: linkedEnvironmentId, input: {} })
+      : null,
+  );
+  const linkedTask = linkedTasksQuery.data?.tasks.find(
+    (task) =>
+      task.id === target.taskId &&
+      linkedEnvironmentId !== undefined &&
+      matchesScheduledTaskScope(scope, linkedEnvironmentId, task.projectId),
+  );
+  // A `taskId` link opens its editor once, the first time the task loads. The editor then owns
+  // the session until close, so a disconnect that disables the query cannot drop unsaved edits.
+  // An editor the user already opened wins: a late-loading link must not replace its draft.
+  const [openedLinkTaskId, setOpenedLinkTaskId] = useState<ScheduledTaskId | undefined>();
+  if (target.taskId === undefined && openedLinkTaskId !== undefined) {
+    setOpenedLinkTaskId(undefined);
+  }
+  if (linkedTask && linkedEnvironmentId !== undefined && openedLinkTaskId !== target.taskId) {
+    setOpenedLinkTaskId(target.taskId);
+    if (editor === null) setEditor({ environmentId: linkedEnvironmentId, task: linkedTask });
+  }
+  const navigate = useNavigate({ from: "/settings/scheduled-tasks" });
+  const closeEditor = () => {
+    setEditor(null);
+    if (target.taskId === undefined) return;
+    void navigate({
+      to: "/settings/scheduled-tasks",
+      search: ({ taskId: _closed, ...rest }) => rest,
+      replace: true,
+    });
+  };
   const canCreate = useAtomValue(
     serverEnvironment.upsertScheduledTask.permissionAtom(defaultEnvironment?.environmentId ?? null),
   );
@@ -373,8 +511,7 @@ export function ScheduledTasksSettings(target: {
           </Empty>
         ) : environments.length > 1 ? (
           <ScheduledTaskEnvironmentList
-            key={`${target.environmentId ?? defaultEnvironment?.environmentId}:${target.taskId ?? ""}`}
-            environmentId={target.environmentId ?? defaultEnvironment?.environmentId}
+            environmentId={linkedEnvironmentId}
             taskId={target.taskId}
             onEdit={openForEdit}
           />
@@ -382,15 +519,10 @@ export function ScheduledTasksSettings(target: {
           <div className="space-y-8">
             {environments.map((entry) => (
               <ScheduledTaskEnvironmentSection
-                key={`${entry.environmentId}:${target.taskId ?? ""}`}
+                key={entry.environmentId}
                 environment={entry}
                 showEnvironmentHeading={environments.length > 1}
-                taskId={
-                  (target.environmentId ?? defaultEnvironment?.environmentId) ===
-                  entry.environmentId
-                    ? target.taskId
-                    : undefined
-                }
+                taskId={linkedEnvironmentId === entry.environmentId ? target.taskId : undefined}
                 onEdit={openForEdit}
               />
             ))}
@@ -402,7 +534,7 @@ export function ScheduledTasksSettings(target: {
           key={`${editor.environmentId}:${editor.task?.id ?? "new"}`}
           initialEnvironmentId={editor.environmentId}
           task={editor.task}
-          onClose={() => setEditor(null)}
+          onClose={closeEditor}
         />
       ) : null}
     </SettingsPageContainer>
@@ -445,13 +577,6 @@ function ScheduledTaskEnvironmentList({
   });
   const linkedState = states.find((state) => state.environment.environmentId === environmentId);
   const linkedTask = linkedState?.tasks?.find((task) => task.id === taskId);
-  const openedLink = useRef(false);
-  useEffect(() => {
-    if (!openedLink.current && environmentId && linkedTask) {
-      openedLink.current = true;
-      onEdit(environmentId, linkedTask);
-    }
-  }, [environmentId, linkedTask, onEdit]);
 
   const loaded = states.filter((state) => state.connected && state.error === null && state.tasks);
   const populated = loaded.filter((state) => state.tasks && state.tasks.length > 0);
@@ -472,7 +597,9 @@ function ScheduledTaskEnvironmentList({
         `${label} (${connectionStatusTitle(environment.connection)})`,
       );
     } else if (error !== null) {
-      summaries[couldNotLoadLabel]!.push(`${label}: ${error}`);
+      summaries[couldNotLoadLabel]!.push(
+        currentTranslator()("settingsD.modeWithLabel", { mode: label, label: error }),
+      );
     } else if (!tasks) {
       summaries[loadingOnLabel]!.push(label);
     } else if (tasks.length === 0 && populated.length > 0) {
@@ -581,13 +708,6 @@ function ScheduledTaskEnvironmentSection({
     matchesScheduledTaskScope(scope, environment.environmentId, task.projectId),
   );
   const linkedTask = tasks?.find((task) => task.id === taskId);
-  const openedLink = useRef(false);
-  useEffect(() => {
-    if (!openedLink.current && linkedTask) {
-      openedLink.current = true;
-      onEdit(environment.environmentId, linkedTask);
-    }
-  }, [environment.environmentId, linkedTask, onEdit]);
   return (
     <SettingsSection
       title={environment.label}
@@ -777,7 +897,10 @@ function WebhookDeliveriesDialog({
 }) {
   const t = useT();
   const deliveriesQuery = useEnvironmentQuery(
-    serverEnvironment.scheduledTaskWebhookDeliveries({ environmentId, input: { id: task.id } }),
+    serverEnvironment.scheduledTaskWebhookDeliveries({
+      environmentId,
+      input: { id: task.id, acceptAnyOutcome: true },
+    }),
   );
   const [selectedId, setSelectedId] = useState<ScheduledTaskWebhookDeliverySummary["id"] | null>(
     null,
@@ -787,7 +910,7 @@ function WebhookDeliveriesDialog({
       ? null
       : serverEnvironment.scheduledTaskWebhookDelivery({
           environmentId,
-          input: { id: task.id, deliveryId: selectedId },
+          input: { id: task.id, deliveryId: selectedId, acceptAnyOutcome: true },
         }),
   );
   const deliveries = deliveriesQuery.data?.deliveries ?? null;
@@ -815,8 +938,12 @@ function WebhookDeliveriesDialog({
           ) : selected ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Badge variant={deliveryOutcomeVariant(selected.outcome)}>
-                  {DELIVERY_OUTCOME_LABELS[selected.outcome]}
+                <Badge
+                  variant={deliveryOutcomeVariant(
+                    selected.pendingWindow ? "coalesced" : selected.outcome,
+                  )}
+                >
+                  {webhookDeliveryLabel(selected)}
                 </Badge>
                 <span>
                   {selected.method} · <ScheduledRelativeLabel value={selected.receivedAt} />
@@ -825,9 +952,28 @@ function WebhookDeliveriesDialog({
                   <span className="text-muted-foreground">{t("settingsC.signatureVerified")}</span>
                 ) : null}
               </div>
-              {selected.error ? <p className="text-sm text-destructive">{selected.error}</p> : null}
-              <DeliveryBlock title={t("settingsC.promptSentToAgent")}>
-                {selected.renderedPrompt ?? t("settingsC.noRunStarted")}
+              {selected.error ? (
+                <p
+                  className={
+                    selected.outcome === "filtered"
+                      ? "text-sm text-muted-foreground"
+                      : "text-sm text-destructive"
+                  }
+                >
+                  {selected.error}
+                </p>
+              ) : null}
+              <DeliveryBlock
+                title={
+                  selected.pendingWindow
+                    ? currentTranslator()("updates.scheduledRun")
+                    : currentTranslator()("settingsC.promptSentToAgent")
+                }
+              >
+                {selected.renderedPrompt ??
+                  (selected.pendingWindow
+                    ? currentTranslator()("updates.runScheduledWhenTheWindowClosesNoRun")
+                    : currentTranslator()("settingsC.noRunStarted"))}
               </DeliveryBlock>
               {selected.missingFields.length > 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -836,7 +982,9 @@ function WebhookDeliveriesDialog({
               ) : null}
               <DeliveryBlock title={t("settingsC.headers")}>
                 {Object.entries(selected.headers)
-                  .map(([name, value]) => `${name}: ${value}`)
+                  .map(([name, value]) =>
+                    currentTranslator()("settingsD.modeWithLabel", { mode: name, label: value }),
+                  )
                   .join("\n")}
               </DeliveryBlock>
               {selected.query ? (
@@ -845,7 +993,7 @@ function WebhookDeliveriesDialog({
               <DeliveryBlock
                 title={selected.bodyTruncated ? t("settingsC.bodyTruncated") : t("settingsC.body")}
               >
-                {selected.body || "(empty)"}
+                {selected.body || currentTranslator()("chat.stashSnippetEmpty")}
               </DeliveryBlock>
             </div>
           ) : selectedId !== null ? null : deliveries === null ? (
@@ -863,13 +1011,20 @@ function WebhookDeliveriesDialog({
                     className="flex w-full flex-wrap items-center gap-2 py-2 text-left text-sm hover:bg-accent/40"
                     onClick={() => setSelectedId(delivery.id)}
                   >
-                    <Badge variant={deliveryOutcomeVariant(delivery.outcome)}>
-                      {DELIVERY_OUTCOME_LABELS[delivery.outcome]}
+                    <Badge
+                      variant={deliveryOutcomeVariant(
+                        delivery.pendingWindow ? "coalesced" : delivery.outcome,
+                      )}
+                    >
+                      {webhookDeliveryLabel(delivery)}
                     </Badge>
                     <span>{delivery.method}</span>
                     <span className="text-muted-foreground">
                       <ScheduledRelativeLabel value={delivery.receivedAt} />
                     </span>
+                    {delivery.outcome === "filtered" && delivery.error ? (
+                      <span className="text-muted-foreground">{delivery.error}</span>
+                    ) : null}
                     {delivery.missingFields.length > 0 ? (
                       <span className="text-muted-foreground">
                         {delivery.missingFields.length} empty placeholder
@@ -1145,12 +1300,14 @@ function ScheduledTaskEditorForm({
       );
       return;
     }
+    const parsedFilters = parseWebhookFilterDrafts(draft.filters);
+    if (draft.scheduleMode === "webhook" && "error" in parsedFilters) {
+      reportFailure("Invalid filter", parsedFilters.error);
+      return;
+    }
     const schedule = scheduleFromDraft(draft);
     if (schedule === null) {
-      reportFailure(
-        currentTranslator()("settingsC.invalidAgeLimit"),
-        `Enter whole minutes from 1 to ${MAX_WEBHOOK_DELIVERY_AGE_MINUTES}, or leave it blank.`,
-      );
+      for (const error of webhookDraftErrors(draft)) reportFailure(error.title, error.description);
       return;
     }
     if (
@@ -1235,13 +1392,18 @@ function ScheduledTaskEditorForm({
     <>
       <DialogHeader>
         <DialogTitle>
-          {draft.editingId ? t("settingsC.editTask") : t("settingsC.newTask")}
+          {draft.editingId
+            ? currentTranslator()("settingsC.editTask")
+            : currentTranslator()("settingsC.newTask")}
         </DialogTitle>
-        <DialogDescription>{t("settingsC.runPromptAutomatically")}</DialogDescription>
+        <DialogDescription>
+          {currentTranslator()("updates.runAPromptAutomaticallyOnAnIntervalAt")}
+        </DialogDescription>
       </DialogHeader>
 
       <DialogPanel>
-        <fieldset disabled={saving} className="space-y-5">
+        {/* Fieldsets default to min-width: min-content, which lets one wide control widen the form past the dialog. */}
+        <fieldset disabled={saving} className="min-w-0 space-y-5">
           {!connected ? (
             <p className="text-sm text-destructive">{t("settingsC.reconnectBeforeSaving")}</p>
           ) : null}
@@ -1453,8 +1615,9 @@ function ScheduledTaskEditorForm({
                 {t("settingsC.legacyIntervalNote")}
               </p>
             ) : null}
-            <div className="flex items-center justify-between gap-2">
-              <Label>{t("settingsC.scheduleLabel")}</Label>
+            {/* Wraps the toggle below the label when both don't fit, as on phones. */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label>{currentTranslator()("settingsC.scheduleLabel")}</Label>
               <ToggleGroup
                 aria-label={t("settingsC.scheduleType")}
                 value={[draft.scheduleMode]}
@@ -1502,6 +1665,62 @@ function ScheduledTaskEditorForm({
                     }
                   />
                 </Field>
+                <WebhookFiltersField
+                  filters={draft.filters}
+                  onChange={(filters) => setDraft((current) => ({ ...current, filters }))}
+                />
+                <Field
+                  label={currentTranslator()("updates.replayKey")}
+                  hint="template, optional"
+                  htmlFor="scheduled-task-replay-key"
+                >
+                  <Input
+                    id="scheduled-task-replay-key"
+                    placeholder="{{headers.delivery-id}}"
+                    value={draft.replayKey}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, replayKey: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field
+                  label={currentTranslator()("updates.coalesceKey")}
+                  hint="template, optional"
+                  htmlFor="scheduled-task-coalesce-key"
+                >
+                  <Input
+                    id="scheduled-task-coalesce-key"
+                    placeholder="{{body.id}}"
+                    value={draft.coalesceKey}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, coalesceKey: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field
+                  label={currentTranslator()("updates.coalesceWindow")}
+                  hint="seconds, 10–3600"
+                  htmlFor="scheduled-task-coalesce-window"
+                >
+                  <Input
+                    id="scheduled-task-coalesce-window"
+                    type="number"
+                    nativeInput
+                    min={10}
+                    max={3600}
+                    placeholder="120"
+                    value={draft.coalesceWindowSeconds}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        coalesceWindowSeconds: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <p className="text-xs text-muted-foreground">
+                  {currentTranslator()("updates.replayKeysSuppressRepeatDeliveriesFor7Days")}
+                </p>
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 space-y-1">
                     <Label htmlFor="scheduled-task-signature">
@@ -1604,7 +1823,9 @@ function ScheduledTaskEditorForm({
                       setDraft((current) => ({ ...current, timeOfDay: event.target.value }))
                     }
                   />
-                  <span className="text-xs text-muted-foreground">on</span>
+                  <span className="text-xs text-muted-foreground">
+                    {currentTranslator()("settingsD.scopeOn")}
+                  </span>
                 </div>
                 <ToggleGroup
                   multiple

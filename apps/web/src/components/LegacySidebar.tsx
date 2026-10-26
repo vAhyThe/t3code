@@ -1,5 +1,5 @@
 import { useSupportsMultiplePullRequests } from "~/hooks/useSupportsMultiplePullRequests";
-import { resolveThreadCurrentPullRequestLink } from "@t3tools/shared/threadPullRequests";
+import { resolveThreadCurrentPullRequestLink } from "@t3tools/client-runtime/thread-pull-requests";
 import { Spinner } from "~/components/ui/spinner";
 import {
   ArchiveIcon,
@@ -24,7 +24,15 @@ import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import { ProjectFavicon } from "./ProjectFavicon";
 import { useAtomValue } from "@effect/atom-react";
 import { autoAnimate } from "@formkit/auto-animate";
-import React, { useEffect, useEffectEvent, memo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useEffect,
+  useEffectEvent,
+  memo,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "~/lib/utils";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -128,6 +136,7 @@ import { useDesktopUpdateState } from "../state/desktopUpdate";
 import { useThreadActions } from "../hooks/useThreadActions";
 import { projectEnvironment } from "../state/projects";
 import { threadEnvironment, useEnvironmentThread } from "../state/threads";
+import { readUnloadedThreadCount } from "../state/olderSettledShelf";
 import { useEnvironment, useEnvironments, usePrimaryEnvironmentId } from "../state/environments";
 import { buildThreadRouteParams, resolveActiveThreadRouteRef } from "../threadRoutes";
 import { stackedThreadToast, toastManager } from "./ui/toast";
@@ -185,6 +194,7 @@ import {
   archiveSelectedThreadEntries,
   buildMultiSelectThreadContextMenuItems,
   deleteSelectedThreadEntries,
+  filterSidebarV2VisibleThreads,
   getSidebarThreadIdsToPrewarm,
   resolveAdjacentThreadId,
   isContextMenuPointerDown,
@@ -198,7 +208,8 @@ import {
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
   useSidebarRowSubscriptionLease,
-  useThreadJumpHintVisibility,
+  setFileDragActive,
+  useThreadJumpHintsVisible,
   ThreadStatusPill,
 } from "./Sidebar.logic";
 import { sortThreads } from "../lib/threadSort";
@@ -208,6 +219,9 @@ import { useIsMobile } from "~/hooks/useMediaQuery";
 import { CommandDialogTrigger } from "./ui/command";
 import { useClientSettings, updateClientSettings } from "~/hooks/useSettings";
 import { primaryServerKeybindingsAtom } from "../state/server";
+import { appAtomRegistry } from "../rpc/atomRegistry";
+import { canShareWithGuestAtom } from "./chat/guestShareAvailability";
+import { openGuestShareDialog } from "./chat/guestShareDialogState";
 import {
   derivePhysicalProjectKey,
   deriveProjectGroupingOverrideKey,
@@ -225,6 +239,7 @@ import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import { currentTranslator, useT } from "../i18n/I18nProvider";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { useThreadRouteTarget } from "../hooks/useThreadRouteTarget";
+import { type SidebarRouteReveal, useActiveRowReveal } from "./sidebar/routeReveal";
 const SIDEBAR_SORT_LABEL_KEYS: Record<SidebarProjectSortOrder, MessageKey> = {
   updated_at: "shellNav.sortLastUserMessage",
   created_at: "shellNav.sortCreatedAt",
@@ -268,7 +283,10 @@ function formatProjectMemberActionLabel(
   }
 
   return member.environmentLabel
-    ? `${member.environmentLabel} — ${member.workspaceRoot}`
+    ? currentTranslator()("settingsD.modeWithLabel", {
+        mode: member.environmentLabel,
+        label: member.workspaceRoot,
+      })
     : member.workspaceRoot;
 }
 
@@ -376,6 +394,11 @@ function checkTaskPermission(environmentId: EnvironmentId): boolean {
   return false;
 }
 
+// The active row reports itself, so a route change scrolls to it once it mounts.
+const RevealActiveRowContext = createContext<(row: HTMLElement | null, threadKey: string) => void>(
+  () => {},
+);
+
 const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowProps) {
   const t = useT();
   const {
@@ -409,12 +432,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const canOperatePreview = useEnvironmentScope(thread.environmentId, AuthPreviewOperateScope);
   const threadKey = scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id));
   const [isFileDragOver, setIsFileDragOver] = useState(false);
-  useEffect(() => {
-    if (!isFileDragOver) return;
-    const clearFileDrag = () => setIsFileDragOver(false);
-    window.addEventListener("dragend", clearFileDrag);
-    return () => window.removeEventListener("dragend", clearFileDrag);
-  }, [isFileDragOver]);
+  const revealActiveRow = useContext(RevealActiveRowContext);
   const { leaseLiveStatus, rowRef } = useSidebarRowSubscriptionLease(isActive);
   const localLastVisitedAt = useUiStateStore((state) => state.threadLastVisitedAtById[threadKey]);
   const lastVisitedAt = resolveThreadLastVisitedAt(thread.lastVisitedAt, localLastVisitedAt);
@@ -458,11 +476,10 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   );
   const pr = linkedPullRequestStatus?.pr ?? null;
   const supportsMultiplePullRequests = useSupportsMultiplePullRequests(thread.environmentId);
-  // Every hook runs above this line: the handlers below key on this ref, and the
-  // compiler can only cache it once no hook call follows its plain uses.
+  // Hooks must precede this ref's plain uses for the compiler to cache it.
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const fileDropHandlers = makeWorkspaceFileDropHandlers({
-    setDragActive: setIsFileDragOver,
+    setDragActive: (active) => setFileDragActive(setIsFileDragOver, active),
     addFiles: (files) => {
       onFileDropThreads(threadRef, files);
     },
@@ -525,8 +542,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const handleRowDoubleClick = (event: React.MouseEvent) => {
     if (!readEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope)) return;
     if (renamingThreadKey === threadKey) return;
-    // On mobile the first tap navigates and closes the sidebar sheet, so the
-    // inline rename can't be shown. Renaming there stays on the context menu.
+    // Mobile navigation closes the sidebar on the first tap, so rename stays in the context menu.
     if (isMobile) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if ((event.target as HTMLElement).closest("button, a")) return;
@@ -630,8 +646,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       void commitRename(threadRef, renamingTitle, thread.title);
     }
   };
-  // Without stopping `dblclick`, double-clicking to select a word would re-fire
-  // the row's rename handler and reset the in-progress edit back to the title.
+  // Stop dblclick propagation so word selection cannot restart rename and discard edits.
   const handleRenameInputClick = (event: React.MouseEvent<HTMLInputElement>) => {
     event.stopPropagation();
   };
@@ -676,6 +691,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       onBlurCapture={handleBlurCapture}
     >
       <div
+        ref={isActive ? (node) => revealActiveRow(node, threadKey) : undefined}
         role="button"
         tabIndex={0}
         data-active={isActive}
@@ -1122,9 +1138,7 @@ function resolveProjectThreadStatus(
   });
 }
 
-// Thread derivations for one project row. Built in their own hooks so they reach
-// SidebarProjectItem frozen: inline, its later calls made the compiler fuse the
-// ordered keys with the route-dependent panel, handing every row a new array.
+// Separate hooks keep array caches independent of the route-dependent panel.
 function useProjectThreads(project: SidebarProjectSnapshot) {
   const threadSortOrder = useClientSettings<SidebarThreadSortOrder>(
     (settings) => settings.sidebarThreadSortOrder,
@@ -1174,7 +1188,7 @@ function useProjectThreads(project: SidebarProjectSnapshot) {
     ]),
   );
   const visibleProjectThreads = sortThreads(
-    sidebarThreads.filter((thread) => thread.archivedAt === null),
+    filterSidebarV2VisibleThreads(sidebarThreads, null),
     threadSortOrder,
   );
   const projectStatus = resolveProjectStatusIndicator(
@@ -1215,20 +1229,26 @@ function useProjectThreadPanel(input: {
     (settings) => settings.sidebarThreadPreviewCount,
   );
   const activeThreadKey = activeRouteThreadKey ?? undefined;
-  const pinnedCollapsedThread =
-    !activeThreadKey || projectExpanded
-      ? null
-      : (visibleProjectThreads.find(
-          (thread) =>
-            scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)) === activeThreadKey,
-        ) ?? null);
-  const hasOverflowingThreads = visibleProjectThreads.length > sidebarThreadPreviewCount;
+  const activeThread = activeThreadKey
+    ? (visibleProjectThreads.find(
+        (thread) =>
+          scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)) === activeThreadKey,
+      ) ?? null)
+    : null;
+  const pinnedCollapsedThread = projectExpanded ? null : activeThread;
+  // The open thread stays listed past the preview cut, as it does in a
+  // collapsed project, so it alone does not overflow the preview.
+  const hasOverflowingThreads = visibleProjectThreads.some(
+    (thread, index) =>
+      index >= sidebarThreadPreviewCount &&
+      scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)) !== activeThreadKey,
+  );
   const previewThreads =
     isThreadListExpanded || !hasOverflowingThreads
       ? visibleProjectThreads
       : visibleProjectThreads.slice(0, sidebarThreadPreviewCount);
   const visibleThreadKeys = new Set(
-    [...previewThreads, ...(pinnedCollapsedThread ? [pinnedCollapsedThread] : [])].map((thread) =>
+    [...previewThreads, ...(activeThread ? [activeThread] : [])].map((thread) =>
       scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
     ),
   );
@@ -1358,8 +1378,6 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
     orderedProjectThreadKeys,
     lastVisitedAtByThreadKey,
   } = useProjectThreads(project);
-  // The "Delete anyway" toast action runs after the toast delay, so it must see
-  // the thread list as of the click, not as of the first prompt.
   const readSidebarThreadByKey = useStableCallback(() => sidebarThreadByKey);
   const projectPreferenceKeys = projectExpansionPreferenceKeys(project);
   const projectExpanded = useUiStateStore((state) =>
@@ -1499,7 +1517,12 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
     }
 
     const memberProjectRef = scopeProjectRef(member.environmentId, member.id);
-    const memberThreadCount = memberThreadCountByPhysicalKey.get(member.physicalProjectKey) ?? 0;
+    const memberThreadCount =
+      (memberThreadCountByPhysicalKey.get(member.physicalProjectKey) ?? 0) +
+      readUnloadedThreadCount(
+        [{ environmentId: member.environmentId, id: member.id }],
+        sidebarThreads,
+      );
     if (memberThreadCount > 0) {
       const warningToastId = toastManager.add(
         stackedThreadToast({
@@ -1522,14 +1545,21 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
                     thread.environmentId === memberProjectRef.environmentId &&
                     thread.projectId === memberProjectRef.projectId,
                 );
+                const threadCount =
+                  latestProjectThreads.length +
+                  readUnloadedThreadCount(
+                    [{ environmentId: member.environmentId, id: member.id }],
+                    latestProjectThreads,
+                  );
                 const confirmed = await api.dialogs.confirm(
-                  latestProjectThreads.length > 0
+                  threadCount > 0
                     ? [
-                        currentTranslator()("shellNav.removeProjectDeleteThreads", {
-                          title: member.title,
-                          count: latestProjectThreads.length,
+                        `Remove project "${member.title}" and delete its ${threadCount} thread${
+                          threadCount === 1 ? "" : "s"
+                        }?`,
+                        currentTranslator()("settingsB.projectSettingsConfirmPath", {
+                          path: member.workspaceRoot,
                         }),
-                        currentTranslator()("shellNav.pathLine", { path: member.workspaceRoot }),
                         ...(member.environmentLabel
                           ? [
                               currentTranslator()("shellNav.environmentLabelLine", {
@@ -1810,9 +1840,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
       return;
     }
 
-    // Ignore the trailing click of a plain double-click so it doesn't navigate
-    // while a double-click is starting an inline rename. Placed after the
-    // modifier branches so cmd/shift selection still processes every click.
+    // Ignore trailing double-clicks after modifier handling so rename does not navigate or break selection.
     if (isTrailingDoubleClick(event.detail)) {
       return;
     }
@@ -2195,8 +2223,6 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
     closeProjectGroupingDialog();
   };
 
-  // Every thread row receives this, so it keeps one identity while the thread
-  // list changes instead of re-rendering all of them.
   const handleThreadContextMenu = useStableCallback(
     async (threadRef: ScopedThreadRef, position: { x: number; y: number }) => {
       const api = readLocalApi();
@@ -2230,10 +2256,13 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
             label: currentTranslator()("shellNav.renameThread"),
             disabled: !canOperateThread,
           },
+          ...(appAtomRegistry.get(canShareWithGuestAtom(thread.environmentId))
+            ? [{ id: "share-guest", label: currentTranslator()("updates.shareWithGuest") }]
+            : []),
           { id: "mark-unread", label: currentTranslator()("shellNav.markUnread") },
           { id: "copy-path", label: currentTranslator()("shellNav.copyPathMenu") },
           { id: "copy-thread-id", label: currentTranslator()("shellNav.copyThreadIdMenu") },
-          { id: "project-settings", label: currentTranslator()("shellNav.projectSettings") },
+          { id: "project-settings", label: currentTranslator()("chat.headerProjectSettings") },
           {
             id: "delete",
             label: currentTranslator()("shellNav.deleteThread"),
@@ -2284,6 +2313,10 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
         return;
       }
 
+      if (clicked === "share-guest") {
+        openGuestShareDialog(threadRef);
+        return;
+      }
       if (clicked === "mark-unread") {
         markThreadUnread(threadRef);
         return;
@@ -2364,7 +2397,7 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
                 <span className="absolute inset-0 flex items-center justify-center transition-opacity duration-150 group-hover/project-header:opacity-0">
                   <span
                     className={`size-[9px] rounded-full ${projectStatus.dotClass} ${
-                      projectStatus.pulse ? "animate-status-pulse" : ""
+                      projectStatus.pulse ? "motion-safe:animate-status-pulse" : ""
                     }`}
                   />
                 </span>
@@ -2642,8 +2675,7 @@ const SidebarProjectListRow = memo(function SidebarProjectListRow(props: Sidebar
 function LocalSecondaryStatus() {
   const t = useT();
   const { environments } = useEnvironments();
-  // The desktop reports which local secondary backends (e.g. the WSL backend)
-  // exist; the hook polls because the bridge has no change event.
+  // Poll desktop-local backends because the bridge has no change event.
   const secondaries = useDesktopLocalBootstraps();
 
   const localEnvByUrl = (() => {
@@ -3150,9 +3182,7 @@ function openAddProjectCommandPalette() {
   openCommandPalette({ open: "add-project" });
 }
 
-// Project and thread derivations live in their own hooks so they reach
-// LegacySidebar frozen and cached on their real inputs; inline, its later hook
-// calls made the compiler recompute them, and the props of every row with them.
+// Separate hooks cache real inputs; later sidebar hooks would invalidate every row's props.
 function useLegacySidebarProjects() {
   const projects = useProjects();
   const projectOrder = useUiStateStore((store) => store.projectOrder);
@@ -3209,8 +3239,7 @@ function useLegacySidebarProjects() {
   };
 }
 
-// Kept apart from useLegacySidebarProjects so a thread change re-sorts the
-// projects without rebuilding their snapshots, which every project row keys on.
+// Re-sort on thread changes without rebuilding project snapshots used as row keys.
 function useSortedLegacySidebarProjects(input: {
   sidebarProjects: readonly SidebarProjectSnapshot[];
   physicalToLogicalKey: ReadonlyMap<string, string>;
@@ -3231,18 +3260,16 @@ function useSortedLegacySidebarProjects(input: {
     ...project,
     id: project.projectKey,
   }));
-  const sortableThreads = sidebarThreads
-    .filter((thread) => thread.archivedAt === null)
-    .map((thread) => {
-      const physicalKey =
-        projectPhysicalKeyByScopedRef.get(
-          scopedProjectKey(scopeProjectRef(thread.environmentId, thread.projectId)),
-        ) ?? scopedProjectKey(scopeProjectRef(thread.environmentId, thread.projectId));
-      return {
-        ...thread,
-        projectId: (physicalToLogicalKey.get(physicalKey) ?? physicalKey) as ProjectId,
-      };
-    });
+  const sortableThreads = filterSidebarV2VisibleThreads(sidebarThreads, null).map((thread) => {
+    const physicalKey =
+      projectPhysicalKeyByScopedRef.get(
+        scopedProjectKey(scopeProjectRef(thread.environmentId, thread.projectId)),
+      ) ?? scopedProjectKey(scopeProjectRef(thread.environmentId, thread.projectId));
+    return {
+      ...thread,
+      projectId: (physicalToLogicalKey.get(physicalKey) ?? physicalKey) as ProjectId,
+    };
+  });
   const sortedProjects = sortProjectsForSidebar(
     sortableProjects,
     sortableThreads,
@@ -3306,9 +3333,7 @@ function useLegacySidebarThreads(input: {
   }
   const visibleSidebarThreadKeys = sortedProjects.flatMap((project) => {
     const projectThreads = sortThreads(
-      (threadsByProjectKey.get(project.projectKey) ?? []).filter(
-        (thread) => thread.archivedAt === null,
-      ),
+      filterSidebarV2VisibleThreads(threadsByProjectKey.get(project.projectKey) ?? [], null),
       sidebarThreadSortOrder,
     );
     const projectExpanded = resolveProjectExpanded(
@@ -3333,10 +3358,17 @@ function useLegacySidebarThreads(input: {
       isThreadListExpanded || !hasOverflowingThreads
         ? projectThreads
         : projectThreads.slice(0, sidebarThreadPreviewCount);
-    const renderedThreads = pinnedCollapsedThread ? [pinnedCollapsedThread] : previewThreads;
-    return renderedThreads.map((thread) =>
-      scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
-    );
+    if (pinnedCollapsedThread) {
+      return [
+        scopedThreadKey(
+          scopeThreadRef(pinnedCollapsedThread.environmentId, pinnedCollapsedThread.id),
+        ),
+      ];
+    }
+    return projectThreads.flatMap((thread, index) => {
+      const threadKey = scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id));
+      return index < previewThreads.length || threadKey === activeThreadKey ? [threadKey] : [];
+    });
   });
   const threadJumpCommandByKey = new Map<
     string,
@@ -3365,7 +3397,14 @@ function useLegacySidebarThreads(input: {
   };
 }
 
-export default function LegacySidebar() {
+function clearThreadSelectionOnOutsideMouseDown(event: globalThis.MouseEvent) {
+  const selection = useThreadSelectionStore.getState();
+  if (!selection.hasSelection()) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (shouldClearThreadSelectionOnMouseDown(target)) selection.clearSelection();
+}
+
+export default function LegacySidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
   const reorderProjects = useUiStateStore((store) => store.reorderProjects);
   const navigate = useNavigate();
   const sidebarThreadSortOrder = useClientSettings((s) => s.sidebarThreadSortOrder);
@@ -3389,7 +3428,6 @@ export default function LegacySidebar() {
   const [expandedThreadListsByProject, setExpandedThreadListsByProject] = useState<
     ReadonlySet<string>
   >(() => new Set());
-  const { showThreadJumpHints, updateThreadJumpHintsVisibility } = useThreadJumpHintVisibility();
   const dragInProgressRef = useRef(false);
   const suppressProjectClickAfterDragRef = useRef(false);
   const suppressProjectClickForContextMenuRef = useRef(false);
@@ -3429,6 +3467,7 @@ export default function LegacySidebar() {
     sidebarThreadPreviewCount,
     expandedThreadListsByProject,
   });
+  const revealActiveRow = useActiveRowReveal(routeReveal, routeThreadKey);
   const newThreadShortcutLabelOptions = {
     platform,
     context: {
@@ -3456,8 +3495,6 @@ export default function LegacySidebar() {
 
   const projectDnDSensors = useSensors(useSensor(PointerSensor, PROJECT_POINTER_SENSOR_OPTIONS));
 
-  // DndContext keeps these across a drag, so they keep one identity and read the
-  // latest projects when called.
   const handleProjectDragEnd = useStableCallback((event: DragEndEvent) => {
     if (sidebarProjectSortOrder !== "manual") {
       dragInProgressRef.current = false;
@@ -3507,8 +3544,7 @@ export default function LegacySidebar() {
   };
 
   const isManualProjectSorting = sidebarProjectSortOrder === "manual";
-  // Built before the modifier-dependent shortcut context so the compiler gives it
-  // its own cache; every project row keys on this map.
+  // Build before modifier-dependent context to give the compiler a separate cache used by every row.
   const threadJumpLabelByKey = buildThreadJumpLabelMap({
     keybindings,
     platform,
@@ -3528,14 +3564,11 @@ export default function LegacySidebar() {
       context: sidebarShortcutContext,
     },
   );
+  const showThreadJumpHints = useThreadJumpHintsVisible(shouldShowThreadJumpHintsNow);
   const visibleThreadJumpLabelByKey = showThreadJumpHints
     ? threadJumpLabelByKey
     : EMPTY_THREAD_JUMP_LABELS;
   const orderedSidebarThreadKeys = visibleSidebarThreadKeys;
-
-  useEffect(() => {
-    updateThreadJumpHintsVisibility(shouldShowThreadJumpHintsNow);
-  }, [shouldShowThreadJumpHintsNow, updateThreadJumpHintsVisibility]);
 
   const onWindowKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     const shortcutContext = {
@@ -3598,20 +3631,11 @@ export default function LegacySidebar() {
       window.removeEventListener("keydown", handleWindowKeyDown);
     };
   }, []);
-
+  // A window listener whose lifetime is the sidebar's: no element owns outside clicks.
   useEffect(() => {
-    const onMouseDown = (event: globalThis.MouseEvent) => {
-      if (!useThreadSelectionStore.getState().hasSelection()) return;
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      if (!shouldClearThreadSelectionOnMouseDown(target)) return;
-      clearSelection();
-    };
-
-    window.addEventListener("mousedown", onMouseDown);
-    return () => {
-      window.removeEventListener("mousedown", onMouseDown);
-    };
-  }, [clearSelection]);
+    window.addEventListener("mousedown", clearThreadSelectionOnOutsideMouseDown);
+    return () => window.removeEventListener("mousedown", clearThreadSelectionOnOutsideMouseDown);
+  }, []);
 
   const desktopUpdateButtonDisabled = isDesktopUpdateButtonDisabled(desktopUpdateState);
   const desktopUpdateButtonAction = desktopUpdateState
@@ -3746,7 +3770,7 @@ export default function LegacySidebar() {
   };
 
   return (
-    <>
+    <RevealActiveRowContext value={revealActiveRow}>
       {prewarmedSidebarThreadRefs.map((threadRef) => (
         <SidebarThreadDetailPrewarmer key={scopedThreadKey(threadRef)} threadRef={threadRef} />
       ))}
@@ -3792,6 +3816,6 @@ export default function LegacySidebar() {
         projectsLength={projectsLength}
       />
       <SidebarChromeFooter />
-    </>
+    </RevealActiveRowContext>
   );
 }

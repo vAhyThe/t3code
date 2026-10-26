@@ -58,7 +58,8 @@ function parseProviderHeaders(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error
+      error:
+        error instanceof Error
           ? error.message
           : currentTranslator()("settingsA.acpHeadersMustBeValidJson"),
     };

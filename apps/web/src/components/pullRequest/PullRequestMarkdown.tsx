@@ -1,7 +1,16 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { ExternalLinkIcon, PaperclipIcon } from "lucide-react";
 import { markdownImageSourceFragment } from "@t3tools/client-runtime/markdown-images";
-import { githubMediaFetchUrl } from "@t3tools/shared/githubMedia";
-import type { AssetResource, EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
+import {
+  sourceControlClients,
+  type ReferenceAutolink,
+} from "@t3tools/client-runtime/source-control-clients";
+import {
+  SOURCE_CONTROL_MEDIA_ASSET,
+  type AssetResource,
+  type EnvironmentId,
+  type ScopedThreadRef,
+} from "@t3tools/contracts";
 import { createContext, useContext } from "react";
 import type { Options as ReactMarkdownOptions } from "react-markdown";
 
@@ -15,11 +24,11 @@ import { remarkPullRequestAutolinks, splitPullRequestBody } from "./pullRequestM
 import { useT } from "../../i18n/I18nProvider";
 
 export const PullRequestMarkdownContext = createContext<{
-  repositoryUrl: string | null;
+  autolinks: ((text: string) => ReadonlyArray<ReferenceAutolink>) | null;
   threadRef: ScopedThreadRef | null;
 } | null>(null);
 
-function PullRequestGitHubVideo({
+function PullRequestHostVideo({
   environmentId,
   cwd,
   url,
@@ -30,8 +39,7 @@ function PullRequestGitHubVideo({
   url: string;
   fetchUrl: string;
 }) {
-  const t = useT();
-  const resource: AssetResource = { _tag: "github-media", cwd, url: fetchUrl };
+  const resource: AssetResource = { _tag: SOURCE_CONTROL_MEDIA_ASSET, cwd, url: fetchUrl };
   const assetUrl = useAssetUrlState(environmentId, resource);
   const refreshAssetUrl = useAssetUrlRefresh(environmentId, resource);
   const src =
@@ -40,7 +48,7 @@ function PullRequestGitHubVideo({
     <MediaVideoPlayer
       src={src === null ? null : src + markdownImageSourceFragment(url)}
       originalUrl={url}
-      label={t("pullRequest.videoLabel")}
+      label={currentTranslator()("pullRequest.videoLabel")}
       className="w-full"
       videoClassName="rounded-lg border border-border/60"
       onRetry={refreshAssetUrl}
@@ -64,10 +72,10 @@ export function PullRequestMarkdown({
   const t = useT();
   const segments = splitPullRequestBody(text);
   const context = useContext(PullRequestMarkdownContext);
-  const repositoryUrl = context?.repositoryUrl;
+  const autolinks = context?.autolinks;
   const resolvedThreadRef = threadRef ?? context?.threadRef ?? undefined;
-  const extraRemarkPlugins: NonNullable<ReactMarkdownOptions["remarkPlugins"]> = repositoryUrl
-    ? [[remarkPullRequestAutolinks, { repositoryUrl }]]
+  const extraRemarkPlugins: NonNullable<ReactMarkdownOptions["remarkPlugins"]> = autolinks
+    ? [[remarkPullRequestAutolinks, { autolinks }]]
     : [];
   return (
     <div
@@ -88,19 +96,19 @@ export function PullRequestMarkdown({
               pullRequestPanelRef={resolvedThreadRef ?? PULL_REQUESTS_PANEL_REF}
               environmentId={environmentId}
               extraRemarkPlugins={extraRemarkPlugins}
-              githubMedia
+              sourceControlMedia
             />
           );
         }
-        const githubMediaUrl = segment.media === "video" ? githubMediaFetchUrl(segment.url) : null;
-        if (githubMediaUrl !== null) {
+        const hostMedia = sourceControlClients.mediaUrl(segment.url);
+        if (segment.media === "video" && hostMedia !== null) {
           return (
-            <PullRequestGitHubVideo
+            <PullRequestHostVideo
               key={`${segment.id}:${segment.url}`}
               environmentId={environmentId}
               cwd={cwd}
               url={segment.url}
-              fetchUrl={githubMediaUrl}
+              fetchUrl={hostMedia.fetchUrl}
             />
           );
         }
@@ -117,9 +125,7 @@ export function PullRequestMarkdown({
           );
         }
         return (
-          // A plain anchor rather than the page's openExternal button: the desktop window
-          // turns a blocked _blank into openExternal itself, and in a browser tab — where
-          // there is no shell to call — this is the only one of the two that goes anywhere.
+          // Desktop converts blocked _blank navigation to openExternal.
           <a
             key={segment.id}
             href={segment.url}
@@ -129,7 +135,8 @@ export function PullRequestMarkdown({
           >
             <PaperclipIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
-              {t("pullRequest.openAttachmentOnGitHub")}
+              {currentTranslator()("updates.openAttachmentOn")}{" "}
+              {hostMedia?.definition.label ?? new URL(segment.url).hostname}
             </span>
             <ExternalLinkIcon aria-hidden className="size-3 shrink-0 text-muted-foreground" />
           </a>

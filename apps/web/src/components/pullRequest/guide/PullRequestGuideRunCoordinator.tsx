@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useNavigate } from "@tanstack/react-router";
 import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -90,7 +91,10 @@ function GuideRunWatcher({ runKey, watch }: { runKey: string; watch: GuideRunWat
       const toastId = toastManager.add({
         type: failure === null ? "success" : "error",
         title,
-        description: failure === null ? body : `${body}: ${failure}`,
+        description:
+          failure === null
+            ? body
+            : currentTranslator()("settingsD.modeWithLabel", { mode: body, label: failure }),
         data: {
           hideCopyButton: true,
           leadingIcon:

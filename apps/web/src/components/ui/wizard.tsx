@@ -107,7 +107,7 @@ export function WizardSteps({
       aria-label={t("shellRest.wizardSetupProgress")}
     >
       {steps.map((step, index) => (
-        <li key={index} className="min-w-0">
+        <li key={step} className="min-w-0">
           <Step
             {...(onStepChange
               ? { type: "button" as const, disabled: isStepDisabled?.(index) }

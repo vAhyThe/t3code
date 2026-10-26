@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type {
   StorageCleanupReport,
   StorageCleanupSettings,
@@ -15,7 +16,8 @@ import { environmentAtomList, environmentIdsKey } from "../../state/environmentA
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { formatRelativeTimeLabel } from "../../timestampFormat";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { useT } from "~/i18n/I18nProvider";
+import { useNowMinute } from "../../hooks/useNowMinute";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 
@@ -34,7 +36,6 @@ import {
   SettingsPageContainer,
   SettingsRow,
   SettingsSection,
-  useRelativeTimeTick,
 } from "./settingsLayout";
 import { DatabaseStorageNotice } from "./DatabaseStorageNotice";
 import { SettingsScopeNotice } from "./SettingsScopeNotice";
@@ -174,7 +175,6 @@ const KEEP_WHEN_LABEL_KEYS = {
   "tracked-changes": "settingsD.keepEditedTrackedFiles",
 } as const;
 
-/** One line for the last-run fold; identical results across machines collapse into one. */
 function lastRunSummary(
   entries: readonly { readonly label: string; readonly counts: string }[],
   machineCount: number,
@@ -185,7 +185,11 @@ function lastRunSummary(
   if (entries.length === machineCount && entries.every((entry) => entry.counts === first.counts)) {
     return currentTranslator()("settingsD.summaryOnEveryMachine", { summary: first.counts });
   }
-  return entries.map((entry) => `${entry.label}: ${entry.counts}`).join(" · ");
+  return entries
+    .map((entry) =>
+      currentTranslator()("settingsD.modeWithLabel", { mode: entry.label, label: entry.counts }),
+    )
+    .join(" · ");
 }
 
 function CleanupResults({
@@ -193,7 +197,7 @@ function CleanupResults({
   environmentLabel,
 }: {
   report: StorageCleanupReport;
-  environmentLabel: string | undefined;
+  environmentLabel: string;
 }) {
   const t = useT();
   return (
@@ -210,13 +214,34 @@ function CleanupResults({
         return (
           <SettingsRow
             key={`${entry.path ?? entry.kind}:${entry.threadId ?? index}`}
-            title={environmentLabel ? `${environmentLabel}: ${name}` : name}
+            title={<span className="wrap-anywhere select-text">{name}</span>}
             description={
-              <span
-                className={`wrap-anywhere ${entry.outcome === "failed" ? "text-destructive" : ""}`}
-              >
-                {entry.threadTitle && entry.threadTitle !== name ? `${entry.threadTitle}. ` : ""}
-                {entry.reason}
+              <span className="block space-y-2 wrap-anywhere select-text">
+                <span className={`block ${entry.outcome === "failed" ? "text-destructive" : ""}`}>
+                  {entry.reason}
+                </span>
+                <span className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-l border-border/60 pl-3">
+                  <span>{currentTranslator()("updates.machine")}</span>
+                  <span className="text-foreground/80">{environmentLabel}</span>
+                  {entry.projectPath && (
+                    <>
+                      <span>{currentTranslator()("chat.skillSourceProject")}</span>
+                      <code className="text-foreground/80">{entry.projectPath}</code>
+                    </>
+                  )}
+                  {entry.path && (
+                    <>
+                      <span>{currentTranslator()("updates.folder")}</span>
+                      <code className="text-foreground/80">{entry.path}</code>
+                    </>
+                  )}
+                  {entry.threadTitle && (
+                    <>
+                      <span>{currentTranslator()("updates.thread")}</span>
+                      <span>{entry.threadTitle}</span>
+                    </>
+                  )}
+                </span>
               </span>
             }
             control={
@@ -242,17 +267,12 @@ function CleanupResults({
       })}
       {report.omittedCount > 0 && (
         <p className="px-3 py-2.5 text-xs text-muted-foreground sm:px-4">
-          {environmentLabel ? `${environmentLabel}: ` : ""}
-          {t("settingsD.moreResults", {
-            count: report.omittedCount,
-            number: report.omittedCount.toLocaleString(),
-          })}
+          {environmentLabel}: {report.omittedCount.toLocaleString()} more results.
         </p>
       )}
       {report.entries.length === 0 && report.omittedCount === 0 && (
         <p className="px-3 py-2.5 text-xs text-muted-foreground sm:px-4">
-          {environmentLabel ? `${environmentLabel}: ` : ""}
-          {t("settingsD.nothingNeededCleanup")}
+          {environmentLabel}: Nothing needed cleanup.
         </p>
       )}
     </>
@@ -269,8 +289,8 @@ const storageCleanupPermissionsAtom = environmentAtomList(
 );
 
 function CleanupSection() {
-  useRelativeTimeTick(60_000);
-  const t = useT();
+  const nowMinute = useNowMinute();
+  const nowMs = Date.parse(`${nowMinute}:00.000Z`);
   const { connectedEnvironments } = useSettingsScope();
   const [pending, setPending] = useState(false);
   const run = useAtomCommand(serverEnvironment.runStorageCleanup);
@@ -319,30 +339,23 @@ function CleanupSection() {
       label: settingsScopeEnvironmentLabel(environment, connectedEnvironments),
       counts: report
         ? report.counts.failed > 0
-          ? t("settingsD.summaryWithFailures", {
+          ? currentTranslator()("settingsD.summaryWithFailures", {
               removed: report.counts.removed,
               kept: report.counts.kept,
               failed: report.counts.failed,
             })
-          : t("settingsD.summary", { removed: report.counts.removed, kept: report.counts.kept })
+          : currentTranslator()("settingsD.summary", {
+              removed: report.counts.removed,
+              kept: report.counts.kept,
+            })
         : "",
       description: report
-        ? [
-            t("settingsD.lastRunSummary", {
-              time: formatRelativeTimeLabel(report.finishedAt),
-              bytes: formatBytes(report.bytesFreed),
-            }),
-            report.counts.failed > 0
-              ? t("settingsD.failedItemsNotRemoved", { count: report.counts.failed })
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" ")
+        ? `Last run ${formatRelativeTimeLabel(report.finishedAt, nowMs)}. ${formatBytes(report.bytesFreed)} recovered.${report.counts.failed > 0 ? ` ${report.counts.failed} ${report.counts.failed === 1 ? "item" : "items"} couldn't be removed.` : ""}`
         : query?.failed
-          ? t("settingsD.couldNotLoadLastRun")
+          ? currentTranslator()("settingsD.couldNotLoadLastRun")
           : query?.loading
-            ? t("settingsD.loadingLastRun")
-            : t("settingsD.cleanupNotRunYet"),
+            ? currentTranslator()("settingsD.loadingLastRun")
+            : currentTranslator()("settingsD.cleanupNotRunYet"),
     };
   });
   const deleteNow = async () => {
@@ -360,13 +373,17 @@ function CleanupSection() {
             if (failures.length > 0)
               toastManager.add({
                 type: "error",
-                title: t("settingsD.cleanupFailedOn", { environment: environment.label }),
+                title: currentTranslator()("settingsD.cleanupFailedOn", {
+                  environment: environment.label,
+                }),
                 description: failures[0]!.reason,
               });
           } else if (!isAtomCommandInterrupted(result)) {
             toastManager.add({
               type: "error",
-              title: t("settingsD.couldNotRunCleanupOn", { environment: environment.label }),
+              title: currentTranslator()("settingsD.couldNotRunCleanupOn", {
+                environment: environment.label,
+              }),
               description: String(squashAtomCommandFailure(result)),
             });
           }
@@ -374,14 +391,18 @@ function CleanupSection() {
     ).finally(() => setPending(false));
   };
   return (
-    <SettingsSection id="storage-cleanup" title={t("settingsD.cleanupTitle")} variant="plain">
+    <SettingsSection
+      id="storage-cleanup"
+      title={currentTranslator()("settingsD.cleanupTitle")}
+      variant="plain"
+    >
       <SettingsGroup>
         <SettingsRow
           {...searchableSetting("storage-delete-now")}
           description={
             <span>
               {!hasRules
-                ? t("settingsD.turnOnCleanupRule")
+                ? currentTranslator()("settingsD.turnOnCleanupRule")
                 : summaries.map(({ environment, label, description }) => (
                     <span key={environment.environmentId} className="block">
                       {supported.length > 1 ? `${label}: ` : ""}
@@ -397,7 +418,9 @@ function CleanupSection() {
               disabled={pending || !hasRules || !state.some((entry) => entry.allowed)}
               onClick={() => void deleteNow()}
             >
-              {pending ? t("settingsD.deleting") : t("settingsD.deleteNow")}
+              {pending
+                ? currentTranslator()("settingsD.deleting")
+                : currentTranslator()("settingsD.deleteNow")}
             </Button>
           }
         />
@@ -405,7 +428,7 @@ function CleanupSection() {
       {summaries.some(({ report }) => report !== null) && (
         <FoldedSettingsSection
           id="storage-cleanup-last-run"
-          title={t("settingsD.lastRun")}
+          title={currentTranslator()("settingsD.lastRun")}
           headerPlacement="inside"
           summary={lastRunSummary(
             summaries.filter(({ report }) => report !== null),
@@ -418,7 +441,7 @@ function CleanupSection() {
                 <CleanupResults
                   key={environment.environmentId}
                   report={report}
-                  environmentLabel={connectedEnvironments.length > 1 ? label : undefined}
+                  environmentLabel={label}
                 />
               ),
           )}
@@ -497,20 +520,15 @@ export function StorageSettingsPanel() {
 
   return (
     <SettingsPageContainer>
-      {!isProjectScope &&
-        connectedEnvironments
-          .filter(
+      {!isProjectScope && (
+        <DatabaseStorageNotice
+          environments={connectedEnvironments.filter(
             (environment) =>
               environment.serverConfig?.environment.capabilities.databaseStorage === true,
-          )
-          .map((environment) => (
-            <DatabaseStorageNotice
-              key={environment.environmentId}
-              environmentId={environment.environmentId}
-              label={environment.label}
-            />
-          ))}
-      <SettingsSection id="storage-worktrees" title={t("settingsD.worktrees")}>
+          )}
+        />
+      )}
+      <SettingsSection id="storage-worktrees" title={currentTranslator()("settingsD.worktrees")}>
         {!isProjectScope && <WorktreesDirectoryRow />}
         {isProjectScope && (
           <SettingsRow

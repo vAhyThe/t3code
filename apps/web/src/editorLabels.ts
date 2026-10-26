@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { EDITORS, type EditorId } from "@t3tools/contracts";
 
 import { getLocalFileManagerName } from "~/lib/utils";
@@ -15,5 +16,7 @@ export function editorLabelForPlatform(editorId: EditorId, platform: string): st
 export function openInEditorMenuLabel(editorId: EditorId | null): string {
   return editorId === null || editorId === "file-manager"
     ? "Open in editor"
-    : `Open in ${editorLabels.get(editorId) ?? "Editor"}`;
+    : currentTranslator()("chat.openInEditorNamed", {
+        editor: editorLabels.get(editorId) ?? "Editor",
+      });
 }

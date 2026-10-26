@@ -221,7 +221,7 @@ export const settingsC = {
   runUpdateInTerminal: "Až budete připraveni, spusťte jej v terminálu.",
   couldNotCopyUpdateCommand: "Příkaz pro aktualizaci poskytovatele {name} se nepodařilo zkopírovat",
   authenticatedAs: "Přihlášen jako",
-  updateViewDetails: "{title} — zobrazit podrobnosti",
+  updateViewDetails: "{title}. zobrazit podrobnosti",
   updating: "Aktualizuje se",
   installVersion: "Nainstalovat {version}",
   updateNow: "Aktualizovat nyní",

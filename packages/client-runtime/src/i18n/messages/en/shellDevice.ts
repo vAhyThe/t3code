@@ -676,7 +676,7 @@ export const shellDevice = {
   connectEnabledAgent: "This environment publishes agent activity to your mobile clients.",
   connectSetUpTitle: "Set up T3 Connect",
   connectSetUpDescription:
-    "Mesh your devices together — publish this environment and connect the rest, all in one place.",
+    "Mesh your devices together. publish this environment and connect the rest, all in one place.",
   connectDontShowAgain: "Don't show this again",
   connectNotNow: "Not now",
   connectEnabling: "Enabling…",
@@ -789,5 +789,5 @@ export const shellDevice = {
   usagePriceNonNegative: "Use non-negative numbers for prices.",
   deviceIosReadyOnHost: "Xcode and iOS Simulator are available on {host}.",
   deviceAndroidReadyOnHost: "The Android SDK and Emulator are available on {host}.",
-  pagePickUnavailable: "Page didn't load — pick unavailable until the page renders",
+  pagePickUnavailable: "Page didn't load. pick unavailable until the page renders",
 } as const satisfies CatalogNamespace;

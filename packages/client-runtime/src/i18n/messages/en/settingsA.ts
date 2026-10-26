@@ -145,7 +145,7 @@ export const settingsA = {
   browserImportFullDiskAccessTitle: "Full Disk Access",
   browserImportFullDiskAccessHeading: "Let T3 Code read {source}’s cookies",
   browserImportFullDiskAccessDescription:
-    "To import cookies from {source}, T3 Code needs Full Disk Access. Turn it on in System Settings, then come back to finish the import — you can revoke it again once the import is done.",
+    "To import cookies from {source}, T3 Code needs Full Disk Access. Turn it on in System Settings, then come back to finish the import. you can revoke it again once the import is done.",
   browserImportPermissionDescription: "Read {source}'s cookies for this import.",
   browserImportOpenSettingsError: "Could not open System Settings. Try Allow again.",
   browserImportAccessStillRequired:
@@ -392,7 +392,7 @@ export const settingsA = {
     "Clipboard copy is unavailable here. Open or manually copy this full pairing URL on the device you want to connect.",
   connectionsRevealCodeDescription:
     "Clipboard copy is unavailable here. Manually copy this code into another client.",
-  connectionsQrTitle: "Pairing link — scan to open on another device",
+  connectionsQrTitle: "Pairing link. scan to open on another device",
   connectionsRevoking: "Revoking…",
   connectionsRevoke: "Revoke",
   connectionsEndpointAria: "Endpoint the pairing QR code and URL use",

@@ -28,8 +28,8 @@ export function snapShotSetupSummary(state: DesktopSnapShotState, enabled: boole
       ? currentTranslator()("shellRest.checkCaptureAccessInSetup")
       : currentTranslator()("shellRest.installCaptureHelperToContinue");
   if (captureSetupBackend(state) === "picker")
-    return currentTranslator()("shellRest.manualCaptureOnly");
-  if (!enabled) return currentTranslator()("shellRest.enableCaptureToContinue");
+    return "Manual capture only. You'll choose a window each time";
+  if (!enabled) return "Enable capture to continue";
   if (state.shortcutPending)
     return state.linuxBackend === "hyprland"
       ? currentTranslator()("shellRest.connectingShortcut")

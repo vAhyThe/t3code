@@ -30,10 +30,9 @@ import { ThemeSearchSection } from "./ThemeSearchSection";
  * would otherwise be pulled into memory, highlighted, and rendered, which
  * locks the UI for as long as that takes.
  */
-export const MAX_THEME_FILE_BYTES = 256 * 1024;
+const MAX_THEME_FILE_BYTES = 256 * 1024;
 
-/** Highlighting rebuilds the whole markup on every keystroke, so oversized
- *  pastes fall back to plain text instead of freezing the editor. */
+/** Highlighting rebuilds markup per keystroke; fall back to plain text for oversized pastes. */
 const MAX_HIGHLIGHTED_JSON_LENGTH = 20_000;
 
 function formatByteSize(bytes: number): string {
@@ -42,7 +41,7 @@ function formatByteSize(bytes: number): string {
   return currentTranslator()("settingsD.byteSize", { count: bytes, number: bytes });
 }
 
-export function describeOversizedThemeFile(bytes: number): string | null {
+function describeOversizedThemeFile(bytes: number): string | null {
   if (bytes <= MAX_THEME_FILE_BYTES) return null;
   return currentTranslator()("settingsD.themeFileTooLarge", {
     size: formatByteSize(bytes),
@@ -177,7 +176,6 @@ export function ThemeImportDialog({
       setConflicts(null);
     }
   }
-  // Opening or closing drops any read still in flight.
   useEffect(() => {
     if (!open) return;
     importRequestRef.current += 1;
@@ -235,7 +233,10 @@ export function ThemeImportDialog({
         });
       } catch (cause) {
         failures.push(
-          `${file.name}: ${cause instanceof Error ? cause.message : "not a theme file"}`,
+          currentTranslator()("settingsD.modeWithLabel", {
+            mode: file.name,
+            label: cause instanceof Error ? cause.message : "not a theme file",
+          }),
         );
       }
     }
@@ -251,13 +252,16 @@ export function ThemeImportDialog({
         installed.push(installCustomTheme(theme));
       } catch (cause) {
         failures.push(
-          `${theme.label}: ${cause instanceof Error ? cause.message : "could not install"}`,
+          currentTranslator()("settingsD.modeWithLabel", {
+            mode: theme.label,
+            label: cause instanceof Error ? cause.message : "could not install",
+          }),
         );
       }
     }
     if (installed.length > 0) onImportedMany(installed, { updated: false });
     if (failures.length > 0) {
-      setError(failures.join(" — "));
+      setError(failures.join("; "));
     } else if (conflicting.length > 0) {
       setConflicts(conflicting);
     } else if (installed.length > 0) {
@@ -354,12 +358,20 @@ export function ThemeImportDialog({
             : installCustomTheme(versionedCopy(theme, preferredName)),
         );
       } catch (cause) {
-        failures.push(`${theme.label}: ${cause instanceof Error ? cause.message : "failed"}`);
+        failures.push(
+          currentTranslator()("settingsD.modeWithLabel", {
+            mode: theme.label,
+            label:
+              cause instanceof Error
+                ? cause.message
+                : currentTranslator()("chat.lineagePhaseStatusFailed"),
+          }),
+        );
       }
     }
     if (resolved.length > 0) onImportedMany(resolved, { updated: mode === "update" });
     setConflicts(null);
-    if (failures.length > 0) setError(failures.join(" — "));
+    if (failures.length > 0) setError(failures.join("; "));
     else onOpenChange(false);
   };
 

@@ -1,5 +1,3 @@
-"use client";
-
 import { useT } from "~/i18n/I18nProvider";
 import {
   AuthPreviewOperateScope,

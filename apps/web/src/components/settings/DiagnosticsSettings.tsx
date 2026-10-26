@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { ProcessSignalActions } from "./ProcessSignalActions";
 import { resolveUsageAccess } from "@t3tools/client-runtime/state/usage-access";
 import { environmentSession } from "../../state/session";
@@ -11,7 +12,7 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type {
   ServerProcessDiagnosticsEntry,
   ServerProcessResourceHistorySummary,
@@ -20,7 +21,7 @@ import type {
 import * as DateTime from "effect/DateTime";
 import * as Option from "effect/Option";
 
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { useT } from "../../i18n/I18nProvider";
 import { cn } from "../../lib/utils";
 import { ensureLocalApi } from "../../localApi";
 import { useOpenInPreferredEditor } from "../../editorPreferences";
@@ -464,10 +465,16 @@ const RESOURCE_HISTORY_WINDOWS = [
 ] as const;
 
 function formatCpuTime(seconds: number): string {
-  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 1 : 2)}s`;
+  if (seconds < 60)
+    return currentTranslator()("shellRest.unitSeconds", {
+      count: seconds.toFixed(seconds >= 10 ? 1 : 2),
+    });
   const minutes = seconds / 60;
-  if (minutes < 60) return `${minutes.toFixed(minutes >= 10 ? 1 : 2)}m`;
-  return `${(minutes / 60).toFixed(2)}h`;
+  if (minutes < 60)
+    return currentTranslator()("shellNav.elapsedMinutes", {
+      minutes: minutes.toFixed(minutes >= 10 ? 1 : 2),
+    });
+  return currentTranslator()("shellRest.unitHours", { count: (minutes / 60).toFixed(2) });
 }
 
 function formatShortProcessName(command: string): string {
@@ -778,7 +785,13 @@ function DiagnosticsRefreshButton({
 }
 
 export function DiagnosticsSettingsPanel() {
-  const t = useT();
+  useT();
+  const { environment } = useSettingsScope();
+  // Signals and pending UI state belong to one environment, so a scope switch starts fresh.
+  return <DiagnosticsSettingsBody key={environment?.environmentId ?? ""} />;
+}
+
+function DiagnosticsSettingsBody() {
   const { environment } = useSettingsScope();
   const environmentId = environment?.environmentId ?? null;
   const canMaintainEnvironment = useEnvironmentScope(environmentId, AuthEnvironmentMaintainScope);
@@ -837,17 +850,6 @@ export function DiagnosticsSettingsPanel() {
   const [openLogsDirectoryError, setOpenLogsDirectoryError] = useState<string | null>(null);
   const [signalingPid, setSignalingPid] = useState<number | null>(null);
   const signalingPidRef = useRef<number | null>(null);
-  const environmentIdRef = useRef(environmentId);
-  const processDataRef = useRef(processData);
-  useEffect(() => {
-    processDataRef.current = processData;
-  }, [processData]);
-  useEffect(() => {
-    environmentIdRef.current = environmentId;
-    return () => {
-      environmentIdRef.current = null;
-    };
-  }, [environmentId]);
 
   const openLogsDirectory = () => {
     const logsDirectoryPath = observability?.logsDirectoryPath ?? null;
@@ -879,8 +881,7 @@ export function DiagnosticsSettingsPanel() {
   const isInitialLoading = isPending && data === null;
   const isProcessInitialLoading = isProcessPending && processData === null;
   const isResourceInitialLoading = isResourcePending && resourceData === null;
-  // The export form waits for each environment's first tables so a search target below them
-  // stays in view. Later loads, such as a new resource window, must not remount it and drop drafts.
+  // Wait for initial tables to stabilize search targets; later loads must preserve export drafts.
   const [exportFormEnvironmentId, setExportFormEnvironmentId] =
     useState<typeof environmentId>(null);
   if (
@@ -893,8 +894,8 @@ export function DiagnosticsSettingsPanel() {
     setExportFormEnvironmentId(environmentId);
   }
   const signalProcess = async (pid: number, signal: ServerProcessSignal) => {
-    const targetEnvironmentId = environmentIdRef.current;
-    const process = processDataRef.current?.processes.find((entry) => entry.pid === pid);
+    const targetEnvironmentId = environmentId;
+    const process = processData?.processes.find((entry) => entry.pid === pid);
     if (
       targetEnvironmentId === null ||
       process === undefined ||
@@ -932,19 +933,9 @@ export function DiagnosticsSettingsPanel() {
         return;
       }
     }
-    const currentEnvironmentId = environmentIdRef.current;
-    if (
-      currentEnvironmentId === null ||
-      currentEnvironmentId !== targetEnvironmentId ||
-      !readEnvironmentScope(currentEnvironmentId, AuthEnvironmentMaintainScope)
-    ) {
-      clearSignaling();
-      return;
-    }
-    if (
-      processDataRef.current?.processes.find((entry) => entry.pid === pid)?.startTimeMs !==
-      process.startTimeMs
-    ) {
+    // The server rejects a pid whose start time no longer matches, so a process that exited
+    // during confirmation is never signaled by mistake.
+    if (!readEnvironmentScope(targetEnvironmentId, AuthEnvironmentMaintainScope)) {
       clearSignaling();
       return;
     }
@@ -1004,9 +995,9 @@ export function DiagnosticsSettingsPanel() {
       <SettingsPageContainer>
         <p className="text-sm text-muted-foreground">
           {environmentId === null
-            ? t("settingsB.diagnosticsConnectEnvironment")
+            ? currentTranslator()("settingsB.diagnosticsConnectEnvironment")
             : diagnosticsAccess.isPending
-              ? t("settingsB.diagnosticsCheckingAccess")
+              ? currentTranslator()("settingsB.diagnosticsCheckingAccess")
               : diagnosticsAccess.error}
         </p>
       </SettingsPageContainer>
@@ -1018,13 +1009,13 @@ export function DiagnosticsSettingsPanel() {
       <ResourceTelemetryDiagnostics environmentId={environmentId} />
 
       <SettingsSection
-        title={t("settingsB.diagnosticsLiveProcesses")}
+        title={currentTranslator()("settingsB.diagnosticsLiveProcesses")}
         headerAction={
           <div className="flex items-center gap-1.5">
             <DiagnosticsLastChecked checkedAt={processData?.readAt ?? null} />
             <DiagnosticsRefreshButton
               isPending={isProcessPending}
-              label={t("settingsB.diagnosticsRefreshProcesses")}
+              label={currentTranslator()("settingsB.diagnosticsRefreshProcesses")}
               onClick={refreshProcesses}
             />
           </div>
@@ -1032,21 +1023,21 @@ export function DiagnosticsSettingsPanel() {
       >
         <StatsGrid>
           <StatBlock
-            label={t("settingsB.diagnosticsChildProcesses")}
+            label={currentTranslator()("settingsB.diagnosticsChildProcesses")}
             value={processData ? formatCount(processData.processCount) : "..."}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsColumnCpu")}
+            label={currentTranslator()("settingsB.diagnosticsColumnCpu")}
             value={processData ? `${processData.totalCpuPercent.toFixed(1)}%` : "..."}
-            tooltip={t("settingsB.diagnosticsProcessCpuTooltip")}
+            tooltip={currentTranslator()("settingsB.diagnosticsProcessCpuTooltip")}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsColumnMemory")}
+            label={currentTranslator()("settingsB.diagnosticsColumnMemory")}
             value={processData ? formatBytes(processData.totalRssBytes) : "..."}
-            tooltip={t("settingsB.diagnosticsProcessMemoryTooltip")}
+            tooltip={currentTranslator()("settingsB.diagnosticsProcessMemoryTooltip")}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsServerPid")}
+            label={currentTranslator()("settingsB.diagnosticsServerPid")}
             value={processData ? String(processData.serverPid) : "..."}
           />
         </StatsGrid>
@@ -1073,14 +1064,14 @@ export function DiagnosticsSettingsPanel() {
           onSignal={signalProcess}
           emptyLabel={
             isProcessInitialLoading
-              ? t("settingsB.diagnosticsLoadingLiveProcesses")
-              : t("settingsB.diagnosticsNoLiveProcesses")
+              ? currentTranslator()("settingsB.diagnosticsLoadingLiveProcesses")
+              : currentTranslator()("settingsB.diagnosticsNoLiveProcesses")
           }
         />
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsB.diagnosticsResourceHistory")}
+        title={currentTranslator()("settingsB.diagnosticsResourceHistory")}
         headerAction={
           <div className="flex items-center gap-1.5">
             <ResourceHistoryWindowSelector
@@ -1090,7 +1081,7 @@ export function DiagnosticsSettingsPanel() {
             <DiagnosticsLastChecked checkedAt={resourceData?.readAt ?? null} />
             <DiagnosticsRefreshButton
               isPending={isResourcePending}
-              label={t("settingsB.diagnosticsRefreshResources")}
+              label={currentTranslator()("settingsB.diagnosticsRefreshResources")}
               onClick={refreshResources}
             />
           </div>
@@ -1098,27 +1089,27 @@ export function DiagnosticsSettingsPanel() {
       >
         <StatsGrid>
           <StatBlock
-            label={t("settingsB.diagnosticsColumnCpuTime")}
+            label={currentTranslator()("settingsB.diagnosticsColumnCpuTime")}
             value={resourceData ? formatCpuTime(resourceData.totalCpuSecondsApprox) : "..."}
-            tooltip={t("settingsB.diagnosticsCpuTimeTooltip")}
+            tooltip={currentTranslator()("settingsB.diagnosticsCpuTimeTooltip")}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsSamples")}
+            label={currentTranslator()("settingsB.diagnosticsSamples")}
             value={resourceData ? formatCount(resourceData.retainedSampleCount) : "..."}
-            tooltip={t("settingsB.diagnosticsSamplesTooltip")}
+            tooltip={currentTranslator()("settingsB.diagnosticsSamplesTooltip")}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsInterval")}
+            label={currentTranslator()("settingsB.diagnosticsInterval")}
             value={
               resourceData
                 ? resourceData.sampleIntervalMs === 0
-                  ? t("settingsB.diagnosticsOnDemand")
+                  ? currentTranslator()("settingsB.diagnosticsOnDemand")
                   : formatDuration(resourceData.sampleIntervalMs)
                 : "..."
             }
           />
           <StatBlock
-            label={t("settingsB.diagnosticsProcesses")}
+            label={currentTranslator()("settingsB.diagnosticsProcesses")}
             value={resourceData ? formatCount(resourceData.topProcesses.length) : "..."}
           />
         </StatsGrid>
@@ -1143,14 +1134,14 @@ export function DiagnosticsSettingsPanel() {
           processes={resourceData?.topProcesses ?? []}
           emptyLabel={
             isResourceInitialLoading
-              ? t("settingsB.diagnosticsCollectingSamples")
-              : t("settingsB.diagnosticsNoResourceSamples")
+              ? currentTranslator()("settingsB.diagnosticsCollectingSamples")
+              : currentTranslator()("settingsB.diagnosticsNoResourceSamples")
           }
         />
       </SettingsSection>
 
       <SettingsSection
-        title={t("settingsB.diagnosticsTraceDiagnostics")}
+        title={currentTranslator()("settingsB.diagnosticsTraceDiagnostics")}
         headerAction={
           <div className="flex items-center gap-1.5">
             <DiagnosticsLastChecked checkedAt={data?.readAt ?? null} />
@@ -1166,17 +1157,19 @@ export function DiagnosticsSettingsPanel() {
                       isOpeningLogsDirectory
                     }
                     onClick={openLogsDirectory}
-                    aria-label={t("settingsB.diagnosticsOpenLogsFolder")}
+                    aria-label={currentTranslator()("settingsB.diagnosticsOpenLogsFolder")}
                   >
                     <FolderOpenIcon />
                   </Button>
                 }
               />
-              <TooltipPopup side="top">{t("settingsB.diagnosticsOpenLogsFolder")}</TooltipPopup>
+              <TooltipPopup side="top">
+                {currentTranslator()("settingsB.diagnosticsOpenLogsFolder")}
+              </TooltipPopup>
             </Tooltip>
             <DiagnosticsRefreshButton
               isPending={isPending}
-              label={t("settingsB.diagnosticsRefreshTrace")}
+              label={currentTranslator()("settingsB.diagnosticsRefreshTrace")}
               onClick={refresh}
             />
           </div>
@@ -1184,28 +1177,28 @@ export function DiagnosticsSettingsPanel() {
       >
         <StatsGrid>
           <StatBlock
-            label={t("settingsB.diagnosticsSpans")}
+            label={currentTranslator()("settingsB.diagnosticsSpans")}
             value={data ? formatCount(data.recordCount) : "..."}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsFailures")}
+            label={currentTranslator()("settingsB.diagnosticsFailures")}
             value={data ? formatCount(data.failureCount) : "..."}
             tone={data && data.failureCount > 0 ? "danger" : "default"}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsSlowSpans")}
+            label={currentTranslator()("settingsB.diagnosticsSlowSpans")}
             value={data ? formatCount(data.slowSpanCount) : "..."}
             tooltip={
               data
-                ? t("settingsB.diagnosticsSlowSpansTooltip", {
+                ? currentTranslator()("settingsB.diagnosticsSlowSpansTooltip", {
                     duration: formatDuration(data.slowSpanThresholdMs),
                   })
-                : t("settingsB.diagnosticsSlowSpansFallback")
+                : currentTranslator()("settingsB.diagnosticsSlowSpansFallback")
             }
             tone={data && data.slowSpanCount > 0 ? "warning" : "default"}
           />
           <StatBlock
-            label={t("settingsB.diagnosticsParseErrors")}
+            label={currentTranslator()("settingsB.diagnosticsParseErrors")}
             value={data ? formatCount(data.parseErrorCount) : "..."}
             tone={data && data.parseErrorCount > 0 ? "warning" : "default"}
           />
@@ -1228,7 +1221,7 @@ export function DiagnosticsSettingsPanel() {
                 <AlertTriangleIcon className="size-3.5 h-lh shrink-0" />
                 <span>
                   {traceDiagnosticsPartialFailure
-                    ? t("settingsB.diagnosticsPartialFailure", {
+                    ? currentTranslator()("settingsB.diagnosticsPartialFailure", {
                         message: traceDiagnosticsError.message,
                       })
                     : traceDiagnosticsError.message}
@@ -1245,14 +1238,14 @@ export function DiagnosticsSettingsPanel() {
         ) : null}
       </SettingsSection>
 
-      <SettingsSection title={t("settingsB.diagnosticsLatestFailures")}>
+      <SettingsSection title={currentTranslator()("settingsB.diagnosticsLatestFailures")}>
         {data && data.latestFailures.length > 0 ? (
           <DiagnosticsTable
             headers={[
-              t("settingsB.diagnosticsColumnSpan"),
-              t("settingsB.diagnosticsColumnCause"),
-              t("settingsB.diagnosticsColumnDuration"),
-              t("settingsB.diagnosticsColumnEnded"),
+              currentTranslator()("settingsB.diagnosticsColumnSpan"),
+              currentTranslator()("settingsB.diagnosticsColumnCause"),
+              currentTranslator()("settingsB.diagnosticsColumnDuration"),
+              currentTranslator()("settingsB.diagnosticsColumnEnded"),
             ]}
           >
             {data.latestFailures.map((failure) => (
@@ -1276,21 +1269,21 @@ export function DiagnosticsSettingsPanel() {
           <EmptyRows
             label={
               isInitialLoading
-                ? t("settingsB.diagnosticsLoadingFailures")
-                : t("settingsB.diagnosticsNoFailedSpans")
+                ? currentTranslator()("settingsB.diagnosticsLoadingFailures")
+                : currentTranslator()("settingsB.diagnosticsNoFailedSpans")
             }
           />
         )}
       </SettingsSection>
 
-      <SettingsSection title={t("settingsB.diagnosticsMostCommonFailures")}>
+      <SettingsSection title={currentTranslator()("settingsB.diagnosticsMostCommonFailures")}>
         {data && data.commonFailures.length > 0 ? (
           <DiagnosticsTable
             headers={[
-              t("settingsB.diagnosticsColumnSpan"),
-              t("settingsB.diagnosticsColumnCount"),
-              t("settingsB.diagnosticsColumnCause"),
-              t("settingsB.diagnosticsColumnLastSeen"),
+              currentTranslator()("settingsB.diagnosticsColumnSpan"),
+              currentTranslator()("settingsB.diagnosticsColumnCount"),
+              currentTranslator()("settingsB.diagnosticsColumnCause"),
+              currentTranslator()("settingsB.diagnosticsColumnLastSeen"),
             ]}
             minTableWidth="min-w-[760px]"
           >
@@ -1315,21 +1308,21 @@ export function DiagnosticsSettingsPanel() {
           <EmptyRows
             label={
               isInitialLoading
-                ? t("settingsB.diagnosticsLoadingFailureGroups")
-                : t("settingsB.diagnosticsNoRepeatedFailures")
+                ? currentTranslator()("settingsB.diagnosticsLoadingFailureGroups")
+                : currentTranslator()("settingsB.diagnosticsNoRepeatedFailures")
             }
           />
         )}
       </SettingsSection>
 
-      <SettingsSection title={t("settingsB.diagnosticsSlowestSpans")}>
+      <SettingsSection title={currentTranslator()("settingsB.diagnosticsSlowestSpans")}>
         {data && data.slowestSpans.length > 0 ? (
           <DiagnosticsTable
             headers={[
-              t("settingsB.diagnosticsColumnSpan"),
-              t("settingsB.diagnosticsColumnDuration"),
-              t("settingsB.diagnosticsColumnEnded"),
-              t("settingsB.diagnosticsColumnTrace"),
+              currentTranslator()("settingsB.diagnosticsColumnSpan"),
+              currentTranslator()("settingsB.diagnosticsColumnDuration"),
+              currentTranslator()("settingsB.diagnosticsColumnEnded"),
+              currentTranslator()("settingsB.diagnosticsColumnTrace"),
             ]}
             minTableWidth="min-w-[900px]"
             columnWidths={["w-[44%]", "w-[14%]", "w-[12%]", "w-[30%]"]}
@@ -1355,14 +1348,14 @@ export function DiagnosticsSettingsPanel() {
           <EmptyRows
             label={
               isInitialLoading
-                ? t("settingsB.diagnosticsLoadingSlowSpans")
-                : t("settingsB.diagnosticsNoSpans")
+                ? currentTranslator()("settingsB.diagnosticsLoadingSlowSpans")
+                : currentTranslator()("settingsB.diagnosticsNoSpans")
             }
           />
         )}
       </SettingsSection>
 
-      <SettingsSection title={t("settingsB.diagnosticsSpanLogs")}>
+      <SettingsSection title={currentTranslator()("settingsB.diagnosticsSpanLogs")}>
         {data && data.latestWarningAndErrorLogs.length > 0 ? (
           <ScrollArea
             radius="none"
@@ -1382,19 +1375,19 @@ export function DiagnosticsSettingsPanel() {
               <thead className="border-b border-border/60 text-2xs uppercase tracking-widest text-muted-foreground/70">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-2.5 font-semibold sm:pl-5">
-                    {t("settingsB.diagnosticsColumnTime")}
+                    {currentTranslator()("settingsB.diagnosticsColumnTime")}
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 font-semibold">
-                    {t("settingsB.diagnosticsColumnLevel")}
+                    {currentTranslator()("settingsB.diagnosticsColumnLevel")}
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 font-semibold">
-                    {t("settingsB.diagnosticsColumnSpan")}
+                    {currentTranslator()("settingsB.diagnosticsColumnSpan")}
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 font-semibold">
-                    {t("settingsB.diagnosticsColumnMessage")}
+                    {currentTranslator()("settingsB.diagnosticsColumnMessage")}
                   </th>
                   <th className="whitespace-nowrap px-4 py-2.5 font-semibold sm:pr-5">
-                    {t("settingsB.diagnosticsColumnTrace")}
+                    {currentTranslator()("settingsB.diagnosticsColumnTrace")}
                   </th>
                 </tr>
               </thead>
@@ -1418,7 +1411,7 @@ export function DiagnosticsSettingsPanel() {
                     <td className="px-4 py-3 align-top text-muted-foreground">
                       <ExpandableText
                         collapsedClassName="line-clamp-2"
-                        expandLabel={t("settingsB.diagnosticsShowFullMessage")}
+                        expandLabel={currentTranslator()("settingsB.diagnosticsShowFullMessage")}
                         text={event.message}
                       />
                     </td>
@@ -1434,22 +1427,22 @@ export function DiagnosticsSettingsPanel() {
           <EmptyRows
             label={
               isInitialLoading
-                ? t("settingsB.diagnosticsLoadingLogs")
-                : t("settingsB.diagnosticsNoWarnings")
+                ? currentTranslator()("settingsB.diagnosticsLoadingLogs")
+                : currentTranslator()("settingsB.diagnosticsNoWarnings")
             }
           />
         )}
       </SettingsSection>
 
-      <SettingsSection title={t("settingsB.diagnosticsTopSpanNames")}>
+      <SettingsSection title={currentTranslator()("settingsB.diagnosticsTopSpanNames")}>
         {data && data.topSpansByCount.length > 0 ? (
           <DiagnosticsTable
             headers={[
-              t("settingsB.diagnosticsColumnSpan"),
-              t("settingsB.diagnosticsColumnCount"),
-              t("settingsB.diagnosticsFailures"),
-              t("settingsB.diagnosticsColumnAverage"),
-              t("settingsB.diagnosticsColumnMax"),
+              currentTranslator()("settingsB.diagnosticsColumnSpan"),
+              currentTranslator()("settingsB.diagnosticsColumnCount"),
+              currentTranslator()("settingsB.diagnosticsFailures"),
+              currentTranslator()("settingsB.diagnosticsColumnAverage"),
+              currentTranslator()("settingsB.diagnosticsColumnMax"),
             ]}
             minTableWidth="min-w-[760px]"
             columnWidths={["w-[48%]", "w-[13%]", "w-[13%]", "w-[13%]", "w-[13%]"]}
@@ -1478,8 +1471,8 @@ export function DiagnosticsSettingsPanel() {
           <EmptyRows
             label={
               isInitialLoading
-                ? t("settingsB.diagnosticsLoadingSpanNames")
-                : t("settingsB.diagnosticsNoSpans")
+                ? currentTranslator()("settingsB.diagnosticsLoadingSpanNames")
+                : currentTranslator()("settingsB.diagnosticsNoSpans")
             }
           />
         )}

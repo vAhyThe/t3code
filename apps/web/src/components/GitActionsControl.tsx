@@ -122,6 +122,7 @@ import { sourceControlClients } from "@t3tools/client-runtime/source-control-cli
 import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
 import { useOpenLink } from "~/browser/useOpenLink";
 import { useT, currentTranslator } from "../i18n/I18nProvider";
+import { useClientSettings } from "~/hooks/useSettings";
 
 interface GitActionsControlProps {
   presentation?: "toolbar" | "menu";
@@ -206,7 +207,7 @@ function getPublishProviderReadiness(input: {
   if (!discovered) {
     return {
       ready: false,
-      hint: "Provider status unavailable. Open Settings -> Source Control and rescan.",
+      hint: "Provider status unavailable. Open Settings -> Source control and rescan.",
     };
   }
   if (discovered.status !== "available") {
@@ -217,7 +218,7 @@ function getPublishProviderReadiness(input: {
       ready: false,
       hint:
         Option.getOrNull(discovered.auth.detail) ??
-        currentTranslator()("pullRequest.gitNotAuthenticated", { label: discovered.label }),
+        `${discovered.label} is not authenticated. Open Settings -> Source control for setup guidance.`,
     };
   }
   return { ready: true, hint: null };
@@ -676,7 +677,10 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                           }
                         />
                         <TooltipPopup side="top" align="end">
-                          {readiness.hint ?? t("pullRequest.gitSetupProviderHint")}
+                          {readiness.hint ??
+                            currentTranslator()(
+                              "updates.openSettingsSourceControlToConfigureThisProvider",
+                            )}
                         </TooltipPopup>
                       </Tooltip>
                     </div>
@@ -1021,8 +1025,6 @@ export default function GitActionsControl({
   const [inlineSuccess, setInlineSuccess] = useState<InlineGitActionSuccess | null>(null);
   const [pendingDefaultBranchAction, setPendingDefaultBranchAction] =
     useState<PendingDefaultBranchAction | null>(null);
-  // Keep the payload until the dialog finishes closing.
-  const [isDefaultBranchDialogOpen, setIsDefaultBranchDialogOpen] = useState(false);
   const sourceControlScope = { environmentId: activeEnvironmentId, cwd: gitCwd };
   const vcsActionState = useAtomValue(vcsActionManager.stateAtom(sourceControlScope));
   const visibleInlineSuccess = inlineSuccess?.scopeKey === successScopeKey ? inlineSuccess : null;
@@ -1166,6 +1168,17 @@ export default function GitActionsControl({
       ? (quickAction.hint ?? t("pullRequest.actionUnavailable"))
       : null;
   const gitActionProgress = resolveGitActionProgressPresentation(vcsActionState);
+  const redesign = useClientSettings((s) => s.redesignEnabled);
+  // A fresh draft or a thread with no turns hides commit, push, and diff rows until there is work.
+  const quietEmptyDraft =
+    redesign &&
+    isPanel &&
+    (draftId !== undefined || activeServerThreadShell?.latestRun === null) &&
+    gitActionProgress === null &&
+    !gitStatusError &&
+    quickAction.disabled &&
+    !changesTotals?.insertions &&
+    !changesTotals?.deletions;
   const pendingDefaultBranchActionCopy = pendingDefaultBranchAction
     ? resolveDefaultBranchActionDialogCopy({
         action: pendingDefaultBranchAction.action,
@@ -1174,9 +1187,7 @@ export default function GitActionsControl({
         terminology: changeRequestTerminology,
       })
     : null;
-  // Follows the live status so the button tracks the tree while the dialog is open. Until the
-  // status loads, keep the option enabled: the server stays the authority and rejects a stale
-  // request with its own error.
+  // Keep enabled until live status loads; the server rejects stale requests.
   const featureBranchUnavailableReason = pendingDefaultBranchAction
     ? resolveFeatureBranchUnavailableReason({
         branchName: pendingDefaultBranchAction.branchName,
@@ -1217,8 +1228,7 @@ export default function GitActionsControl({
     };
   }, [activeEnvironmentId, gitCwd, refreshVcsStatus]);
 
-  // Not an effect event: retained toast actions must stay bound to the checkout and
-  // thread of the render that created them, not follow later selections.
+  // Toast actions must retain their original checkout/thread, so do not use an effect event.
   async function runGitActionWithToast({
     action,
     commitMessage,
@@ -1265,7 +1275,6 @@ export default function GitActionsControl({
         ...(onConfirmed ? { onConfirmed } : {}),
         ...(filePaths ? { filePaths } : {}),
       });
-      setIsDefaultBranchDialogOpen(true);
       return;
     }
     onConfirmed?.();
@@ -1379,11 +1388,11 @@ export default function GitActionsControl({
   }
 
   const continuePendingDefaultBranchAction = (featureBranch: boolean) => {
-    if (!isDefaultBranchDialogOpen || !pendingDefaultBranchAction || !canWriteSourceControl) return;
+    if (!pendingDefaultBranchAction || !canWriteSourceControl) return;
     if (featureBranch && (!canChangeThreadBranch || featureBranchUnavailableReason !== null))
       return;
     const { action, commitMessage, onConfirmed, filePaths } = pendingDefaultBranchAction;
-    setIsDefaultBranchDialogOpen(false);
+    setPendingDefaultBranchAction(null);
     void runGitActionWithToast({
       action,
       ...(commitMessage ? { commitMessage } : {}),
@@ -1638,7 +1647,10 @@ export default function GitActionsControl({
         </MenuItem>
       ) : null}
       {gitStatusForActions?.refName === null && (
-        <p className="px-2 py-1.5 text-xs text-warning">{t("pullRequest.gitDetachedHead")}</p>
+        <p className="px-2 py-1.5 text-xs text-warning">
+          {currentTranslator()("updates.detachedHEADCreateAndCheckOutABranch")}{" "}
+          {changeRequestTerminology.singular} actions.
+        </p>
       )}
       {gitStatusForActions &&
         gitStatusForActions.refName !== null &&
@@ -1719,7 +1731,7 @@ export default function GitActionsControl({
               : t("pullRequest.gitInitializeGit")}
           </span>
         </ThreadDetailsControl>
-      ) : compact && !gitActionProgress && !visibleInlineSuccess ? null : (
+      ) : quietEmptyDraft || (compact && !gitActionProgress && !visibleInlineSuccess) ? null : (
         <ActionGroup
           role="group"
           aria-label={t("pullRequest.gitActions")}
@@ -1856,7 +1868,7 @@ export default function GitActionsControl({
         </ActionGroup>
       )}
 
-      {isPanel && isRepo ? (
+      {isPanel && isRepo && !quietEmptyDraft ? (
         <ThreadDetailsControl
           type="button"
           variant="ghost"
@@ -1867,13 +1879,23 @@ export default function GitActionsControl({
         >
           <FileDiffIcon className={THREAD_DETAILS_PANEL_ICON_CLASS} aria-hidden />
           <span className={cn("flex-1 text-left", THREAD_DETAILS_PANEL_LABEL_CLASS)}>
-            {t("pullRequest.gitChanges")}
+            {currentTranslator()("pullRequest.gitChanges")}
           </span>
-          <span className="flex items-center gap-1 font-mono text-2xs tabular-nums">
-            <span className="text-diff-addition">
+          <span className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
+            <span
+              className={
+                changesTotals?.insertions
+                  ? "text-diff-addition-foreground"
+                  : "text-muted-foreground"
+              }
+            >
               +{formatDiffCount(changesTotals?.insertions ?? 0)}
             </span>
-            <span className="text-diff-deletion">
+            <span
+              className={
+                changesTotals?.deletions ? "text-diff-deletion-foreground" : "text-muted-foreground"
+              }
+            >
               -{formatDiffCount(changesTotals?.deletions ?? 0)}
             </span>
           </span>
@@ -1974,7 +1996,7 @@ export default function GitActionsControl({
                                 )}
                                 <button
                                   type="button"
-                                  className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                  className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left enabled:cursor-pointer"
                                   disabled={!canOperateThread || workingTreeRoot === null}
                                   aria-label={t("pullRequest.gitOpenFileInEditor", {
                                     path: file.path,
@@ -2073,9 +2095,8 @@ export default function GitActionsControl({
       />
 
       <Dialog
-        open={isDefaultBranchDialogOpen}
-        onOpenChange={setIsDefaultBranchDialogOpen}
-        onOpenChangeComplete={(open) => {
+        open={pendingDefaultBranchAction !== null}
+        onOpenChange={(open) => {
           if (!open) setPendingDefaultBranchAction(null);
         }}
       >
@@ -2094,7 +2115,7 @@ export default function GitActionsControl({
               className="w-full sm:mr-auto sm:w-auto"
               variant="outline"
               size="sm"
-              onClick={() => setIsDefaultBranchDialogOpen(false)}
+              onClick={() => setPendingDefaultBranchAction(null)}
             >
               {t("pullRequest.gitAbort")}
             </Button>

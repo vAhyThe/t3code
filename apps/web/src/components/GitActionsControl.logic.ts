@@ -1,17 +1,25 @@
+import type { MessageKey, Translate } from "@t3tools/client-runtime/i18n";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type {
   GitRunStackedActionResult,
   GitStackedAction,
   VcsStatusResult,
 } from "@t3tools/contracts";
 import { isTemporaryWorktreeBranch } from "@t3tools/shared/git";
-import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
-import type { MessageKey, Translate } from "@t3tools/client-runtime/i18n";
-import { currentTranslator } from "../i18n/I18nProvider";
+import {
+  changeRequestTerminologyFor,
+  type DefaultBranchActionDialogCopy,
+  type DefaultBranchConfirmableAction,
+  type GitActionIconName,
+  type GitDialogAction,
+} from "@t3tools/client-runtime/state/vcs";
 
-export type GitActionIconName = "commit" | "push" | "pr";
-
-export type GitDialogAction = "commit" | "push" | "create_pr";
+export {
+  requiresDefaultBranchConfirmation,
+  type DefaultBranchConfirmableAction,
+  type GitActionIconName,
+} from "@t3tools/client-runtime/state/vcs";
 
 export interface GitActionMenuItem {
   id: "commit" | "push" | "pr";
@@ -30,42 +38,6 @@ export interface GitQuickAction {
   hint?: string;
 }
 
-const GIT_ACTION_LABEL_KEYS: Readonly<Record<string, MessageKey>> = {
-  Commit: "pullRequest.gitCommit",
-  Push: "pullRequest.gitPush",
-  Pull: "pullRequest.gitPull",
-  "Commit & push": "pullRequest.gitCommitPush",
-  "Publish repository": "pullRequest.gitPublishRepository",
-  "Sync ref": "pullRequest.gitSyncRef",
-};
-
-/** Patterns for the labels the change-request terminology is spliced into. */
-const GIT_ACTION_LABEL_TEMPLATES: ReadonlyArray<readonly [RegExp, MessageKey]> = [
-  [/^Create (.+)$/u, "pullRequest.gitCreateTerm"],
-  [/^Commit, push & (.+)$/u, "pullRequest.gitCommitPushTerm"],
-  [/^Push & create (.+)$/u, "pullRequest.gitPushCreateTerm"],
-];
-
-/**
- * The text shown for a menu item or quick action. The English `label` stays the identifier the
- * logic and its callers compare against, so it is translated only here, at render.
- */
-export function gitActionLabelText(t: Translate, label: string): string {
-  const key = GIT_ACTION_LABEL_KEYS[label];
-  if (key) return t(key);
-  for (const [pattern, templateKey] of GIT_ACTION_LABEL_TEMPLATES) {
-    const match = pattern.exec(label);
-    if (match?.[1]) return t(templateKey, { term: match[1] });
-  }
-  return label;
-}
-
-export interface DefaultBranchActionDialogCopy {
-  title: string;
-  description: string;
-  continueLabel: string;
-}
-
 export interface GitActionProgressPresentation {
   readonly status: string;
   readonly output: string | null;
@@ -77,12 +49,6 @@ export interface GitActionResultToastTiming {
   readonly dismissAfterVisibleMs: number | null;
 }
 
-export type DefaultBranchConfirmableAction =
-  | "push"
-  | "create_pr"
-  | "commit_push"
-  | "commit_push_pr";
-
 export const GIT_ACTION_SUCCESS_VISIBLE_MS = 10_000;
 
 export function resolveGitActionResultToastTiming(
@@ -92,12 +58,6 @@ export function resolveGitActionResultToastTiming(
     timeout: 0,
     dismissAfterVisibleMs: type === "success" ? GIT_ACTION_SUCCESS_VISIBLE_MS : null,
   };
-}
-
-function resolveChangeRequestTerminology(
-  gitStatus: VcsStatusResult | null,
-): ChangeRequestTerminology {
-  return sourceControlClients.get(gitStatus?.sourceControlProvider?.kind).changeRequest;
 }
 
 export function resolveGitActionProgressPresentation(input: {
@@ -139,55 +99,12 @@ export function formatGitActionElapsed(startedAtMs: number | null, nowMs: number
 
   const elapsedSeconds = Math.max(0, Math.floor((nowMs - startedAtMs) / 1_000));
   if (elapsedSeconds < 60) {
-    return `${elapsedSeconds}s`;
+    return currentTranslator()("shellRest.unitSeconds", { count: elapsedSeconds });
   }
 
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
   return `${minutes}m ${seconds}s`;
-}
-
-export function buildGitActionProgressStages(input: {
-  action: GitStackedAction;
-  hasCustomCommitMessage: boolean;
-  hasWorkingTreeChanges: boolean;
-  pushTarget?: string;
-  featureBranch?: boolean;
-  shouldPushBeforePr?: boolean;
-  terminology?: ChangeRequestTerminology;
-}): string[] {
-  const t = currentTranslator();
-  const terminology = input.terminology ?? sourceControlClients.get(undefined).changeRequest;
-  const branchStages = input.featureBranch ? [t("pullRequest.gitStagePrepareFeatureRef")] : [];
-  const pushStage = input.pushTarget
-    ? t("pullRequest.gitStagePushingTo", { target: input.pushTarget })
-    : t("pullRequest.gitStagePushing");
-  const prStages = [
-    t("pullRequest.gitStagePreparing", { term: terminology.shortLabel }),
-    t("pullRequest.gitStageGeneratingContent", { term: terminology.shortLabel }),
-    t("pullRequest.gitStageCreating", { singular: terminology.singular }),
-  ];
-
-  if (input.action === "push") {
-    return [pushStage];
-  }
-  if (input.action === "create_pr") {
-    return input.shouldPushBeforePr ? [pushStage, ...prStages] : prStages;
-  }
-
-  const shouldIncludeCommitStages = input.action === "commit" || input.hasWorkingTreeChanges;
-  const commitStages = !shouldIncludeCommitStages
-    ? []
-    : input.hasCustomCommitMessage
-      ? [t("pullRequest.gitStageCommitting")]
-      : [t("pullRequest.gitStageGenerateCommitMessage"), t("pullRequest.gitStageCommitting")];
-  if (input.action === "commit") {
-    return [...branchStages, ...commitStages];
-  }
-  if (input.action === "commit_push") {
-    return [...branchStages, ...commitStages, pushStage];
-  }
-  return [...branchStages, ...commitStages, pushStage, ...prStages];
 }
 
 export function buildMenuItems(
@@ -196,7 +113,7 @@ export function buildMenuItems(
   hasPrimaryRemote = true,
 ): GitActionMenuItem[] {
   if (!gitStatus) return [];
-  const terminology = resolveChangeRequestTerminology(gitStatus);
+  const terminology = changeRequestTerminologyFor(gitStatus);
 
   const hasBranch = gitStatus.refName !== null;
   const hasChanges = gitStatus.hasWorkingTreeChanges;
@@ -296,7 +213,7 @@ export function resolveQuickAction(
   const hasDefaultBranchDelta = (gitStatus.aheadOfDefaultCount ?? gitStatus.aheadCount) > 0;
   const isBehind = gitStatus.behindCount > 0;
   const isDiverged = isAhead && isBehind;
-  const terminology = resolveChangeRequestTerminology(gitStatus);
+  const terminology = changeRequestTerminologyFor(gitStatus);
 
   if (!hasBranch) {
     return {
@@ -440,29 +357,16 @@ export function resolveQuickAction(
   };
 }
 
-export function requiresDefaultBranchConfirmation(
-  action: GitStackedAction,
-  isDefaultRef: boolean,
-): boolean {
-  if (!isDefaultRef) return false;
-  return (
-    action === "push" ||
-    action === "create_pr" ||
-    action === "commit_push" ||
-    action === "commit_push_pr"
-  );
-}
-
 export function resolveDefaultBranchActionDialogCopy(input: {
   action: DefaultBranchConfirmableAction;
   branchName: string;
   includesCommit: boolean;
-  terminology?: ChangeRequestTerminology;
+  terminology: ChangeRequestTerminology;
 }): DefaultBranchActionDialogCopy {
   const t = currentTranslator();
   const branchLabel = input.branchName;
-  const suffix = t("pullRequest.gitDefaultRefSuffix", { branch: branchLabel });
-  const terminology = input.terminology ?? sourceControlClients.get(undefined).changeRequest;
+  const suffix = currentTranslator()("pullRequest.gitDefaultRefSuffix", { branch: branchLabel });
+  const { terminology } = input;
 
   if (input.action === "push" || input.action === "commit_push") {
     if (input.includesCommit) {
@@ -498,10 +402,7 @@ export function resolveDefaultBranchActionDialogCopy(input: {
   };
 }
 
-/**
- * Why the default-ref dialog cannot check out a feature branch, or null when it can.
- * The server names that branch from the uncommitted changes, so a clean tree cannot use it.
- */
+/** Clean trees cannot create feature branches because the server derives names from uncommitted changes. */
 export function resolveFeatureBranchUnavailableReason(input: {
   branchName: string;
   hasWorkingTreeChanges: boolean;
@@ -563,3 +464,33 @@ export function resolveLiveThreadBranchUpdate(input: {
 }
 
 export { resolveAutoFeatureBranchName } from "@t3tools/shared/git";
+
+const GIT_ACTION_LABEL_KEYS: Readonly<Record<string, MessageKey>> = {
+  Commit: "pullRequest.gitCommit",
+  Push: "pullRequest.gitPush",
+  Pull: "pullRequest.gitPull",
+  "Commit & push": "pullRequest.gitCommitPush",
+  "Publish repository": "pullRequest.gitPublishRepository",
+  "Sync ref": "pullRequest.gitSyncRef",
+};
+
+/** Patterns for the labels the change-request terminology is spliced into. */
+const GIT_ACTION_LABEL_TEMPLATES: ReadonlyArray<readonly [RegExp, MessageKey]> = [
+  [/^Create (.+)$/u, "pullRequest.gitCreateTerm"],
+  [/^Commit, push & (.+)$/u, "pullRequest.gitCommitPushTerm"],
+  [/^Push & create (.+)$/u, "pullRequest.gitPushCreateTerm"],
+];
+
+/**
+ * The text shown for a menu item or quick action. The English `label` stays the identifier the
+ * logic and its callers compare against, so it is translated only here, at render.
+ */
+export function gitActionLabelText(t: Translate, label: string): string {
+  const key = GIT_ACTION_LABEL_KEYS[label];
+  if (key) return t(key);
+  for (const [pattern, templateKey] of GIT_ACTION_LABEL_TEMPLATES) {
+    const match = pattern.exec(label);
+    if (match?.[1]) return t(templateKey, { term: match[1] });
+  }
+  return label;
+}

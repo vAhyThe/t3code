@@ -1,8 +1,9 @@
-import { pullRequestHostOf, type RepositoryIdentity } from "@t3tools/contracts";
-import { parseChangeRequestUrl } from "@t3tools/shared/changeRequestUrl";
+import type { RepositoryIdentity } from "@t3tools/contracts";
+import { canonicalizeGitCafePullRequestUrl } from "@t3tools/source-control-definitions/registry";
 
 import { createTranslator, type Translate } from "./i18n/translate.ts";
 import { sourceControlClients } from "./sourceControlClients.ts";
+import { type ChangeRequestTerminology } from "./sourceControlClients.ts";
 
 const PULL_REQUEST_NUMBER_PATTERN = /^#?(\d+)$/;
 
@@ -44,10 +45,11 @@ export function pullRequestLinkProject(identity: RepositoryIdentity | null | und
     (identity.owner && identity.name ? `${identity.owner}/${identity.name}` : null);
   if (repository === null) return null;
   const definition = sourceControlClients.get(identity.provider ?? "unknown");
-  const host = pullRequestHostOf(identity, definition.kind);
+  const host = sourceControlClients.changeRequestHost(identity, definition.kind);
   return {
     host,
     repository,
+    terminology: definition.changeRequest,
     webUrl: (number: number) =>
       definition.changeRequestUrl({
         host,
@@ -71,6 +73,7 @@ export function resolveLinkPullRequestInput(input: {
   readonly project: {
     readonly host: string;
     readonly repository: string;
+    readonly terminology: ChangeRequestTerminology;
     readonly webUrl: (number: number) => string | null;
   } | null;
   readonly hasProject: (reference: ResolvedLink) => boolean;
@@ -79,32 +82,48 @@ export function resolveLinkPullRequestInput(input: {
 }): { link: ResolvedLink } | { error: string } | null {
   const t = input.translate ?? createTranslator("en");
   const parsed =
-    parseChangeRequestUrl(input.reference.trim()) !== null
+    sourceControlClients.parseChangeRequestUrl(input.reference.trim()) !== null
       ? input.reference.trim()
       : parsePullRequestReference(input.reference);
   if (parsed === null) return null;
-  const url = parseChangeRequestUrl(parsed);
-  if (url !== null) {
+  const url = sourceControlClients.parseChangeRequestUrl(parsed)?.link;
+  if (url !== undefined) {
     if (!input.hasProject({ ...url, url: parsed })) {
       return {
         error: t("pullRequest.noProjectCanRead", { host: url.host, repository: url.repository }),
       };
     }
     return {
-      link: { host: url.host, repository: url.repository, number: url.number, url: parsed },
+      link: {
+        host: url.host,
+        repository: url.repository,
+        number: url.number,
+        url: canonicalizeGitCafePullRequestUrl(parsed),
+      },
     };
   }
   const number = Number(parsed);
   if (!Number.isSafeInteger(number) || number < 1) return null;
   if (input.project === null) {
-    return { error: t("pullRequest.pasteFullUrl") };
+    return {
+      error:
+        "Paste the full pull request URL; this thread has no repository to resolve the number against.",
+    };
   }
   const webUrl = input.project.webUrl(number);
-  const webReference = webUrl === null ? null : parseChangeRequestUrl(webUrl);
-  if (webUrl === null || webReference === null) {
-    return { error: t("pullRequest.pasteFullUrlUnknownHost") };
+  const webReference =
+    webUrl === null ? undefined : sourceControlClients.parseChangeRequestUrl(webUrl)?.link;
+  if (webUrl === null || webReference === undefined) {
+    return {
+      error: `Paste a full URL; this project's host has no known ${input.project.terminology.singular} URL.`,
+    };
   }
   return {
-    link: { ...webReference, url: webUrl },
+    link: {
+      host: webReference.host,
+      repository: webReference.repository,
+      number: webReference.number,
+      url: webUrl,
+    },
   };
 }

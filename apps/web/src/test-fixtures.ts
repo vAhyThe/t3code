@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
 import {
   EnvironmentId,
@@ -30,7 +31,7 @@ export function makeThreadProjectionFixture(): OrchestrationV2ThreadProjection {
     thread: {
       id,
       projectId: ProjectId.make("project-test"),
-      title: "Thread", // i18n-ignore: test fixture data
+      title: currentTranslator()("updates.thread"), // i18n-ignore: test fixture data
       providerInstanceId,
       modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
       runtimeMode: "full-access",
@@ -95,7 +96,7 @@ export function makeThreadFixture(overrides: ThreadFixtureOverrides = {}): Threa
   const shell = presentThreadShell(environmentId, {
     id,
     projectId,
-    title: overrides.title ?? "Thread", // i18n-ignore: test fixture data
+    title: overrides.title ?? currentTranslator()("updates.thread"), // i18n-ignore: test fixture data
     providerInstanceId,
     modelSelection,
     runtimeMode: overrides.runtimeMode ?? "full-access",
@@ -163,7 +164,7 @@ export function makeStreamingTimelineFixture(text = "") {
       ...base("history-user-item", historyRunId, 0),
       type: "user_message",
       messageId: MessageId.make("history-user"),
-      text: "Inspect",
+      text: currentTranslator()("settingsD.inspect"),
       attachments: [],
       inputIntent: "turn_start",
       createdBy: "user",
@@ -181,7 +182,7 @@ export function makeStreamingTimelineFixture(text = "") {
       ...base("history-assistant-item", historyRunId, 3),
       type: "assistant_message",
       messageId: MessageId.make("history-assistant"),
-      text: "Done",
+      text: currentTranslator()("common.done"),
       streaming: false,
       updatedAt: DateTime.makeUnsafe(time(4)),
     },
@@ -189,7 +190,7 @@ export function makeStreamingTimelineFixture(text = "") {
       ...base("live-user-item", runId, 5),
       type: "user_message",
       messageId: MessageId.make("live-user"),
-      text: "Continue",
+      text: currentTranslator()("common.continue"),
       attachments: [],
       inputIntent: "turn_start",
       createdBy: "user",

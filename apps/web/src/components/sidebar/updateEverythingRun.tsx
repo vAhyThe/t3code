@@ -2,12 +2,11 @@ import { useAtomValue } from "@effect/atom-react";
 import { EnvironmentId } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
-import { Atom } from "effect/reactivity";
-import { useEffect } from "react";
+import { AsyncResult, Atom } from "effect/reactivity";
 
 import { APP_VERSION } from "~/branding";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
-import { useDesktopUpdateState } from "~/state/desktopUpdate";
+import { desktopUpdateStateAtom } from "~/state/desktopUpdate";
 import { serverEnvironment } from "~/state/server";
 import { currentTranslator } from "~/i18n/I18nProvider";
 import { resolveVersionMismatch } from "~/versionSkew";
@@ -182,8 +181,7 @@ export function saveUpdateEverythingResult(result: UpdateEverythingResult): void
   const handedOff = (run?.machines ?? []).flatMap((machine): HandedOffServer[] => {
     if (machine.result !== null) return [];
     const state = appAtomRegistry.get(serverEnvironment.updateStateAtom(machine.environmentId));
-    // A desktop-managed server installs its own feed's version, which only its
-    // update state knows.
+    // Only the desktop-managed server's update state knows its own feed version.
     const targetVersion =
       machine.handedOffVersion ??
       (state.status === "running" ? state.targetVersion : machine.server?.targetVersion);
@@ -278,7 +276,10 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
       queueMicrotask(() => unsubscribe());
       settleUpdateRunMachine(server.environmentId, failure);
       if (failure === null) updatedServers += 1;
-      else failures.push(`${server.label}: ${failure}`);
+      else
+        failures.push(
+          currentTranslator()("settingsD.modeWithLabel", { mode: server.label, label: failure }),
+        );
       remaining -= 1;
       if (remaining === 0) {
         showUpdateEverythingResult({
@@ -314,33 +315,34 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
   }
 }
 
-let notifiedNotAppliedVersion: string | null = null;
-
-export function DesktopUpdateLaunchNotice() {
-  const notAppliedVersion = useDesktopUpdateState()?.notAppliedVersion ?? null;
-
-  useEffect(() => {
-    const saved = takeSavedUpdateEverythingResult();
-    if (!saved) return;
+/** Reports, once per launch, how the update run that restarted the app ended. */
+export function startDesktopUpdateLaunchNotice(): () => void {
+  const saved = takeSavedUpdateEverythingResult();
+  if (saved) {
     const handedOff = saved.handedOff ?? [];
     showUpdateEverythingResult({ ...saved, restarting: handedOff.map((server) => server.label) });
     followHandedOffServers(handedOff);
-  }, []);
+  }
 
-  useEffect(() => {
-    if (notAppliedVersion === null || notifiedNotAppliedVersion === notAppliedVersion) return;
-    notifiedNotAppliedVersion = notAppliedVersion;
-    toastManager.add(
-      stackedThreadToast({
-        type: "error",
-        title: currentTranslator()("shellNav.updateDidNotApply"),
-        description: currentTranslator()("shellNav.updateNotAppliedDescription", {
-          version: APP_VERSION,
-          notAppliedVersion,
+  let notifiedNotAppliedVersion: string | null = null;
+  return appAtomRegistry.subscribe(
+    desktopUpdateStateAtom,
+    (result) => {
+      const notAppliedVersion =
+        AsyncResult.getOrElse(result, () => null)?.notAppliedVersion ?? null;
+      if (notAppliedVersion === null || notifiedNotAppliedVersion === notAppliedVersion) return;
+      notifiedNotAppliedVersion = notAppliedVersion;
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: currentTranslator()("shellNav.updateDidNotApply"),
+          description: currentTranslator()("shellNav.updateNotAppliedDescription", {
+            version: APP_VERSION,
+            notAppliedVersion: notAppliedVersion,
+          }),
         }),
-      }),
-    );
-  }, [notAppliedVersion]);
-
-  return null;
+      );
+    },
+    { immediate: true },
+  );
 }

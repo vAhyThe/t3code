@@ -8,7 +8,6 @@ import type { DesktopCaptureExtensionState } from "@t3tools/contracts";
 
 import { currentDesktopTranslator } from "../i18n/desktopTranslator.ts";
 import { GNOME_CAPTURE_FILES, GNOME_CAPTURE_UUID } from "./gnomeCaptureBundle.ts";
-export { isGnomeCaptureSession } from "./linuxCaptureSession.ts";
 
 const SHELL = "org.gnome.Shell";
 const SHELL_PATH = "/org/gnome/Shell";

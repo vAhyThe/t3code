@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { UsageProviderKind } from "@t3tools/contracts";
 
 import { ProviderDriverKind } from "@t3tools/contracts";
@@ -10,12 +11,12 @@ type UsageProviderPresentation = {
 
 export const PROVIDER_PRESENTATION = {
   codex: {
-    label: "Codex", // i18n-ignore: product name
+    label: currentTranslator()("shellDevice.onboardingBrandCodex"), // i18n-ignore: product name
     color: "var(--contrast-foreground)",
     driverKind: ProviderDriverKind.make("codex"),
   },
   claude: {
-    label: "Claude Code", // i18n-ignore: product name
+    label: currentTranslator()("shellDevice.onboardingBrandClaudeCode"), // i18n-ignore: product name
     color: "#d97757",
     driverKind: ProviderDriverKind.make("claudeAgent"),
   },
@@ -24,7 +25,11 @@ export const PROVIDER_PRESENTATION = {
     color: "color-mix(in oklab, var(--contrast-foreground) 72%, var(--background))",
     driverKind: ProviderDriverKind.make("grok"),
   },
-  cursor: { label: "Cursor", color: "#8b8b8b", driverKind: ProviderDriverKind.make("cursor") }, // i18n-ignore: product name
+  cursor: {
+    label: currentTranslator()("shellDevice.usageBrandCursor"),
+    color: "#8b8b8b",
+    driverKind: ProviderDriverKind.make("cursor"),
+  }, // i18n-ignore: product name
   opencode: {
     label: "OpenCode", // i18n-ignore: product name
     color: "#5b9bbd",
@@ -39,6 +44,11 @@ export const PROVIDER_PRESENTATION = {
     label: "Pi", // i18n-ignore: product name
     color: "#4d9f8a",
     driverKind: ProviderDriverKind.make("pi"),
+  },
+  muse: {
+    label: "Muse Code",
+    color: "#0866ff",
+    driverKind: ProviderDriverKind.make("muse"),
   },
 } satisfies Record<UsageProviderKind, UsageProviderPresentation>;
 

@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { PullRequestListEntry, PullRequestSummary } from "@t3tools/contracts";
 import {
   ArrowLeftIcon,
@@ -10,6 +11,11 @@ import {
   UsersIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import {
+  capitalizeTerm,
+  sourceControlClients,
+  type ChangeRequestTerminology,
+} from "@t3tools/client-runtime/source-control-clients";
 
 import { readLocalApi } from "~/localApi";
 import { cn } from "~/lib/utils";
@@ -49,32 +55,37 @@ function defaultDetailTabs(t: Translate) {
 }
 
 export function PullRequestListGhost({ rows = 7, caption }: { rows?: number; caption?: string }) {
-  const t = useT();
+  useT();
   return (
     <div
       role="status"
-      aria-label={caption ?? t("pullRequest.loadingPullRequests")}
-      className="motion-safe:animate-skeleton space-y-0.5"
+      aria-label={caption ?? currentTranslator()("pullRequest.loadingPullRequests")}
+      className="space-y-0.5"
     >
+      {/* Outside the pulse so the explanation stays readable. */}
       {caption ? (
-        <p className="px-3 pb-1 text-xs font-medium text-muted-foreground/70">{caption}</p>
+        <p className="px-3 pb-1 text-xs font-medium text-muted-foreground/70 redesign:text-muted-foreground">
+          {caption}
+        </p>
       ) : null}
-      {Array.from({ length: rows }, (_, index) => (
-        <div
-          key={index}
-          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2.5"
-        >
-          <GhostBar className="size-4 rounded-full" />
-          <div className="min-w-0 space-y-1.5">
-            <GhostBar className={cn("h-4", TITLE_WIDTHS[index % TITLE_WIDTHS.length])} />
-            <GhostBar className={cn("h-3.5", META_WIDTHS[index % META_WIDTHS.length])} />
+      <div className="motion-safe:animate-skeleton space-y-0.5">
+        {Array.from({ length: rows }, (_, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2.5"
+          >
+            <GhostBar className="size-4 rounded-full" />
+            <div className="min-w-0 space-y-1.5">
+              <GhostBar className={cn("h-4", TITLE_WIDTHS[index % TITLE_WIDTHS.length])} />
+              <GhostBar className={cn("h-3.5", META_WIDTHS[index % META_WIDTHS.length])} />
+            </div>
+            <div className="flex flex-col items-end gap-1.5">
+              <GhostBar className="w-12" />
+              <GhostBar className="w-16" />
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <GhostBar className="w-12" />
-            <GhostBar className="w-16" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -110,13 +121,14 @@ export function PullRequestDetailGhost({
         isDraft: summary.isDraft ?? entry?.isDraft,
       }
     : entry;
+  const terminology = sourceControlClients.get(seed?.provider).changeRequest;
   const statePresentation = seed
     ? resolvePullRequestState({
         state: seed.state,
         isDraft: seed.isDraft ?? false,
       })
     : null;
-  // Passing list rollups can omit workflows awaiting approval; wait for detail to claim success.
+  // Passing list rollups can omit workflows awaiting approval; wait for detail.
   const checksPresentation =
     seed?.checksState === "failing" || seed?.checksState === "pending"
       ? pullRequestChecksStatePresentation(seed.checksState)
@@ -130,7 +142,7 @@ export function PullRequestDetailGhost({
   return (
     <div
       role="status"
-      aria-label={t("pullRequest.loadingPullRequest")}
+      aria-label={currentTranslator()("chat.htmlRenderLoading", { title: terminology.singular })}
       className={cn(
         "flex h-full min-h-0 flex-col overflow-hidden bg-background",
         !seed && "motion-safe:animate-skeleton",
@@ -155,7 +167,10 @@ export function PullRequestDetailGhost({
                 <span className="min-w-0 truncate font-medium">{seed.repository}</span>
                 <InlineButton
                   onClick={() => void readLocalApi()?.shell.openExternal(seed.url)}
-                  aria-label={t("pullRequest.openPullRequestOnHost", { number: seed.number })}
+                  aria-label={currentTranslator()("updates.openTermNumberOnHost", {
+                    term: terminology.singular,
+                    number: seed.number,
+                  })}
                 >
                   <span className={statePresentation?.toneClassName}>#{seed.number}</span>
                   <ExternalLinkIcon aria-hidden className="size-2.5" />
@@ -175,7 +190,9 @@ export function PullRequestDetailGhost({
             size="icon-xs"
             variant="ghost"
             disabled
-            aria-label={t("pullRequest.pullRequestActionsLoading")}
+            aria-label={currentTranslator()("updates.termActionsLoading", {
+              term: capitalizeTerm(terminology.singular),
+            })}
           >
             <EllipsisIcon aria-hidden className="size-4" />
           </Button>
@@ -183,7 +200,9 @@ export function PullRequestDetailGhost({
             <Button
               size="icon-xs"
               variant="ghost"
-              aria-label={t("pullRequest.collapsePullRequestPanel")}
+              aria-label={currentTranslator()("updates.collapseTermPanel", {
+                term: terminology.singular,
+              })}
               onClick={onClose}
             >
               <PanelRightIcon aria-hidden className="size-3.5" />
@@ -227,9 +246,9 @@ export function PullRequestDetailGhost({
                   <PullRequestCopyableCode
                     key={checkout}
                     value={checkout}
-                    target="pull request checkout command"
-                    copyLabel={t("pullRequest.copyCheckoutCommand")}
-                    copiedLabel={t("pullRequest.checkoutCommandCopied")}
+                    target={`${terminology.singular} checkout command`}
+                    copyLabel="Copy checkout command"
+                    copiedLabel="Checkout command copied"
                     className="ml-auto font-mono"
                     tooltipSide="bottom"
                     {...(onCheckoutError ? { onError: onCheckoutError } : {})}
@@ -253,8 +272,8 @@ export function PullRequestDetailGhost({
                     key={seed.headBranch}
                     value={seed.headBranch}
                     target="branch name"
-                    copyLabel={t("pullRequest.copyPullRequestBranch")}
-                    copiedLabel={t("pullRequest.branchNameCopied")}
+                    copyLabel={`Copy ${terminology.singular} branch`}
+                    copiedLabel="Branch name copied"
                     className="min-w-0 font-mono"
                   />
                 ) : (
@@ -421,12 +440,19 @@ export function PullRequestTimelineGhost({ rows = 6 }: { rows?: number }) {
   );
 }
 
-export function PullRequestConversationGhost({ rows = 3 }: { rows?: number }) {
-  const t = useT();
+export function PullRequestConversationGhost({
+  rows = 3,
+  terminology,
+}: {
+  rows?: number;
+  terminology: ChangeRequestTerminology;
+}) {
   return (
     <div
       role="status"
-      aria-label={t("pullRequest.loadingConversation")}
+      aria-label={currentTranslator()("updates.loadingTermConversation", {
+        term: terminology.singular,
+      })}
       className="motion-safe:animate-skeleton space-y-4 py-2"
     >
       {Array.from({ length: rows }, (_, index) => (

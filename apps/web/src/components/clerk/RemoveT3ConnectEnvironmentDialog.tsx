@@ -47,6 +47,7 @@ export function RemoveT3ConnectEnvironmentDialog({
               <Trans
                 k="shellDevice.clerkRemoveStays"
                 components={{
+                  // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
                   settings: (children) =>
                     openAccountPage ? (
                       <InlineButton

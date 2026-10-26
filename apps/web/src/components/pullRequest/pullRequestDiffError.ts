@@ -1,6 +1,6 @@
 import { currentTranslator } from "~/i18n/I18nProvider";
 /** Diff failures currently include transport wrappers, so recognize the reason inside them. */
-export function describePullRequestDiffError(error: string, providerName: string) {
+export function describePullRequestDiffError(error: string, providerName: string, term: string) {
   if (/\brate limit\b|\brate[-_]limited\b|\btoo many requests\b/i.test(error)) {
     return {
       title: currentTranslator()("pullRequest.diffRateLimited", { providerName }),
@@ -10,6 +10,9 @@ export function describePullRequestDiffError(error: string, providerName: string
 
   return {
     title: currentTranslator()("pullRequest.diffChangesLoadFailed"),
-    description: currentTranslator()("pullRequest.diffLoadFailedDescription", { providerName }),
+    description: currentTranslator()("updates.theEnvironmentCouldnTLoadThisTermS", {
+      term: term,
+      provider: providerName,
+    }),
   };
 }

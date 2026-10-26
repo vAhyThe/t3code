@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import {
   AntigravitySettings,
   ClaudeSettings,
@@ -15,7 +16,7 @@ import { piClient } from "@t3tools/provider-pi/client";
 export const providerClients = makeProviderClientRegistry([
   {
     driverKind: ProviderDriverKind.make("codex"),
-    label: "Codex", // i18n-ignore: brand name
+    label: currentTranslator()("shellDevice.onboardingBrandCodex"), // i18n-ignore: brand name
     settingsSchema: CodexSettings,
   },
   {

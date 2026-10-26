@@ -1,9 +1,9 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { settlePromise } from "@t3tools/client-runtime/state/runtime";
 import { AsyncResult } from "effect/reactivity";
 import { PlayIcon, RotateCwIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
 
-import { useT } from "../../i18n/I18nProvider";
 import { cn } from "../../lib/utils";
 import { prepareVideoFirstFrame } from "../../lib/videoFirstFrame";
 import { Button } from "../ui/button";
@@ -45,8 +45,7 @@ export function MediaVideoPlayer({
   onRetry,
   actionsSource,
 }: MediaVideoPlayerProps) {
-  const t = useT();
-  // State, not a ref: the element remounts on retry and failure, and effects must rebind to it.
+  // Use state so effects rebind when retry or failure remounts the video.
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const [playbackSource, setPlaybackSource] = useState<{
     src: string;
@@ -62,13 +61,16 @@ export function MediaVideoPlayer({
   const failed = src !== null ? failedSrc === src : sourceFailed;
   const preloaded = preloadedSrc === src || typeof IntersectionObserver === "undefined";
 
-  // Re-signing must not reset the playhead. Changed files refresh once playback pauses.
+  // Re-signing must not reload a loaded source. Changed files load once playback pauses.
   if (
     playbackSource !== null &&
     playbackSource.revision !== revision &&
+    (latestSrc !== null || sourceFailed) &&
     (video === null || playingVideo !== video)
   ) {
-    setPlaybackSource(null);
+    setPlaybackSource(
+      revision !== null && latestSrc !== null ? { src: latestSrc, revision } : null,
+    );
   }
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export function MediaVideoPlayer({
         >
           <span className="inline-flex items-center gap-1.5">
             <TriangleAlertIcon aria-hidden className="size-3.5 shrink-0" />
-            {t("chat.videoUnavailable")}
+            {currentTranslator()("chat.videoUnavailable")}
             {label ? ` · ${label}` : ""}
           </span>
           <span className="flex flex-wrap items-center justify-center gap-2">
@@ -153,7 +155,9 @@ export function MediaVideoPlayer({
                 onClick={() => void retry()}
               >
                 <RotateCwIcon />
-                {retrying ? t("chat.videoRetrying") : t("chat.videoRetry")}
+                {retrying
+                  ? currentTranslator()("chat.videoRetrying")
+                  : currentTranslator()("chat.videoRetry")}
               </Button>
             ) : null}
             <OpenMediaLink originalUrl={originalUrl} src={latestSrc ?? src} fileName={label} />
@@ -164,7 +168,7 @@ export function MediaVideoPlayer({
           key={loadAttempt}
           ref={setVideo}
           src={src}
-          aria-label={label || t("chat.videoPreviewAria")}
+          aria-label={label || currentTranslator()("chat.videoPreviewAria")}
           aria-hidden={onOpen ? true : undefined}
           autoPlay={onOpen ? false : autoPlay}
           controls={!onOpen}
@@ -177,7 +181,10 @@ export function MediaVideoPlayer({
             videoClassName,
           )}
           style={style}
-          onLoadedMetadata={(event) => prepareVideoFirstFrame(event.currentTarget)}
+          onLoadedMetadata={(event) => {
+            prepareVideoFirstFrame(event.currentTarget);
+            if (sourceRevision !== null) setPlaybackSource({ src, revision: sourceRevision });
+          }}
           onPlay={(event) => {
             setPlayingVideo(event.currentTarget);
             setPlaybackSource({ src, revision: sourceRevision });
@@ -186,14 +193,18 @@ export function MediaVideoPlayer({
           onEnded={() => setPlayingVideo(null)}
           onError={() => {
             setPlayingVideo(null);
-            if (latestSrc !== null && src !== latestSrc) setPlaybackSource(null);
-            else setFailedSrc(src);
+            setPlaybackSource(null);
+            if (latestSrc === null || src === latestSrc) setFailedSrc(src);
           }}
         />
       ) : (
         <span
           role="status"
-          aria-label={failed ? t("chat.videoPreviewUnavailable") : t("chat.videoLoading")}
+          aria-label={
+            failed
+              ? currentTranslator()("chat.videoPreviewUnavailable")
+              : currentTranslator()("chat.videoLoading")
+          }
           className={cn("block aspect-video w-full rounded-lg bg-muted/60", stateClassName)}
           style={style}
         />
@@ -201,7 +212,11 @@ export function MediaVideoPlayer({
       {onOpen ? (
         <button
           type="button"
-          aria-label={label ? t("chat.videoPlayLabel", { label }) : t("chat.videoPlay")}
+          aria-label={
+            label
+              ? currentTranslator()("chat.videoPlayLabel", { label })
+              : currentTranslator()("chat.videoPlay")
+          }
           onClick={onOpen}
           className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
         >

@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import {
   isActiveSubagentStatus,
   isTerminalSubagentStatus,
@@ -42,7 +43,7 @@ export function deriveAgentSpawnSummary({
       : coordinatorStatus === "cancelled" || coordinatorStatus === "interrupted"
         ? "Workflow stopped"
         : failed > 0
-          ? `${failed} failed`
+          ? currentTranslator()("chat.lineageFailedCount", { count: failed })
           : stopped > 0
             ? `${stopped} stopped`
             : idle > 0

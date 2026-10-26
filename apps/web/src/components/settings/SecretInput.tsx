@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { DraftInput, type DraftInputProps } from "../ui/draft-input";
 import { Input, type InputProps } from "../ui/input";
 
@@ -21,7 +22,7 @@ export function SecretInput({
     spellCheck: false,
     placeholder: configured
       ? "Stored secret, enter a new value to replace"
-      : (placeholder ?? "Not set"),
+      : (placeholder ?? currentTranslator()("settingsC.inheritNotSet")),
   };
   if (onCommit) {
     return (

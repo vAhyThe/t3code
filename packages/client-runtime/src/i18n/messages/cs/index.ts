@@ -1,3 +1,5 @@
+import { updates } from "./updates.ts";
+// oxlint-disable-next-line t3code/no-low-value-comments -- Shared translation glossary, not implementation commentary.
 /*
  * Czech catalog. Formal imperative, as in macOS system apps ("Zadejte",
  * "Vyberte"). Every wave keeps to this glossary:
@@ -36,6 +38,7 @@ import { shellRest } from "./shellRest.ts";
 
 export const csMessages = {
   common,
+  updates,
   settingsA,
   settingsB,
   settingsC,

@@ -12,7 +12,8 @@ import * as Cause from "effect/Cause";
 import { useState } from "react";
 import { getDesktopSnapShotBridge } from "../../lib/desktopSnapShot";
 import { resolveDiffThemeName } from "../../lib/diffRendering";
-import { useTheme } from "../../hooks/useTheme";
+import { PREFERRED_HIGHLIGHTER } from "../../lib/syntaxHighlighting";
+import { useRenderedAppearance } from "../../hooks/useTheme";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
@@ -37,7 +38,7 @@ export function CaptureShortcutConfig({
 }) {
   const t = useT();
   const bridge = getDesktopSnapShotBridge();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useRenderedAppearance();
   const { copyToClipboard, isCopied } = useCopyToClipboard();
   const [preview, setPreview] = useState<DesktopCaptureConfigPreview | null>(null);
   const [result, setResult] = useState<DesktopCaptureConfigApplied | null>(null);
@@ -183,6 +184,7 @@ export function CaptureShortcutConfig({
                   diffStyle: "unified",
                   theme: resolveDiffThemeName(resolvedTheme),
                   overflow: "wrap",
+                  preferredHighlighter: PREFERRED_HIGHLIGHTER,
                 }}
               />
             </div>

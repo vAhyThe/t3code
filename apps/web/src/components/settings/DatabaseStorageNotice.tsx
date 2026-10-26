@@ -1,66 +1,77 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { useAtomValue } from "@effect/atom-react";
-import { shouldRecommendDatabaseCompaction, type EnvironmentId } from "@t3tools/contracts";
+import type { EnvironmentId } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
-import { useT } from "~/i18n/I18nProvider";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { serverEnvironment } from "../../state/server";
 import { Button } from "../ui/button";
-import { SettingsGroup } from "./SettingsGroup";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 
-/** Suggests `t3 doctor` for a database that still holds at least 1 GiB of freed pages. */
+const DismissedEnvironmentIds = Schema.Array(Schema.String);
+
+/** Suggests `t3 doctor` on every machine whose database still holds at least 1 GiB of freed pages. */
 export function DatabaseStorageNotice({
-  environmentId,
-  label,
+  environments,
 }: {
-  environmentId: EnvironmentId;
-  label: string;
+  environments: ReadonlyArray<{ readonly environmentId: EnvironmentId; readonly label: string }>;
 }) {
-  const t = useT();
-  const result = useAtomValue(serverEnvironment.databaseStorage({ environmentId, input: {} }));
+  const recommendations = useAtomValue(
+    serverEnvironment.databaseCompactionRecommendations(
+      JSON.stringify(environments.map((environment) => environment.environmentId)),
+    ),
+  );
   const [dismissed, setDismissed] = useLocalStorage(
-    `database-storage-notice-dismissed:${environmentId}`,
-    false,
-    Schema.Boolean,
+    "database-storage-notice-dismissed",
+    [],
+    DismissedEnvironmentIds,
   );
   const { copyToClipboard } = useCopyToClipboard({ target: "command" });
-  const status = result._tag === "Success" ? result.value : null;
-  if (dismissed || status === null || !shouldRecommendDatabaseCompaction(status)) return null;
+  const visible = recommendations.filter(
+    (recommendation) => !dismissed.includes(recommendation.environmentId),
+  );
+  if (visible.length === 0) return null;
   return (
     <SettingsSection
-      id={`storage-database-${environmentId}`}
-      title={t("settingsD.databaseStorageTitle")}
+      id="storage-database"
+      title={currentTranslator()("settingsD.databaseStorageTitle")}
     >
-      <SettingsGroup>
+      <SettingsRow
+        title={currentTranslator()("updates.reclaimFreedDatabaseSpace")}
+        description={currentTranslator()("updates.oldHistoryIsCleanedUpAutomaticallyButThese")}
+      />
+      {visible.map(({ environmentId, status }) => (
         <SettingsRow
-          title={t("settingsD.databaseReclaimTitle", {
+          key={environmentId}
+          title={currentTranslator()("updates.sizeGiBOnEnvironment", {
             size: (status.reclaimableBytes / 1024 ** 3).toFixed(1),
-            label,
+            environment:
+              environments.find((environment) => environment.environmentId === environmentId)
+                ?.label ?? environmentId,
           })}
-          description={
-            <>
-              {t("settingsD.databaseReclaimDescription", { label })}
-              <code className="mt-2 block select-text break-all">{status.compactCommand}</code>
-            </>
-          }
+          description={<code className="select-text break-all">{status.compactCommand}</code>}
           control={
             <div className="flex flex-wrap items-center gap-1.5">
               <Button
                 variant="outline"
-                size="sm"
+                size="xs"
                 onClick={() => copyToClipboard(status.compactCommand, undefined)}
               >
-                {t("settingsC.copyCommand")}
+                {currentTranslator()("settingsC.copyCommand")}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setDismissed(true)}>
-                {t("shellNav.actionDismiss")}
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setDismissed((current) => [...current, environmentId])}
+              >
+                {currentTranslator()("shellDevice.browserDismiss")}
               </Button>
             </div>
           }
         />
-      </SettingsGroup>
+      ))}
     </SettingsSection>
   );
 }

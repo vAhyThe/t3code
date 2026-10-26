@@ -1,3 +1,7 @@
+import {
+  capitalizeTerm,
+  sourceControlClients,
+} from "@t3tools/client-runtime/source-control-clients";
 import { useAtomCommand } from "~/state/use-atom-command";
 import type {
   EnvironmentId,
@@ -9,6 +13,7 @@ import type {
 } from "@t3tools/contracts";
 import {
   ChevronDownIcon,
+  CircleCheckIcon,
   ExternalLinkIcon,
   FileCode2Icon,
   GitCommitHorizontalIcon,
@@ -34,9 +39,11 @@ import {
   pullRequestReviewOutcome,
   type PullRequestReviewOutcome,
   type PullRequestTimelineEvent,
+  type PullRequestTimelineThread,
 } from "./pullRequestDetail.logic";
-import { canEditPullRequestComment } from "./pullRequestEditing.logic";
+import { canEditPullRequestComment } from "@t3tools/client-runtime/pull-request-editing";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
+import { PullRequestMoreReplies } from "./PullRequestMoreReplies";
 import { PullRequestMarkdownEditor } from "./PullRequestMarkdownEditor";
 import { PullRequestReactionBar } from "./PullRequestReactions";
 import {
@@ -173,13 +180,13 @@ function ReviewStateBadge({ state }: { state: string }) {
 }
 
 function OpenOnHostButton({ url, onOpen }: { url: string | null; onOpen: (url: string) => void }) {
-  const t = useT();
+  useT();
   return url === null ? null : (
     <Button
       size="icon-xs"
       variant="ghost-muted"
-      className="-mr-1 -mt-1 shrink-0"
-      aria-label={t("pullRequest.openActivityOnHost")}
+      className="-mr-1 shrink-0"
+      aria-label={currentTranslator()("pullRequest.openActivityOnHost")}
       onClick={() => onOpen(url)}
     >
       <ExternalLinkIcon className="size-3" />
@@ -193,12 +200,14 @@ function ConversationCard({
   cwd,
   onOpen,
   reactions,
+  showPath = true,
 }: {
   event: PullRequestTimelineEvent;
   editable: PullRequestComment | null;
   cwd: string;
   onOpen: (url: string) => void;
   reactions: ReactionSurface;
+  showPath?: boolean;
 }) {
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -208,8 +217,6 @@ function ConversationCard({
   });
 
   const save = async (body: string) => {
-    // A review's own summary is not a kind any host rewrites, which is why `editable` is never
-    // one; the check is here because the comment's own type still allows it.
     if (editable === null || saving || editable.kind === "review") return;
     setSaving(true);
     const result = await updateComment({
@@ -231,7 +238,7 @@ function ConversationCard({
   return (
     <article className="group py-2">
       <div className="px-2">
-        <div className="flex min-w-0 flex-wrap items-start gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
               <ActorName actor={event.actor} />
@@ -242,7 +249,7 @@ function ConversationCard({
               <span>
                 <RelativeTime timestamp={event.at} />
               </span>
-              {event.path ? (
+              {showPath && event.path ? (
                 <span className="inline-flex min-w-0 items-center gap-1">
                   <FileCode2Icon aria-hidden className="size-3 shrink-0" />
                   <span className="truncate">{event.path}</span>
@@ -252,8 +259,7 @@ function ConversationCard({
           </div>
           {editable !== null && !editing ? (
             <PullRequestEditButton
-              className="-mt-1"
-              aria-label={t("pullRequest.editComment")}
+              aria-label={currentTranslator()("pullRequest.editComment")}
               onClick={() => setEditing(true)}
             />
           ) : null}
@@ -364,9 +370,7 @@ function ConversationGroup({
               <div className="mt-1 space-y-1">
                 {events.map((event) => (
                   <ConversationCard
-                    // Named with the pull request too: a remark's id is the host's own, and two
-                    // pull requests can hand out the same one — which would leave one card's open
-                    // editor standing over the other's remark.
+                    // Host comment ids can collide across pull requests.
                     key={`${reactions.reference.projectId}#${reactions.reference.number}:${event.id}`}
                     event={event}
                     editable={editable.get(event.id) ?? null}
@@ -380,6 +384,111 @@ function ConversationGroup({
           </CollapsiblePanel>
         </div>
       </Collapsible>
+    </div>
+  );
+}
+
+function ReviewThreadEvent({
+  event,
+  thread,
+  editable,
+  cwd,
+  onOpen,
+  reactions,
+}: {
+  event: PullRequestTimelineEvent;
+  thread: PullRequestTimelineThread;
+  editable: ReadonlyMap<string, PullRequestComment>;
+  cwd: string;
+  onOpen: (url: string) => void;
+  reactions: ReactionSurface;
+}) {
+  const dismissed = pullRequestReviewOutcome(event.reviewState) === "dismissed";
+  const [expanded, setExpanded] = useState(!thread.isResolved && !dismissed);
+  const replyCount = thread.replies.length + thread.moreReplies;
+
+  return (
+    <div className="group relative mb-5 pl-12 [contain-intrinsic-block-size:48px] [content-visibility:auto]">
+      <ActorTimelineMarker
+        actors={event.actor ? [event.actor] : []}
+        className="top-4"
+        fallback={<MessageSquareIcon className="size-3.5" />}
+        muted={!expanded}
+      />
+      <button
+        type="button"
+        className="flex w-full min-w-0 items-center gap-2 px-2 py-2 text-left text-2xs text-muted-foreground hover:text-foreground"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
+        <FileCode2Icon aria-hidden className="size-3 shrink-0" />
+        <span className="min-w-0 truncate font-mono">
+          {thread.line === null ? thread.path : `${thread.path}:${thread.line}`}
+        </span>
+        {thread.isResolved ? (
+          <span className="inline-flex shrink-0 items-center gap-1 font-medium text-success-foreground">
+            <CircleCheckIcon aria-hidden className="size-3" />
+            {currentTranslator()("pullRequest.threadResolved")}
+          </span>
+        ) : null}
+        {dismissed ? (
+          <span className="shrink-0 font-medium">
+            {currentTranslator()("pullRequest.reviewDismissed")}
+          </span>
+        ) : null}
+        {thread.isOutdated ? (
+          <span className="shrink-0 font-medium">
+            {currentTranslator()("pullRequest.outdated")}
+          </span>
+        ) : null}
+        {expanded ? null : (
+          <span className="shrink-0">
+            · {event.actor?.login ?? "ghost"}
+            {replyCount > 0 ? (
+              <>
+                {" "}
+                · {replyCount.toLocaleString()} {replyCount === 1 ? "reply" : "replies"}
+              </>
+            ) : null}
+          </span>
+        )}
+        <ChevronDownIcon
+          aria-hidden
+          className={cn("ml-auto size-3.5 shrink-0 transition-transform", expanded && "rotate-180")}
+        />
+      </button>
+      {expanded ? (
+        <>
+          <ConversationCard
+            event={event}
+            editable={editable.get(event.id) ?? null}
+            cwd={cwd}
+            onOpen={onOpen}
+            reactions={reactions}
+            showPath={false}
+          />
+          {thread.replies.length > 0 ? (
+            <div className="ml-2 space-y-1 border-l border-border/60 pl-3">
+              {thread.replies.map((reply) => (
+                <ConversationCard
+                  key={reply.id}
+                  event={reply}
+                  editable={editable.get(reply.id) ?? null}
+                  cwd={cwd}
+                  onOpen={onOpen}
+                  reactions={reactions}
+                  showPath={false}
+                />
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+      {thread.hasMoreReplies ? (
+        <div className="px-2">
+          <PullRequestMoreReplies {...thread} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -427,22 +536,22 @@ function CommitEvent({
   );
 }
 
-function LifecycleEvent({ event }: { event: PullRequestTimelineEvent }) {
-  const t = useT();
+function LifecycleEvent({ event, term }: { event: PullRequestTimelineEvent; term: string }) {
+  const title = capitalizeTerm(term);
   const presentation =
     event.kind === "opened"
       ? {
           icon: <PullRequestGlyph.pullRequest className="size-3.5" />,
-          label: t("pullRequest.lifecycleOpened"),
+          label: currentTranslator()("updates.titleOpened", { title: title }),
         }
       : event.kind === "merged"
         ? {
             icon: <PullRequestGlyph.merged className="size-3.5" />,
-            label: t("pullRequest.lifecycleMerged"),
+            label: currentTranslator()("updates.titleMerged", { title: title }),
           }
         : {
             icon: <PullRequestGlyph.closed className="size-3.5" />,
-            label: t("pullRequest.lifecycleClosed"),
+            label: currentTranslator()("updates.titleClosed", { title: title }),
           };
 
   return (
@@ -483,7 +592,7 @@ function ReviewVerdictEvent({
         className="top-6"
         fallback={<PullRequestReviewOutcomeIcon outcome={outcome} />}
       />
-      <div className="flex min-w-0 flex-wrap items-start gap-2 py-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 py-1.5">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
             <ActorName actor={event.actor} />
@@ -567,6 +676,7 @@ export function PullRequestTimelineTab({
 }) {
   const t = useT();
   const events = buildPullRequestTimeline(detail);
+  const term = sourceControlClients.get(detail.provider).changeRequest.singular;
   const newestCommitAt = newestPullRequestCommitAt(detail.commits);
   const reactions: ReactionSurface = {
     canReact: detail.capabilities.reactions === true,
@@ -576,7 +686,9 @@ export function PullRequestTimelineTab({
     onRefresh,
   };
   const editable = new Map(
-    detail.comments
+    events
+      .flatMap((event) => [event, ...(event.thread?.replies ?? [])])
+      .flatMap((event) => (event.comment ? [event.comment] : []))
       .filter((comment) => canEditPullRequestComment(detail, comment))
       .map((comment) => [comment.id, comment] as const),
   );
@@ -605,6 +717,19 @@ export function PullRequestTimelineTab({
               );
             }
             const event = row.event;
+            if (event.thread !== undefined) {
+              return (
+                <ReviewThreadEvent
+                  key={`${reactions.reference.projectId}#${reactions.reference.number}:thread:${event.id}:${event.thread.isResolved}:${pullRequestReviewOutcome(event.reviewState) === "dismissed"}`}
+                  event={event}
+                  thread={event.thread}
+                  editable={editable}
+                  cwd={detail.workspaceRoot}
+                  onOpen={openOnHost}
+                  reactions={reactions}
+                />
+              );
+            }
             if (event.kind === "commit") {
               return <CommitEvent key={event.id} event={event} onOpen={onOpenCommit} />;
             }
@@ -622,7 +747,7 @@ export function PullRequestTimelineTab({
                 />
               );
             }
-            return <LifecycleEvent key={event.id} event={event} />;
+            return <LifecycleEvent key={event.id} event={event} term={term} />;
           })}
         </div>
 

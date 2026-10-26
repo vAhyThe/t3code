@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import {
   STATIC_KEYBINDING_COMMANDS,
   type KeybindingCommand,
@@ -13,15 +14,11 @@ import {
 } from "@t3tools/shared/keybindings";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
 
-import { currentTranslator } from "../../i18n/I18nProvider";
-
 import { shortcutKeyFromEvent } from "../../keybindings";
 import { isMacPlatform } from "../../lib/utils";
 import { METRIC_OPTIONS, WINDOW_OPTIONS } from "../usage/usageShortcuts";
 
-// Every usage.* command needs a rank. An unranked one falls back to the
-// alphabetical compare, which makes the comparator inconsistent and the order
-// depend on the input order.
+// Rank every usage command; mixing rank and alphabetical comparisons makes order input-dependent.
 const usageCommandOrder = new Map<KeybindingCommand, number>(
   [
     "usage.open" as const,
@@ -302,8 +299,6 @@ export function buildKeybindingRows(
   return rowsWithConflicts;
 }
 
-// Filtering keeps the row objects so rows that stay visible while the query
-// changes receive the same props and skip rendering.
 export function filterKeybindingRows(
   rows: ReadonlyArray<KeybindingRow>,
   query: string,
@@ -438,17 +433,28 @@ const COMMAND_LABEL_KEYS = new Map<string, MessageKey>([
 ]);
 
 export function commandLabel(command: KeybindingCommand): string {
-  const t = currentTranslator();
-  const key = COMMAND_LABEL_KEYS.get(command);
-  if (key) return t(key);
+  if (command === "composer.sendAlternate") return "Composer: Opposite Queue or Steer Action";
+  if (command === "composer.sendBackground") return "Composer: Start in Background";
+  if (command === "composer.sendAndNewThread") return "Composer: Send and Start New Thread";
+  if (command === "thread.steerQueuedMessage") return "Queue: Send First Queued Message";
+  if (command === "thread.editQueuedMessage") return "Queue: Edit Last Queued Message";
+  if (command === "thread.copyReference") return "Pull Request: Copy Link or Thread ID";
+  const labelKey = COMMAND_LABEL_KEYS.get(command);
+  if (labelKey) return currentTranslator()(labelKey);
   const usageMetric = METRIC_OPTIONS.find((option) => option.command === command);
-  if (usageMetric) return t("settingsB.keybindingUsageMetric", { metric: t(usageMetric.labelKey) });
+  if (usageMetric)
+    return currentTranslator()("settingsB.keybindingUsageMetric", {
+      metric: currentTranslator()(usageMetric.labelKey),
+    });
   const usagePeriod = WINDOW_OPTIONS.find((option) => option.command === command);
-  if (usagePeriod) return t("settingsB.keybindingUsagePeriod", { period: t(usagePeriod.labelKey) });
+  if (usagePeriod)
+    return currentTranslator()("settingsB.keybindingUsagePeriod", {
+      period: currentTranslator()(usagePeriod.labelKey),
+    });
   const raw = String(command);
   const jump = /^(thread|modelPicker)\.jump\.(\d)$/.exec(raw);
   if (jump) {
-    return t(
+    return currentTranslator()(
       jump[1] === "thread"
         ? "settingsB.keybindingThreadJump"
         : "settingsB.keybindingModelPickerJump",
@@ -456,7 +462,7 @@ export function commandLabel(command: KeybindingCommand): string {
     );
   }
   if (raw.startsWith("script.") && raw.endsWith(".run")) {
-    return t("settingsB.keybindingRunScript", {
+    return currentTranslator()("settingsB.keybindingRunScript", {
       name: titleCaseCommandSegment(raw.slice("script.".length, -".run".length)),
     });
   }

@@ -9,7 +9,6 @@ import {
   useClientSettings,
   useClientSettingsHydrationStatus,
 } from "../../hooks/useSettings";
-import { isLocalEnvironmentDisabled } from "../../localEnvironment";
 import { completeOnboarding } from "../../onboarding/firstRun";
 import {
   isFirstRunWorkspaceProvenanceAuthoritative,
@@ -28,10 +27,7 @@ import { environmentThreadShells } from "../../state/threads";
 import { useT } from "../../i18n/I18nProvider";
 import { Button } from "../ui/button";
 
-/**
- * Nothing renders while pending — no shell, no EventRouter (whose welcome
- * payload would otherwise navigate into a thread), no dialogs.
- */
+/** Pending blocks all rendering, including EventRouter welcome navigation. */
 
 const FIRST_RUN_DECISION_TIMEOUT_MS = 4_000;
 
@@ -58,9 +54,8 @@ const workspaceEvidenceLiveAtom = Atom.make((get) => {
   return true;
 }).pipe(Atom.withLabel("web-onboarding-workspace-evidence-live"));
 
-// The gate only needs how many threads exist and, while there is at most one,
-// that thread; a shell update of any thread in a populated workspace must not
-// re-render the app root.
+// Subscribe only to thread count and the sole thread so populated-workspace shell updates cannot rerender the
+// app root.
 const threadCountAtom = Atom.make(
   (get) => get(environmentThreadShells.threadShellsAtom).length,
 ).pipe(Atom.withLabel("web-onboarding-thread-count"));
@@ -85,7 +80,7 @@ export function FirstRunGate({
   const hydrated = hydrationStatus === "ready";
   const onboardingCompletedAt = useClientSettings((settings) => settings.onboardingCompletedAt);
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
-  const { environments, isReady: environmentCatalogReady } = useEnvironments();
+  const { isReady: environmentCatalogReady } = useEnvironments();
   const projects = useProjects();
   const threadCount = useAtomValue(threadCountAtom);
   const soleThread = useAtomValue(soleThreadAtom);
@@ -102,10 +97,7 @@ export function FirstRunGate({
   }));
   const { decision, stalled } = gateState;
   const settingsReadFailed = hydrationStatus === "failed" || hydrationStatus === "retrying";
-  // A workspace still counts as fresh when its only content is the server's own
-  // cwd auto-bootstrap: web mode creates a project + thread from cwd at startup
-  // (`autoBootstrapProjectFromCwd` defaults on there), so "no projects at all"
-  // would mean `npx t3` users never see the wizard.
+  // The server's sole cwd-bootstrap project/thread still counts as fresh so npx t3 users see onboarding.
   const serverCwd = serverConfig?.cwd ?? null;
   const primaryEnvironmentId = serverConfig?.environment.environmentId ?? null;
   const workspaceFresh =
@@ -122,13 +114,7 @@ export function FirstRunGate({
     });
 
   const { decision: nextDecision, persistCompletion } = hostedStatic
-    ? resolveHostedFirstRunDecision({
-        localEnvironmentDisabled: isLocalEnvironmentDisabled(),
-        hydrated,
-        completed: onboardingCompletedAt !== null,
-        catalogReady: environmentCatalogReady,
-        environmentCount: environments.length,
-      })
+    ? resolveHostedFirstRunDecision(hydrated)
     : resolveFirstRunDecision({
         enabled,
         hydrated,
@@ -147,7 +133,7 @@ export function FirstRunGate({
         threadCount,
       });
 
-  if (decision !== "wizard" && hydrated) {
+  if (hydrated) {
     const transitioned = transitionFirstRunGateState(gateState, {
       type: "evidence",
       decision: nextDecision,
@@ -171,14 +157,20 @@ export function FirstRunGate({
     return () => window.clearTimeout(timer);
   }, [decision, enabled, hydrated]);
 
+  // Setup opens by itself only from the home route. A direct link, such as
+  // Settings, opens as asked so setup can never lock a user out of the app.
+  const wizardOwnsRoute = pathname === "/";
   useEffect(() => {
-    if (decision === "wizard" && pathname !== "/welcome") {
+    if (decision === "wizard" && wizardOwnsRoute) {
       void navigate({ to: "/welcome", replace: true });
     }
-  }, [decision, navigate, pathname]);
+  }, [decision, navigate, wizardOwnsRoute]);
 
   if (settingsReadFailed) {
     return <FirstRunRecovery reason="settings" retrying={hydrationStatus === "retrying"} />;
+  }
+  if (decision === "wizard" && !wizardOwnsRoute) {
+    return children;
   }
   if (decision !== "app") {
     return stalled ? <FirstRunRecovery reason="connection" /> : null;

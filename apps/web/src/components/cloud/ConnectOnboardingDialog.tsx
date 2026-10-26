@@ -1,5 +1,6 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+import { useT } from "~/i18n/I18nProvider";
 import { useAuth } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
 import { AuthRelayReadScope, AuthRelayWriteScope, type AuthSessionState } from "@t3tools/contracts";
@@ -14,6 +15,7 @@ import {
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useCloudLinkController } from "~/cloud/useCloudLinkController";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
+import { isHostedStaticApp } from "~/hostedPairing";
 import {
   useEnvironments,
   usePrimaryEnvironment,
@@ -39,9 +41,7 @@ type OnboardingStep = "publish" | "devices";
 const EMPTY_SESSION_STATE_ATOM = Atom.make(AsyncResult.initial<AuthSessionState>());
 
 function ConfiguredConnectOnboardingDialog() {
-  const t = useT();
-  // Mirrors ManagedRelayAuthProvider: a pending Clerk session must not read as
-  // signed-out, or its later activation would look like a fresh sign-in.
+  // Pending Clerk sessions must not look signed out or activation would look like a new sign-in.
   const { isLoaded, isSignedIn, userId } = useAuth({ treatPendingAsSignedOut: false });
   const [optOutState, setOptOutState] = useLocalStorage(
     CONNECT_ONBOARDING_OPT_OUT_STORAGE_KEY,
@@ -49,7 +49,10 @@ function ConfiguredConnectOnboardingDialog() {
     ConnectOnboardingOptOutSchema,
   );
 
-  const { isReady: environmentsReady } = useEnvironments();
+  const { environments, isReady: environmentsReady } = useEnvironments();
+  // The empty hosted home already adds account computers after sign-in.
+  const homeScreenAddsComputers =
+    isHostedStaticApp() && environmentsReady && environments.length === 0;
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const primarySessionState = useAtomValue(
     primaryEnvironmentId === null
@@ -76,8 +79,7 @@ function ConfiguredConnectOnboardingDialog() {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [prefilledFromLinkState, setPrefilledFromLinkState] = useState(false);
-  // undefined until auth first settles, so the account already signed in at load
-  // never reads as a fresh sign-in.
+  // Start undefined so an existing account never looks like a fresh sign-in.
   const [observedAccount, setObservedAccount] = useState<string | null | undefined>(undefined);
 
   if (step === "publish" && sessionScopesKnown && !showPublishStep && !isApplying) {
@@ -86,9 +88,7 @@ function ConfiguredConnectOnboardingDialog() {
 
   const optOutAccounts = optOutState.optOutAccounts;
 
-  // A loaded-but-incomplete snapshot (signed in, user id not yet populated)
-  // must not be recorded as signed-out — the next render would then look
-  // like a fresh sign-in on a cold load.
+  // A signed-in snapshot without userId is incomplete; recording signed-out would fake a fresh sign-in.
   if (isLoaded && !(isSignedIn && !userId)) {
     const nextAccount = isSignedIn && userId ? userId : null;
     if (nextAccount !== observedAccount) {
@@ -106,14 +106,12 @@ function ConfiguredConnectOnboardingDialog() {
     setRequestedAccount(null);
   }
 
-  // A manageable session implies a primary environment, so when the scopes
-  // allow publishing, wait for the connection target too — otherwise the
-  // wizard could open on the devices step moments before the publish step
-  // becomes available and freeze there.
+  // Wait for the publish target before opening; otherwise the wizard can freeze on devices before publish
+  // becomes available.
   const publishStepDecided = !canManageRelay || controller.linkState.target !== null;
 
   if (requestedAccount !== null && openForAccount === null) {
-    if (optOutAccounts.includes(requestedAccount)) {
+    if (homeScreenAddsComputers || optOutAccounts.includes(requestedAccount)) {
       setRequestedAccount(null);
     } else if (sessionScopesKnown && publishStepDecided) {
       setRequestedAccount(null);
@@ -163,8 +161,7 @@ function ConfiguredConnectOnboardingDialog() {
       return;
     }
     if (linkStateData === null || controller.linkState.error !== null) return;
-    // The wizard only ever enables — with both toggles off there is nothing to
-    // apply, and an existing link must not be torn down from onboarding.
+    // Onboarding only enables links; both toggles off must preserve existing links.
     if (!exposeEnvironment && !publishAgentActivity) {
       setStep("devices");
       return;
@@ -196,12 +193,14 @@ function ConfiguredConnectOnboardingDialog() {
     >
       <WizardPopup>
         <WizardHeader
-          title={t("shellDevice.connectSetUpTitle")}
-          description={<>{t("shellDevice.connectSetUpDescription")}</>}
+          title={currentTranslator()("shellDevice.connectSetUpTitle")}
+          description={
+            <>{currentTranslator()("updates.meshYourDevicesTogetherPublishThisEnvironmentAnd")}</>
+          }
         >
           {steps.length > 1 ? (
             <WizardSteps
-              steps={steps.map((id) => t(STEP_LABELS[id]))}
+              steps={steps.map((id) => currentTranslator()(STEP_LABELS[id]))}
               currentStep={steps.indexOf(step)}
               isStepDisabled={() => isApplying}
               onStepChange={(index) => {
@@ -253,25 +252,27 @@ function ConfiguredConnectOnboardingDialog() {
                 checked={dontShowAgain}
                 onCheckedChange={(checked) => setDontShowAgain(checked === true)}
               />
-              {t("shellDevice.connectDontShowAgain")}
+              {currentTranslator()("shellDevice.connectDontShowAgain")}
             </label>
           }
         >
           {step === "publish" ? (
             <>
               <Button variant="ghost" disabled={isApplying} onClick={() => setStep("devices")}>
-                {t("shellDevice.connectNotNow")}
+                {currentTranslator()("shellDevice.connectNotNow")}
               </Button>
               <Button
                 disabled={isApplying || !canManageRelay || linkStateData === null}
                 onClick={() => void applyPublishSelection()}
               >
-                {isApplying ? t("shellDevice.connectEnabling") : t("common.continue")}
+                {isApplying
+                  ? currentTranslator()("shellDevice.connectEnabling")
+                  : currentTranslator()("common.continue")}
               </Button>
             </>
           ) : (
             <Button disabled={isApplying} onClick={complete}>
-              {t("common.done")}
+              {currentTranslator()("common.done")}
             </Button>
           )}
         </WizardFooter>

@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useT } from "../../i18n/I18nProvider";
 import { DeviceToolVersions } from "../device/DeviceToolVersions";
 import { DeviceHostAvailability } from "../device/DeviceHostAvailability";
@@ -42,6 +43,7 @@ import { DeviceHostEditor } from "./DeviceHostEditor";
 import { useHostConnectionChecks } from "./useHostConnectionChecks";
 import { deviceHostConnectionKey } from "./deviceHostConnectionChecks";
 import { settingsScopeEnvironmentLabel, settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
+import { DeviceHostDiagnostics } from "../device/DeviceSetup";
 
 export function DeviceHostsSettings(props: { environmentId: EnvironmentId | null }) {
   const t = useT();
@@ -154,7 +156,7 @@ export function DeviceHostsSettings(props: { environmentId: EnvironmentId | null
           }
           onClick={() => {
             setOriginalHost(null);
-            setEditing({ id: randomUUID(), label: "", target: "" });
+            setEditing({ kind: "ssh", id: randomUUID(), label: "", target: "" });
           }}
         >
           <PlusIcon className="size-3.5" /> {t("settingsB.deviceHostsAddHost")}
@@ -443,6 +445,18 @@ function DeviceHostList({
                 ))}
               </div>
               <p className="truncate text-xs text-muted-foreground">{host.target}</p>
+              {results
+                .filter(
+                  (result) =>
+                    result.status?.status === "ready" && result.status.androidDiscoveryIncomplete,
+                )
+                .map((result) => (
+                  <p key={result.environmentId} role="status" className="mt-1 text-xs text-warning">
+                    {compact ? `${result.label}: ` : ""}
+                    {result.status?.detail ??
+                      currentTranslator()("updates.theAndroidDeviceListMayBeIncompleteRefresh")}
+                  </p>
+                ))}
               {compact ? (
                 <Collapsible>
                   <div className="min-w-0 text-xs [--inline-button-white-space:normal]">
@@ -472,6 +486,12 @@ function DeviceHostList({
                             <p role="status" className="text-xs text-destructive">
                               {result.error}
                             </p>
+                          ) : null}
+                          {result.state ? (
+                            <DeviceHostDiagnostics
+                              hosts={[result.host]}
+                              hostStatuses={result.state.hostStatuses}
+                            />
                           ) : null}
                           {result.versions}
                           {result.check?.status === "local" ? (
@@ -508,6 +528,18 @@ function DeviceHostList({
                   </details>
                 </div>
               ) : null}
+              {!compact
+                ? results.map((result) =>
+                    result.state ? (
+                      <DeviceHostDiagnostics
+                        key={result.environmentId}
+                        className="mt-1"
+                        hosts={[result.host]}
+                        hostStatuses={result.state.hostStatuses}
+                      />
+                    ) : null,
+                  )
+                : null}
             </div>
             {!compact && progress ? (
               <span

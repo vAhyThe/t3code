@@ -61,7 +61,7 @@ export function useReviewGuideWriter({
         title: currentTranslator()("pullRequest.couldNotStartGuide"),
         description: readableFailure(
           squashAtomCommandFailure(result),
-          currentTranslator()("pullRequest.checkGuideModel"),
+          "Check the review guide model in Settings → Source control.",
         ),
       });
     }

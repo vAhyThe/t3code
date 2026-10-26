@@ -87,9 +87,7 @@ function readAuthorizationRequest(): AuthMcpAuthorizationRequest {
   return Object.fromEntries(new URL(window.location.href).searchParams);
 }
 
-/**
- * A session may only grant access whose scopes it holds itself.
- */
+/** Sessions can grant only scopes they hold. */
 function oneClickApproves(details: AuthMcpApprovalDetails, access: AuthMcpClientAccess) {
   return details.csrfToken !== undefined && (details.oneClickAccess ?? []).includes(access);
 }
@@ -187,6 +185,7 @@ export function ConnectAgentSurface() {
             k="shellDevice.authAgentWantsThreads"
             params={{ host: details.environmentHost }}
             components={{
+              // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
               host: (children) => <span className="font-medium text-foreground">{children}</span>,
             }}
           />
@@ -200,6 +199,7 @@ export function ConnectAgentSurface() {
             k="shellDevice.authRedirectRemote"
             params={{ host: details.redirectHost }}
             components={{
+              // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
               host: (children) => <span className="font-medium text-foreground">{children}</span>,
             }}
           />
@@ -249,6 +249,7 @@ export function ConnectAgentSurface() {
             <p className="text-xs text-muted-foreground">
               <Trans
                 k="shellDevice.authPairingCodeHelp"
+                // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
                 components={{ code: (children) => <code>{children}</code> }}
               />
             </p>

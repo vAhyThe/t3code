@@ -1,10 +1,11 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { BookmarkIcon, FileIcon, FileTextIcon } from "lucide-react";
-import { memo, useEffect, useRef, useState, type RefObject } from "react";
+import { memo, useEffect, useEffectEvent, useRef, useState, type RefObject } from "react";
 import { assistantCitationsToPlainText } from "@t3tools/shared/assistantCitations";
 
 import { RelativeTime } from "../RelativeTime";
 import { cn } from "~/lib/utils";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+
 import { type PromptStashEntry } from "../../promptStashStore";
 import { ComposerBanner } from "./ComposerBanner";
 
@@ -33,10 +34,7 @@ function stashEntrySnippet(entry: PromptStashEntry): string {
       : t("chat.stashSnippetImages", { count: attachmentCount });
 }
 
-/**
- * The listener runs capture-phase on window so it wins over the composer's handlers while the
- * menu is open.
- */
+/** Window capture gives the open menu priority over composer key handlers. */
 export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
   entries: ReadonlyArray<PromptStashEntry>;
   stashShortcutLabel: string | null;
@@ -46,91 +44,95 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
   onClose: () => void;
 }) {
   const { entries, stashShortcutLabel, composerFormRef, onRestore, onDelete, onClose } = props;
-  const t = useT();
-  const drawerRef = useRef<HTMLDivElement>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(entries[0]?.id ?? null);
 
   const highlightedEntry = entries.find((entry) => entry.id === highlightedId) ?? entries[0];
+  const drawerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const closeOnOutsidePointer = (event: PointerEvent) => {
-      const drawer = drawerRef.current;
-      if (
-        (drawer && event.composedPath().includes(drawer)) ||
-        (event.target instanceof Element &&
-          event.target.closest('[data-prompt-stash-badge="true"]'))
-      ) {
-        return;
-      }
+  // Both listeners read entries, highlight and callbacks at event time, so they subscribe
+  // once for the menu's lifetime instead of on every highlight change.
+  const closeOnOutsidePointer = useEffectEvent((event: PointerEvent) => {
+    const drawer = drawerRef.current;
+    if (
+      (drawer && event.composedPath().includes(drawer)) ||
+      (event.target instanceof Element && event.target.closest('[data-prompt-stash-badge="true"]'))
+    ) {
+      return;
+    }
+    onClose();
+  });
+
+  const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const target = event.target;
+    if (
+      !(target instanceof Node) ||
+      (target !== document.body &&
+        !(target instanceof Element && target.closest('[data-prompt-stash-badge="true"]')) &&
+        !drawer.contains(target) &&
+        !composerFormRef.current?.querySelector('textarea, [role="textbox"]')?.contains(target))
+    ) {
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
       onClose();
-    };
-    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
-  }, [onClose]);
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (entries.length === 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const currentIndex = entries.findIndex((entry) => entry.id === highlightedEntry?.id);
+      const offset = event.key === "ArrowDown" ? 1 : -1;
+      const normalizedIndex = currentIndex >= 0 ? currentIndex : offset === 1 ? -1 : 0;
+      const nextIndex = (normalizedIndex + offset + entries.length) % entries.length;
+      setHighlightedId(entries[nextIndex]?.id ?? null);
+      const nextButton =
+        drawer.querySelectorAll<HTMLButtonElement>("[data-stash-restore]")[nextIndex];
+      nextButton?.scrollIntoView({ block: "nearest" });
+      if (drawer.contains(document.activeElement)) {
+        nextButton?.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (event.key === "Enter") {
+      // Let the delete button handle Enter instead of restoring its row.
+      if (event.target instanceof HTMLElement && event.target.closest("button[aria-label]")) {
+        return;
+      }
+      if (!highlightedEntry) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onRestore(highlightedEntry);
+      return;
+    }
+    if (event.key === "Backspace" && (event.metaKey || event.ctrlKey)) {
+      if (!highlightedEntry) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onDelete(highlightedEntry);
+    }
+  });
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      const target = event.target;
-      if (
-        !(target instanceof Node) ||
-        (target !== document.body &&
-          !(target instanceof Element && target.closest('[data-prompt-stash-badge="true"]')) &&
-          !drawerRef.current?.contains(target) &&
-          !composerFormRef.current?.querySelector('textarea, [role="textbox"]')?.contains(target))
-      ) {
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        if (entries.length === 0) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const currentIndex = entries.findIndex((entry) => entry.id === highlightedEntry?.id);
-        const offset = event.key === "ArrowDown" ? 1 : -1;
-        const normalizedIndex = currentIndex >= 0 ? currentIndex : offset === 1 ? -1 : 0;
-        const nextIndex = (normalizedIndex + offset + entries.length) % entries.length;
-        setHighlightedId(entries[nextIndex]?.id ?? null);
-        const nextButton =
-          drawerRef.current?.querySelectorAll<HTMLButtonElement>("[data-stash-restore]")[nextIndex];
-        nextButton?.scrollIntoView({ block: "nearest" });
-        if (drawerRef.current?.contains(document.activeElement)) {
-          nextButton?.focus({ preventScroll: true });
-        }
-        return;
-      }
-      if (event.key === "Enter") {
-        // A focused control inside the row (the delete button) owns its own
-        // activation; swallowing Enter here would restore instead of delete.
-        if (event.target instanceof HTMLElement && event.target.closest("button[aria-label]")) {
-          return;
-        }
-        if (!highlightedEntry) return;
-        event.preventDefault();
-        event.stopPropagation();
-        onRestore(highlightedEntry);
-        return;
-      }
-      if (event.key === "Backspace" && (event.metaKey || event.ctrlKey)) {
-        if (!highlightedEntry) return;
-        event.preventDefault();
-        event.stopPropagation();
-        onDelete(highlightedEntry);
-      }
+    const onPointerDown = (event: PointerEvent) => closeOnOutsidePointer(event);
+    const onKeyDown = (event: KeyboardEvent) => handleKeyDown(event);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("keydown", onKeyDown, true);
     };
-    window.addEventListener("keydown", handler, true);
-    return () => window.removeEventListener("keydown", handler, true);
-  }, [composerFormRef, entries, highlightedEntry, onClose, onDelete, onRestore]);
+  }, []);
 
   return (
     <ComposerBanner.Root ref={drawerRef} data-composer-stash-drawer="true">
       <ComposerBanner.Row
         render={<button type="button" />}
-        aria-label={t("chat.stashMenuClose")}
+        aria-label={currentTranslator()("chat.stashMenuClose")}
         aria-expanded="true"
         onPointerDown={(event) => event.preventDefault()}
         onClick={onClose}
@@ -139,7 +141,7 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
           <BookmarkIcon />
         </ComposerBanner.Icon>
         <ComposerBanner.Content className="text-muted-foreground">
-          {t("chat.stashMenuTitle")}
+          {currentTranslator()("chat.stashMenuTitle")}
         </ComposerBanner.Content>
         <ComposerBanner.Actions>
           <ComposerBanner.Count>{entries.length}</ComposerBanner.Count>
@@ -149,15 +151,17 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
       <ComposerBanner.Scroll>
         <ComposerBanner.Children
           render={<ul role="list" />}
-          aria-label={t("chat.stashMenuListLabel")}
+          aria-label={currentTranslator()("chat.stashMenuListLabel")}
         >
           {entries.length === 0 ? (
             <ComposerBanner.Row render={<li />}>
               <ComposerBanner.Icon />
               <ComposerBanner.Content className="text-muted-foreground">
                 {stashShortcutLabel
-                  ? t("chat.stashMenuEmptyWithShortcut", { shortcut: stashShortcutLabel })
-                  : t("chat.stashMenuEmpty")}
+                  ? currentTranslator()("chat.stashMenuEmptyWithShortcut", {
+                      shortcut: stashShortcutLabel,
+                    })
+                  : currentTranslator()("chat.stashMenuEmpty")}
               </ComposerBanner.Content>
             </ComposerBanner.Row>
           ) : (
@@ -184,7 +188,7 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                     type="button"
                     className="min-w-0 flex-1 cursor-pointer truncate text-left text-foreground/80 outline-none before:absolute before:inset-0 before:rounded-sm focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-ring"
                     data-stash-restore={entry.id}
-                    aria-label={t("chat.stashMenuRestoreAria", {
+                    aria-label={currentTranslator()("chat.stashMenuRestoreAria", {
                       snippet: stashEntrySnippet(entry),
                     })}
                     onPointerDown={(event) => event.preventDefault()}
@@ -196,11 +200,15 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                 <ComposerBanner.Actions>
                   {entry.pendingImageCount ? (
                     <span className="shrink-0 text-muted-foreground">
-                      {t("chat.stashSavingImages", { count: entry.pendingImageCount })}
+                      {currentTranslator()("chat.stashSavingImages", {
+                        count: entry.pendingImageCount,
+                      })}
                     </span>
                   ) : missingImageCount(entry) > 0 ? (
                     <span className="shrink-0 text-warning-foreground">
-                      {t("chat.stashImagesDropped", { count: missingImageCount(entry) })}
+                      {currentTranslator()("chat.stashImagesDropped", {
+                        count: missingImageCount(entry),
+                      })}
                     </span>
                   ) : null}
                   {entry.attachments.length > 0 ? (
@@ -230,7 +238,7 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                   </time>
                   <ComposerBanner.Dismiss
                     className="z-10"
-                    aria-label={t("chat.stashMenuDelete")}
+                    aria-label={currentTranslator()("chat.stashMenuDelete")}
                     onPointerDown={(event) => event.preventDefault()}
                     onClick={() => onDelete(entry)}
                   />

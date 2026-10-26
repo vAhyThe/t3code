@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useAtomValue } from "@effect/atom-react";
 import {
   AuthEnvironmentMaintainScope,
@@ -18,7 +19,7 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import { CircleArrowUpIcon } from "lucide-react";
-import { type ComponentProps, type ReactNode, useRef, useState } from "react";
+import { type ComponentProps, useRef, useState } from "react";
 
 import { requestConfirmDialog } from "~/confirmDialog";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
@@ -30,7 +31,6 @@ import { manualServerUpdateCommand } from "~/versionSkew";
 import { Button } from "./ui/button";
 import { toastManager } from "./ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
-import { currentTranslator } from "~/i18n/I18nProvider";
 
 const UPDATE_STAGE_LABELS: Record<ServerUpdateStage, string> = {
   downloading: "Downloading…",
@@ -58,16 +58,6 @@ export interface ServerUpdateTarget {
   readonly threadContinuation?: boolean;
   readonly targetVersion: string;
   readonly continueThreadsAfterServerUpdate?: boolean;
-}
-
-export type PendingServerUpdate = Omit<ServerUpdateTarget, "continueThreadsAfterServerUpdate"> & {
-  readonly serverVersion: string;
-};
-
-export interface ServerUpdateControl {
-  readonly label: string;
-  readonly disabled: boolean;
-  readonly onClick: () => void;
 }
 
 type UpdateButtonProps = Pick<ComponentProps<typeof Button>, "variant" | "size" | "className"> & {
@@ -217,10 +207,7 @@ export function ServerUpdateProgress({
   );
 }
 
-/**
- * Self-updates delegate their full lifecycle to client-runtime so this component can unmount
- * during reconnect without losing operation state.
- */
+/** client-runtime owns self-updates so unmounting during reconnect preserves operation state. */
 export function ServerUpdateAction({
   environmentId,
   serverLabel,
@@ -234,14 +221,8 @@ export function ServerUpdateAction({
   size = "xs",
   className,
   appearance = "button",
-  render,
-}: Omit<ServerUpdateTarget, "continueThreadsAfterServerUpdate"> &
-  UpdateButtonProps & {
-    readonly render?: (control: ServerUpdateControl) => ReactNode;
-  }) {
-  const t = currentTranslator();
+}: Omit<ServerUpdateTarget, "continueThreadsAfterServerUpdate"> & UpdateButtonProps) {
   const isDesktopAppUpdate = selfUpdate === "desktop-managed";
-  const unsupportedDesktopUpdate = isDesktopAppUpdate && !desktopAppUpdate;
   const sessionStateAtom = environmentSession.sessionStateAtom(environmentId);
   const canUpdate = canUpdateServer(useAtomValue(sessionStateAtom));
   const continueThreadsAfterServerUpdate = useEnvironmentSettings(
@@ -275,7 +256,6 @@ export function ServerUpdateAction({
 
   const handleUpdate = async () => {
     if (
-      unsupportedDesktopUpdate ||
       !canUpdateServer(appAtomRegistry.get(sessionStateAtom)) ||
       pendingUpdateEnvironmentIds.has(environmentId)
     ) {
@@ -302,30 +282,26 @@ export function ServerUpdateAction({
     });
   };
 
-  const manualCommand =
-    selfUpdate === null ? manualServerUpdateCommand(targetVersion, installation) : null;
-  const actionLabel = unsupportedDesktopUpdate
-    ? "Update the desktop app on"
-    : manualCommand !== null
-      ? installation?.kind === "npm-global"
-        ? t("shellRest.copyUpdateCommand")
-        : t("shellRest.copyRelaunchCommand")
-      : label;
-  const onClick =
-    manualCommand !== null
-      ? () => copyToClipboard(manualCommand, { command: manualCommand })
-      : () => void handleUpdate();
-  const disabled = unsupportedDesktopUpdate || (manualCommand === null && !canUpdate);
-
-  if (render) return render({ label: actionLabel, disabled, onClick });
-
-  if (unsupportedDesktopUpdate) {
+  if (selfUpdate === "desktop-managed" && !desktopAppUpdate) {
     return (
       <span className="text-muted-foreground text-xs">
         {currentTranslator()("shellRest.updateDesktopForServer")}
       </span>
     );
   }
+
+  const manualCommand =
+    selfUpdate === null ? manualServerUpdateCommand(targetVersion, installation) : null;
+  const actionLabel =
+    manualCommand !== null
+      ? installation?.kind === "npm-global"
+        ? currentTranslator()("shellRest.copyUpdateCommand")
+        : currentTranslator()("shellRest.copyRelaunchCommand")
+      : label;
+  const onClick =
+    manualCommand !== null
+      ? () => copyToClipboard(manualCommand, { command: manualCommand })
+      : () => void handleUpdate();
 
   if (appearance === "icon") {
     return (
@@ -336,11 +312,11 @@ export function ServerUpdateAction({
               size="icon-xs"
               variant="ghost-muted"
               className={className}
-              aria-label={t("shellRest.actionForServer", {
+              aria-label={currentTranslator()("shellRest.actionForServer", {
                 action: actionLabel,
                 server: serverLabel,
               })}
-              disabled={disabled}
+              disabled={manualCommand === null && !canUpdate}
               onClick={onClick}
             />
           }
@@ -357,7 +333,7 @@ export function ServerUpdateAction({
       size={size}
       variant={variant}
       className={className}
-      disabled={disabled}
+      disabled={manualCommand === null && !canUpdate}
       onClick={onClick}
     >
       {actionLabel}
@@ -365,9 +341,7 @@ export function ServerUpdateAction({
   );
 }
 
-/**
- * Its version comes from the host descriptor because the host never delivers a server config.
- */
+/** Read the host descriptor's version because the host never delivers server config. */
 export function OutdatedServerUpdateAction({
   environmentId,
   serverLabel,

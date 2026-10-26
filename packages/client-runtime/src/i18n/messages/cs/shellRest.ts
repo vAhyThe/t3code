@@ -666,7 +666,7 @@ export const shellRest = {
   unableToOpenPath: "Cestu nelze otevřít",
   terminalWriteFailed: "Zápis do terminálu selhal",
   unableToInitializeTerminal: "Nelze inicializovat libghostty-vt",
-  closeAndReopenTerminal: "{message} — zavřete terminál a otevřete jej znovu.",
+  closeAndReopenTerminal: "{message}. zavřete terminál a otevřete jej znovu.",
   splitTerminalHorizontally: "Rozdělit terminál vodorovně",
   splitTerminalHorizontallyMax: "Rozdělit terminál vodorovně (max. {max} v jedné skupině)",
   splitTerminalHorizontallyShortcut: "Rozdělit terminál vodorovně ({shortcut})",

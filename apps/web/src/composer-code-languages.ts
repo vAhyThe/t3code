@@ -13,7 +13,7 @@ export const CODE_BLOCK_LANGUAGES = [
   { id: "csharp", label: "C#" }, // i18n-ignore: language name in the picker
   { id: "css", label: "CSS" }, // i18n-ignore: language name in the picker
   { id: "dart", label: "Dart" }, // i18n-ignore: language name in the picker
-  { id: "diff", label: "Diff" }, // i18n-ignore: language name in the picker
+  { id: "diff", label: currentTranslator()("shellNav.surfaceDiff") }, // i18n-ignore: language name in the picker
   { id: "dockerfile", label: "Dockerfile" }, // i18n-ignore: language name in the picker
   { id: "elixir", label: "Elixir" }, // i18n-ignore: language name in the picker
   { id: "go", label: "Go" }, // i18n-ignore: language name in the picker
@@ -67,10 +67,7 @@ export function languageOfInfoString(info: string): string {
   return info.trim().split(/\s+/, 1)[0] ?? "";
 }
 
-/**
- * Plain text clears it, unless something follows: a bare `title=x` would read
- * as the language, so that keeps `text` in front.
- */
+/** Plain text clears the language unless trailing metadata would be parsed as one. */
 export function withInfoStringLanguage(info: string, language: string): string {
   const leading = /^\s*/.exec(info)![0];
   const rest = info.slice(leading.length + languageOfInfoString(info).length);

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import type { OtlpEndpointCheckResult, OtlpSignal } from "@t3tools/contracts";
+import type { OtlpEndpointCheckResult, OtlpSignal, ServerObservability } from "@t3tools/contracts";
 import { useEffect, useEffectEvent, useState } from "react";
 
 import { serverEnvironment } from "../../state/server";
@@ -15,12 +15,43 @@ import { SettingsSection } from "./settingsLayout";
 import { SettingsScopeNotice } from "./SettingsScopeNotice";
 
 const SIGNALS = [
-  { key: "otlpTracesUrl", endpointKey: "settingsD.tracesEndpoint", signal: "traces" },
-  { key: "otlpMetricsUrl", endpointKey: "settingsD.metricsEndpoint", signal: "metrics" },
-  { key: "otlpLogsUrl", endpointKey: "settingsD.logsEndpoint", signal: "logs" },
+  {
+    key: "otlpTracesUrl",
+    sourceKey: "otlpTracesSource",
+    variableKey: "otlpTracesVariable",
+    label: currentTranslator()("updates.traces"),
+    signal: "traces",
+  },
+  {
+    key: "otlpMetricsUrl",
+    sourceKey: "otlpMetricsSource",
+    variableKey: "otlpMetricsVariable",
+    label: currentTranslator()("updates.metrics"),
+    signal: "metrics",
+  },
+  {
+    key: "otlpLogsUrl",
+    sourceKey: "otlpLogsSource",
+    variableKey: "otlpLogsVariable",
+    label: currentTranslator()("updates.logs"),
+    signal: "logs",
+  },
 ] as const;
 
-type SignalKey = (typeof SIGNALS)[number]["key"];
+type SignalDescriptor = (typeof SIGNALS)[number];
+type SignalKey = SignalDescriptor["key"];
+
+const OVERRIDE_LABELS = { environment: "Set by environment", bootstrap: "Set by desktop" } as const;
+
+function runningOverride(
+  running: ServerObservability | undefined,
+  { key, sourceKey, variableKey }: SignalDescriptor,
+) {
+  const url = running?.[key];
+  const source = running?.[sourceKey];
+  if (url === undefined || (source !== "environment" && source !== "bootstrap")) return undefined;
+  return { url, label: OVERRIDE_LABELS[source], variable: running?.[variableKey] };
+}
 
 type EndpointCheck = { readonly url: string; readonly result: OtlpEndpointCheckResult | null };
 
@@ -80,12 +111,13 @@ function TelemetryExportForm() {
   );
   const canCheck =
     canEdit && environment?.serverConfig?.environment.capabilities.otlpEndpointCheck === true;
+  const running = environment?.serverConfig?.observability;
   const [checks, setChecks] = useState<Partial<Record<SignalKey, EndpointCheck>>>(() =>
     Object.fromEntries(
-      SIGNALS.filter(({ key }) => isHttpUrl(saved[key])).map(({ key }) => [
-        key,
-        { url: saved[key], result: null },
-      ]),
+      SIGNALS.flatMap((descriptor) => {
+        const url = runningOverride(running, descriptor)?.url ?? saved[descriptor.key];
+        return isHttpUrl(url) ? [[descriptor.key, { url, result: null }]] : [];
+      }),
     ),
   );
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, { reportFailure: true });
@@ -93,7 +125,6 @@ function TelemetryExportForm() {
   const values = { ...saved, ...draft };
   const changedSignals = SIGNALS.filter(({ key }) => values[key].trim() !== saved[key]);
   const changed = changedSignals.length > 0;
-  const running = environment?.serverConfig?.observability;
 
   const sendCheck = async (key: SignalKey, signal: OtlpSignal, url: string) => {
     if (!environmentId) return;
@@ -158,15 +189,23 @@ function TelemetryExportForm() {
             })}
           </p>
         )}
-        {SIGNALS.map(({ key, endpointKey, signal }) => {
-          const url = values[key].trim();
-          const status = canCheck ? endpointStatus(url, checks[key]) : null;
+        {SIGNALS.map((descriptor) => {
+          const { key, label, signal } = descriptor;
+          const override = runningOverride(running, descriptor);
+          const url = override?.url ?? values[key].trim();
+          const check = canCheck ? endpointStatus(url, checks[key]) : null;
+          const status = override
+            ? {
+                label: check ? `${override.label} · ${check.label}` : override.label,
+                dot: check?.dot ?? "bg-muted-foreground/40",
+              }
+            : check;
           return (
             <div key={key} className="grid gap-1.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
                   {status && <ConnectionStatusDot dotClassName={status.dot} />}
-                  <Label htmlFor={key}>{t(endpointKey)}</Label>
+                  <Label htmlFor={key}>{label}</Label>
                 </div>
                 {status && <span className="text-xs text-muted-foreground">{status.label}</span>}
               </div>
@@ -185,8 +224,7 @@ function TelemetryExportForm() {
                   disabled={saving || !canEdit}
                   onChange={(event) => {
                     const value = event.target.value;
-                    // Restoring the saved value drops the draft, so a later save can't resend it
-                    // over another client's change.
+                    // Clear restored drafts so later saves cannot overwrite another client's changes.
                     setDraft((previous) => {
                       const next = { ...previous, [key]: value };
                       if (value.trim() === saved[key]) delete next[key];
@@ -207,9 +245,16 @@ function TelemetryExportForm() {
                   </Button>
                 )}
               </div>
-              {saved[key] !== (running?.[key] ?? "") && (
+              {(saved[key] !== (running?.[key] ?? "") || override?.variable) && (
                 <p className="break-all text-xs text-muted-foreground">
-                  {t("settingsD.running")} {running?.[key] || t("settingsD.disabled")}
+                  {currentTranslator()("settingsD.running")}{" "}
+                  {running?.[key] || currentTranslator()("settingsA.acpDisabled")}
+                  {override?.variable && (
+                    <>
+                      {" "}
+                      from <code className="font-mono">{override.variable}</code>
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -229,7 +274,9 @@ function TelemetryExportForm() {
                 setDraft({});
                 setMessage(null);
                 if (!canCheck) return;
-                for (const { key, signal } of SIGNALS) {
+                for (const descriptor of SIGNALS) {
+                  const { key, signal } = descriptor;
+                  if (runningOverride(running, descriptor)) continue;
                   if (checks[key]?.url !== saved[key]) checkEndpoint(key, signal, saved[key]);
                 }
               }}

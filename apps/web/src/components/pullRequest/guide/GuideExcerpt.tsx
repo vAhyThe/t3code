@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type {
   DiffLineAnnotation,
   FileDiffContentsLoader,
@@ -9,7 +10,7 @@ import type { PullRequestReviewGuideExcerpt, PullRequestReviewPosition } from "@
 import { ArrowUpRightIcon } from "lucide-react";
 import { useState } from "react";
 
-import { useTheme } from "~/hooks/useTheme";
+import { useRenderedAppearance } from "~/hooks/useTheme";
 import {
   getRenderablePatch,
   resolveDiffThemeName,
@@ -18,7 +19,7 @@ import {
 import { PREFERRED_HIGHLIGHTER } from "~/lib/syntaxHighlighting";
 import {
   buildDiffReviewComment,
-  resolveDiffReviewPosition,
+  resolveDiffReviewAnchor,
   type ReviewCommentContext,
 } from "~/reviewCommentContext";
 
@@ -39,7 +40,6 @@ import {
 } from "@t3tools/client-runtime/review-guide-tour";
 import { GuideNoteMarker } from "./GuideNotes";
 import { GuideProse } from "./GuideProse";
-import { useT } from "../../../i18n/I18nProvider";
 
 const EXCERPT_UNSAFE_CSS = `${DIFF_VIEW_UNSAFE_CSS}
 [data-code]::-webkit-scrollbar-thumb {
@@ -54,11 +54,14 @@ export interface ExcerptNoteMarker {
 
 export interface ExcerptCommenting {
   readonly canComment: boolean;
+  /** The host anchors a comment to a range of lines rather than to its last one. */
+  readonly rangeComments: boolean;
   readonly pending: ReadonlyArray<PendingReviewComment>;
   readonly onComment: (comment: {
     readonly path: string;
     readonly oldPath: string | null;
     readonly position: PullRequestReviewPosition;
+    readonly startPosition?: PullRequestReviewPosition | undefined;
     readonly body: string;
   }) => void;
   readonly onRemove: (commentId: string) => void;
@@ -74,6 +77,7 @@ interface ExcerptAnnotation {
 interface ExcerptDraft {
   readonly range: SelectedLineRange;
   readonly position: PullRequestReviewPosition;
+  readonly startPosition?: PullRequestReviewPosition;
 }
 
 type ExcerptSlice = NonNullable<ReturnType<typeof excerptSlice>>;
@@ -96,9 +100,7 @@ function excerptSlice(file: FileDiffMetadata | null, excerpt: PullRequestReviewG
   return { fileDiff, rows: shown, shown: shown.length, total: rows.length, drawn };
 }
 
-// The excerpt expands against an old side of its own: the file's real old side differs from
-// the new one wherever another hunk changed it, and the renderer needs the two to agree around
-// the lines it shows. A slice across hunks has nothing consistent to expand into.
+// Other hunks shift old-side context; expand against an excerpt-matching old side.
 function excerptLoader(
   excerpt: PullRequestReviewGuideExcerpt,
   sliceRows: ExcerptSlice["rows"],
@@ -139,8 +141,7 @@ export function GuideExcerpt({
   loadDiffFiles: FileDiffContentsLoader;
   onOpenFile: (path: string) => void;
 }) {
-  const t = useT();
-  // Kept here, not in ExcerptDiff, so a selection survives the diff reloading for a new head.
+  // Keep selections outside ExcerptDiff to survive head reloads.
   const [draft, setDraft] = useState<ExcerptDraft | null>(null);
   const slice = excerptSlice(file, excerpt);
 
@@ -165,7 +166,7 @@ export function GuideExcerpt({
         />
       ) : loading ? (
         <p className="rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
-          {t("pullRequest.loadingPath", { path: excerpt.path })}
+          {currentTranslator()("pullRequest.loadingPath", { path: excerpt.path })}
         </p>
       ) : (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
@@ -174,7 +175,7 @@ export function GuideExcerpt({
             {excerpt.end} are not in the loaded diff.
           </span>
           <Button size="xs" variant="outline" onClick={() => onOpenFile(excerpt.path)}>
-            {t("pullRequest.openInCode")}
+            {currentTranslator()("pullRequest.openInCode")}
           </Button>
         </div>
       )}
@@ -182,7 +183,6 @@ export function GuideExcerpt({
   );
 }
 
-// Split out so draft changes re-render the diff without re-slicing the patch.
 function ExcerptDiff({
   excerpt,
   file,
@@ -204,8 +204,7 @@ function ExcerptDiff({
   commenting: ExcerptCommenting | null;
   onOpenFile: (path: string) => void;
 }) {
-  const t = useT();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useRenderedAppearance();
   const loadExcerptFiles = excerptLoader(excerpt, slice.rows, loadDiffFiles);
 
   const annotations = (() => {
@@ -256,9 +255,9 @@ function ExcerptDiff({
 
   const beginComment = (range: SelectedLineRange | null) => {
     if (range === null) return;
-    const position = resolveDiffReviewPosition(file, range.end, range.endSide ?? range.side);
-    if (position === null) return;
-    setDraft({ range, position });
+    const anchor = resolveDiffReviewAnchor(file, range, commenting?.rangeComments === true);
+    if (anchor === null) return;
+    setDraft({ range, ...anchor });
   };
   const interactive = commenting !== null && draft === null;
   const onAskAgent = commenting?.onAskAgent ?? null;
@@ -327,16 +326,18 @@ function ExcerptDiff({
                 text=""
                 placeholder={
                   commenting.canComment
-                    ? t("pullRequest.addCommentDots")
-                    : t("pullRequest.askAgentAboutLines")
+                    ? currentTranslator()("pullRequest.addCommentDots")
+                    : currentTranslator()("pullRequest.askAgentAboutLines")
                 }
                 submitLabel={
-                  commenting.canComment ? t("pullRequest.addToReview") : t("pullRequest.askAgent")
+                  commenting.canComment
+                    ? currentTranslator()("pullRequest.addToReview")
+                    : currentTranslator()("pullRequest.askAgent")
                 }
                 {...(commenting.canComment && onAskAgent !== null
                   ? {
                       secondaryAction: {
-                        label: t("pullRequest.askAgent"),
+                        label: currentTranslator()("pullRequest.askAgent"),
                         onAction: (text: string) => askAgent(text),
                       },
                     }
@@ -351,6 +352,7 @@ function ExcerptDiff({
                     path: excerpt.path,
                     oldPath: previousPathOf(file, excerpt.path),
                     position: draft.position,
+                    startPosition: draft.startPosition,
                     body,
                   });
                   setDraft(null);
@@ -368,7 +370,7 @@ function ExcerptDiff({
             <Button
               size="icon-xs"
               variant="ghost-muted"
-              aria-label={t("pullRequest.openPathInCode", { path: excerpt.path })}
+              aria-label={currentTranslator()("pullRequest.openPathInCode", { path: excerpt.path })}
               onClick={() => onOpenFile(excerpt.path)}
             >
               <ArrowUpRightIcon aria-hidden />

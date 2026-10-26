@@ -79,7 +79,11 @@ export function CodexSetupSection(props: CodexSetupSectionProps) {
     props.mode === "existing" && props.presentation === "onboarding" ? (
       <CodexWelcomeCard
         // i18n-ignore: product name
-        title={props.displayName || props.provider?.displayName || "Codex"}
+        title={
+          props.displayName ||
+          props.provider?.displayName ||
+          currentTranslator()("shellDevice.onboardingBrandCodex")
+        }
         description={
           existingReady ? (
             existingEmail ? (
@@ -87,6 +91,7 @@ export function CodexSetupSection(props: CodexSetupSectionProps) {
                 k="settingsA.codexSignedInAs"
                 params={{ email: existingEmail }}
                 components={{
+                  // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
                   account: () => (
                     <RedactedSensitiveText
                       value={existingEmail}
@@ -140,11 +145,15 @@ export function CodexSetupSection(props: CodexSetupSectionProps) {
           ) : null
         }
       />
-    ) : props.mode === "existing" ? null : props.provider?.setup === undefined ? (
+    ) : props.mode === "existing" ? null : !props.provider?.setup?.canAuthenticate ? (
       props.presentation === "onboarding" ? (
         <CodexWelcomeCard
           // i18n-ignore: product name
-          title={props.displayName || props.provider?.displayName || "Codex"}
+          title={
+            props.displayName ||
+            props.provider?.displayName ||
+            currentTranslator()("shellDevice.onboardingBrandCodex")
+          }
           description={<CodexSignInDescription />}
           control={
             <Button size="sm" variant="outline" className="min-w-44" disabled>
@@ -602,6 +611,7 @@ function ManagedCodexSetup({
         k="settingsA.codexSignedInAs"
         params={{ email: authEmail }}
         components={{
+          // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
           account: () => (
             <RedactedSensitiveText
               value={authEmail}
@@ -781,7 +791,11 @@ function ManagedCodexSetup({
         {accountPicker}
         <CodexWelcomeCard
           // i18n-ignore: product name
-          title={displayName || provider?.displayName || "Codex"}
+          title={
+            displayName ||
+            provider?.displayName ||
+            currentTranslator()("shellDevice.onboardingBrandCodex")
+          }
           description={
             installActive ? (
               runtimeDescription
@@ -791,6 +805,7 @@ function ManagedCodexSetup({
                   k="settingsA.codexSignedInAs"
                   params={{ email: authEmail }}
                   components={{
+                    // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
                     account: () => (
                       <RedactedSensitiveText
                         value={authEmail}

@@ -1,15 +1,6 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off - A small synchronous CLI that prints its findings.
-/**
- * Lists strings that look user-facing but are not translated yet, so a rebase
- * onto a new upstream release shows exactly which new texts need a catalog key.
- *
- *   node scripts/i18n-audit.ts [path…]
- *
- * Prints `file:line: text` per candidate and exits 1 when it finds any. A
- * deliberate literal (brand, endonym, command) is marked with an
- * `i18n-ignore: <reason>` comment on its line, or alone on the line above.
- */
+/** Reports untranslated UI text; i18n-ignore comments exempt intentional literals. */
 import * as NodeFS from "node:fs";
 import * as NodePath from "node:path";
 import * as NodeProcess from "node:process";

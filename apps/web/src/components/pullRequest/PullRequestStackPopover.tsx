@@ -8,7 +8,7 @@ import { PullRequestStackHeader } from "./PullRequestStackHeader";
 import { PullRequestGlyph } from "./pullRequestIcons";
 import { useT } from "../../i18n/I18nProvider";
 
-/** Mounted only while the menu is open, so list rows do not each fetch a stack. */
+// Mount only on open to avoid per-row stack fetches.
 function StackBody({
   environmentId,
   reference,
