@@ -28,9 +28,6 @@ export function resolveEnvironmentIconPickerLock(input: {
   if (input.serverConfig === null) {
     return currentTranslator()("settingsB.iconLockDisconnected");
   }
-  if (input.serverConfig.environment.capabilities.environmentIcon !== true) {
-    return currentTranslator()("settingsB.iconLockOldServer");
-  }
   if (input.operateAccess !== "granted") {
     return currentTranslator()("settingsB.iconLockNoAccess");
   }

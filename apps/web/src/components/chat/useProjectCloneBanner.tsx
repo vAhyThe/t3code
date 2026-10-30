@@ -79,7 +79,6 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
       return {
         id: `project-clone:${projectId}`,
         variant: "info",
-        priority: "activity",
         icon: <DownloadIcon />,
         title: currentTranslator()("shellNav.cloningProject", { name: name }),
         description: projectCloneProgressSummary(activeProjectClone),

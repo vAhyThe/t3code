@@ -1,47 +1,40 @@
-import type { DesktopCliCommandState } from "@t3tools/contracts";
-import { useEffect, useState } from "react";
+import { currentTranslator } from "~/i18n/I18nProvider";
+import { useState } from "react";
 
+import {
+  desktopCliCommandStateAtom,
+  getDesktopCliCommandBridge,
+  refreshDesktopCliCommandState,
+} from "~/state/desktopCliCommand";
+import { useEnvironmentQuery } from "~/state/query";
 import { Button } from "../ui/button";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { SettingsRow } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
-import { useT } from "../../i18n/I18nProvider";
 
 export function CliCommandSettingsRow() {
-  const t = useT();
-  const bridge = typeof window === "undefined" ? undefined : window.desktopBridge?.cliCommand;
-  const [state, setState] = useState<DesktopCliCommandState | null>(null);
+  const bridge = getDesktopCliCommandBridge();
+  const query = useEnvironmentQuery(bridge ? desktopCliCommandStateAtom : null);
+  const state = query.data;
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    if (!bridge) return;
-    let cancelled = false;
-    void bridge
-      .getState()
-      .then((next) => {
-        if (!cancelled) setState(next);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [bridge]);
 
   const change = (action: "install" | "uninstall") => {
     if (!bridge || pending) return;
     setPending(true);
     void bridge[action]()
-      .then(setState)
+      .then(refreshDesktopCliCommandState)
       .catch((error: unknown) => {
         toastManager.add(
           stackedThreadToast({
             type: "error",
             title:
               action === "install"
-                ? t("settingsA.cliCommandInstallFailed")
-                : t("settingsA.cliCommandRemoveFailed"),
+                ? currentTranslator()("settingsA.cliCommandInstallFailed")
+                : currentTranslator()("settingsA.cliCommandRemoveFailed"),
             description:
-              error instanceof Error ? error.message : t("settingsA.cliCommandFallbackError"),
+              error instanceof Error
+                ? error.message
+                : currentTranslator()("settingsA.cliCommandFallbackError"),
           }),
         );
       })
@@ -51,12 +44,12 @@ export function CliCommandSettingsRow() {
   if (!bridge || !state?.supported) return null;
   const installed = state.installedPath !== null;
   const description = state.shadowedBy
-    ? t("settingsA.cliCommandShadowed", { path: state.shadowedBy })
+    ? currentTranslator()("settingsA.cliCommandShadowed", { path: state.shadowedBy })
     : !installed
-      ? t("settingsA.cliCommandNotInstalled")
+      ? currentTranslator()("settingsA.cliCommandNotInstalled")
       : state.onPath
-        ? t("settingsA.cliCommandInstalled", { path: state.installedPath ?? "" })
-        : t("settingsA.cliCommandNotOnPath", { path: state.installedPath ?? "" });
+        ? currentTranslator()("settingsA.cliCommandInstalled", { path: state.installedPath ?? "" })
+        : currentTranslator()("settingsA.cliCommandNotOnPath", { path: state.installedPath ?? "" });
 
   return (
     <SettingsRow
@@ -66,10 +59,12 @@ export function CliCommandSettingsRow() {
         <Button
           size="sm"
           variant="outline"
-          disabled={pending}
+          disabled={pending || query.isPending}
           onClick={() => change(installed ? "uninstall" : "install")}
         >
-          {installed ? t("settingsA.cliCommandRemove") : t("settingsA.cliCommandInstall")}
+          {installed
+            ? currentTranslator()("settingsA.cliCommandRemove")
+            : currentTranslator()("settingsA.cliCommandInstall")}
         </Button>
       }
     />

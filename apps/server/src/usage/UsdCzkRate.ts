@@ -34,7 +34,7 @@ export function parseCnbUsdRate(text: string): UsdCzkRateValue | null {
   return null;
 }
 
-export const make = Effect.gen(function* () {
+const make = Effect.gen(function* () {
   const httpClient = yield* HttpClient.HttpClient;
   const lock = yield* Semaphore.make(1);
   let rate: UsdCzkRateValue | null = null;

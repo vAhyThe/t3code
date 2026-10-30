@@ -283,7 +283,7 @@ export function resolveQuickAction(
     }
     return {
       // i18n-ignore: English label identifier, shown through gitActionLabelText
-      label: `Push & create ${terminology.shortLabel}`,
+      label: currentTranslator()("pullRequest.gitPushCreateTerm", { term: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
       action: "create_pr",
@@ -321,7 +321,7 @@ export function resolveQuickAction(
     }
     return {
       // i18n-ignore: English label identifier, shown through gitActionLabelText
-      label: `Push & create ${terminology.shortLabel}`,
+      label: currentTranslator()("pullRequest.gitPushCreateTerm", { term: terminology.shortLabel }),
       disabled: false,
       kind: "run_action",
       action: "create_pr",
@@ -462,8 +462,6 @@ export function resolveLiveThreadBranchUpdate(input: {
     branch: input.gitStatus.refName,
   };
 }
-
-export { resolveAutoFeatureBranchName } from "@t3tools/shared/git";
 
 const GIT_ACTION_LABEL_KEYS: Readonly<Record<string, MessageKey>> = {
   Commit: "pullRequest.gitCommit",

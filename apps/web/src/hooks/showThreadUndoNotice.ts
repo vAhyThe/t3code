@@ -1,4 +1,3 @@
-import type { MessageKey } from "@t3tools/client-runtime/i18n";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
@@ -11,8 +10,9 @@ import { shortcutLabelForCommand } from "../keybindings";
 import { announce, cancelAnnouncement } from "../lib/announce";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { primaryServerKeybindingsAtom } from "../state/server";
-import * as ThreadUndo from "./threadUndo";
+
 import { currentTranslator } from "~/i18n/I18nProvider";
+import * as ThreadUndo from "@t3tools/client-runtime/state/thread-undo";
 
 type UndoOptions = {
   action: "Settled" | "Snoozed" | "Unpinned" | "Archived" | "Discarded";
@@ -30,19 +30,9 @@ type UndoNotice = {
 
 export const useThreadUndoNotice = create<{ notice: UndoNotice | null }>(() => ({ notice: null }));
 
-const UNDO_NOTICE_KEYS: Record<
-  "Settled" | "Snoozed" | "Unpinned" | "Archived" | "Discarded",
-  MessageKey
-> = {
-  Settled: "shellNav.undoSettled",
-  Snoozed: "shellNav.undoSnoozed",
-  Unpinned: "shellNav.undoUnpinned",
-  Archived: "shellNav.undoArchived",
-  Discarded: "shellNav.undoDiscarded",
-};
-
-export function threadUndoNoticeSummary(notice: Pick<UndoNotice, "action" | "count">): string {
-  return currentTranslator()(UNDO_NOTICE_KEYS[notice.action], { count: notice.count });
+function threadUndoNoticeSummary(notice: Pick<UndoNotice, "action" | "count">): string {
+  const noun = notice.action === "Discarded" ? "draft" : "thread";
+  return `${notice.action} ${notice.count} ${noun}${notice.count === 1 ? "" : "s"}`;
 }
 
 export function threadUndoLabel(keybindings: Parameters<typeof shortcutLabelForCommand>[0]) {

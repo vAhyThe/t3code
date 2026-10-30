@@ -1,4 +1,5 @@
 import { currentTranslator } from "~/i18n/I18nProvider";
+import { pipe } from "effect/Function";
 import {
   IMAGE_DIMENSIONS_HEADER_BYTES,
   readImageDimensions,
@@ -222,7 +223,7 @@ const HTML_TAGS = new Set([
   "dd",
 ]);
 async function epubHtml(node: XmlNode, archive: JSZip, base: string): Promise<string> {
-  if (node.name === "#text") return boundedMarkup(escape(text(node)));
+  if (node.name === "#text") return pipe(text(node), escape, boundedMarkup);
   const tag =
     node.name
       .replace(/^\{[^}]*\}/, "")
@@ -250,7 +251,7 @@ async function epubHtml(node: XmlNode, archive: JSZip, base: string): Promise<st
   return `<${tag}${spans}>${children}</${tag}>`;
 }
 async function odfHtml(node: XmlNode, archive: JSZip): Promise<string> {
-  if (node.name === "#text") return boundedMarkup(escape(text(node)));
+  if (node.name === "#text") return pipe(text(node), escape, boundedMarkup);
   if (node.name === "text:s" || node.name === "text:tab")
     return boundedMarkup(
       `<span data-odf-whitespace>${node.name === "text:tab" ? "&#9;" : " ".repeat(repeat(node.attrs["text:c"], 100))}</span>`,

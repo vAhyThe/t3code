@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useT } from "~/i18n/I18nProvider";
 import { UserButton, useAuth } from "@clerk/react";
 import { LogInIcon } from "lucide-react";
@@ -30,14 +31,15 @@ function ConfiguredT3ConnectSidebarAvatar() {
       appearance={{
         elements: {
           avatarBox: "size-7",
-          userButtonTrigger: "rounded-lg p-1 hover:bg-sidebar-row-hover",
+          // Clerk's unlayered trigger reset (padding, radius, background) beats layered utilities.
+          userButtonTrigger: "mb-1! rounded-lg! p-1! hover:bg-sidebar-row-hover!",
         },
       }}
     >
       {T3_CONNECT_ACCOUNT_PAGES.map((page) => (
         <UserButton.UserProfilePage
           key={page.url}
-          label={t(page.labelKey)}
+          label={"labelKey" in page ? t(page.labelKey) : page.label}
           labelIcon={page.icon}
           url={page.url}
         >
@@ -49,23 +51,20 @@ function ConfiguredT3ConnectSidebarAvatar() {
 }
 
 function ConfiguredT3ConnectSidebarSignIn() {
-  const t = useT();
+  useT();
   const { isLoaded, isSignedIn } = useAuth();
-  const { authPrompt, openAuthPrompt } = useT3ConnectAuthPrompt();
+  const { openAuthPrompt } = useT3ConnectAuthPrompt();
 
   if (!isLoaded || isSignedIn) return null;
 
   return (
-    <>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton onClick={openAuthPrompt}>
-            <LogInIcon />
-            <span>{t("shellDevice.clerkSignInToT3Connect")}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-      {authPrompt}
-    </>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton onClick={openAuthPrompt}>
+          <LogInIcon />
+          <span>{currentTranslator()("shellDevice.clerkSignInToT3Connect")}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }

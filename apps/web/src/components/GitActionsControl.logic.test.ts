@@ -2,12 +2,12 @@ import { createTranslator } from "@t3tools/client-runtime/i18n";
 import { localeStore } from "~/i18n/I18nProvider";
 import { SourceControlProviderKind, type VcsStatusResult } from "@t3tools/contracts";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
+import { resolveAutoFeatureBranchName } from "@t3tools/shared/git";
 import { assert, describe, it } from "vite-plus/test";
 import {
   buildMenuItems,
   gitActionLabelText,
   requiresDefaultBranchConfirmation,
-  resolveAutoFeatureBranchName,
   resolveDefaultBranchActionDialogCopy,
   resolveLiveThreadBranchUpdate,
   resolveQuickAction,

@@ -7,7 +7,7 @@ import { AsyncResult, Atom } from "effect/reactivity";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { usePrimaryEnvironmentId } from "./environments";
 
-export const usdCzkRate = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
+const usdCzkRate = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
   label: "environment-data:server:usd-czk-rate", // i18n-ignore: atom query ID
   tag: WS_METHODS.serverGetUsdCzkRate,
   staleTimeMs: 60 * 60_000,

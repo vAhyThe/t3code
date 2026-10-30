@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { SessionPermissions } from "./SessionPermissions";
 import { ChevronRightIcon, EllipsisIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
@@ -36,6 +37,8 @@ import { LocalEnvironmentSetting } from "./LocalEnvironmentSetting";
 import { searchableSetting } from "./settingsSearch";
 import { EnvironmentIconMenu } from "./EnvironmentIconPicker";
 import { FoldedSettingsSection } from "./FoldedSettingsSection";
+import { LinkedEnvironmentsSettings } from "./LinkedEnvironmentsSettings";
+import { usePeerLinkHosts } from "~/state/peerLinks";
 import { LoadBalancingSettings } from "./LoadBalancingSettings";
 import { PullRequestRoutingSettings } from "./PullRequestRoutingSettings";
 import { Input } from "../ui/input";
@@ -80,7 +83,6 @@ import {
   resolveServerConfigVersionMismatch,
   resolveServerSelfUpdateCapability,
   supportsDesktopAppUpdate,
-  supportsServerUpdateThreadContinuation,
 } from "~/versionSkew";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { RemoveT3ConnectEnvironmentDialog } from "../clerk/RemoveT3ConnectEnvironmentDialog";
@@ -100,7 +102,7 @@ import {
   usePrimaryEnvironment,
 } from "~/state/environments";
 import { requestConfirmDialog } from "~/confirmDialog";
-import { currentTranslator, useT } from "~/i18n/I18nProvider";
+
 import { useAtomCommand } from "../../state/use-atom-command";
 import { environmentIdsKey } from "~/state/environmentAtomList";
 import { environmentUpdateStatesAtom, serverEnvironment } from "~/state/server";
@@ -121,13 +123,12 @@ import {
   endpointDefaultPreferenceKey,
 } from "./ConnectionsSettings.logic";
 import {
-  type AccessSectionPresentation,
-  accessRowClassName,
   AdvertisedEndpointListRow,
   AuthorizedClientsHeaderAction,
   NetworkAccessDescription,
   PairingClientsList,
 } from "./AuthorizedClientsSettings";
+import { ITEM_ROW_CLASSNAME } from "./itemRows";
 import {
   CloudLinkRow,
   CloudRemoteEnvironmentRows,
@@ -152,11 +153,12 @@ function LocalVersionStatusLabel() {
   );
 }
 
-export function ConnectionsSettings() {
-  const t = useT();
+/** Environments lists the machines this app connects to; access covers who may reach this one. */
+export function ConnectionsSettings({ view }: { readonly view: "environments" | "access" }) {
   const desktopBridge = window.desktopBridge;
   const { environments } = useEnvironments();
   const primaryEnvironment = usePrimaryEnvironment();
+  const peerLinkHosts = usePeerLinkHosts();
   const removeEnvironment = useAtomCommand(environmentCatalog.remove, { reportFailure: false });
   const setEnvironmentEnabled = useAtomCommand(environmentCatalog.setEnabled, {
     reportFailure: false,
@@ -205,9 +207,6 @@ export function ConnectionsSettings() {
           selfUpdate,
           installation: environment.serverConfig?.environment.capabilities.serverInstallation,
           desktopAppUpdate,
-          threadContinuation: supportsServerUpdateThreadContinuation(environment.serverConfig),
-          continueThreadsAfterServerUpdate:
-            environment.serverConfig?.settings.continueThreadsAfterServerUpdate ?? false,
           targetVersion: mismatch.clientVersion,
         },
       ];
@@ -287,8 +286,9 @@ export function ConnectionsSettings() {
   const canMaintain = useEnvironmentScope(primaryEnvironmentId, AuthEnvironmentMaintainScope);
   const canManageRelay = useEnvironmentScope(primaryEnvironmentId, AuthRelayWriteScope);
   const canManageLocalBackend = !isLocalEnvironmentDisabled() && canMaintain;
+  const showsAccess = view === "access";
   const authAccessChanges = useEnvironmentQuery(
-    canReadAccess && primaryEnvironmentId !== null
+    showsAccess && canReadAccess && primaryEnvironmentId !== null
       ? authEnvironment.accessChanges({
           environmentId: primaryEnvironmentId,
           input: null,
@@ -296,10 +296,10 @@ export function ConnectionsSettings() {
       : null,
   );
   const desktopNetworkAccess = useEnvironmentQuery(
-    canManageLocalBackend && desktopBridge ? desktopNetworkAccessStateAtom : null,
+    showsAccess && canManageLocalBackend && desktopBridge ? desktopNetworkAccessStateAtom : null,
   );
   const desktopWsl = useEnvironmentQuery(
-    canManageLocalBackend && desktopBridge ? desktopWslStateAtom : null,
+    showsAccess && canManageLocalBackend && desktopBridge ? desktopWslStateAtom : null,
   );
   const desktopWslState = desktopWsl.data;
   const desktopWslError = desktopWslMutationError ?? desktopWsl.error;
@@ -667,10 +667,10 @@ export function ConnectionsSettings() {
       onCheckedChange={(checked) => {
         setPendingDesktopServerExposureMode(checked ? "network-accessible" : "local-only");
       }}
-      aria-label={t("settingsA.connectionsEnableNetworkAccess")}
+      aria-label={currentTranslator()("settingsA.connectionsEnableNetworkAccess")}
     />
   );
-  const renderEndpointRows = (presentation: AccessSectionPresentation) =>
+  const renderEndpointRows = () =>
     isAdvertisedEndpointListExpanded
       ? visibleDesktopNetworkAdvertisedEndpoints.map((endpoint) => {
           const endpointKey = endpointDefaultPreferenceKey(endpoint);
@@ -679,7 +679,6 @@ export function ConnectionsSettings() {
               key={endpoint.id}
               endpoint={endpoint}
               isDefault={endpointKey === defaultDesktopAdvertisedEndpointKey}
-              presentation={presentation}
               onSetDefault={handleSetDefaultAdvertisedEndpoint}
               onSetupTailscaleServe={handleStartTailscaleServeSetup}
               onDisableTailscaleServe={handleStartTailscaleServeDisable}
@@ -810,7 +809,7 @@ export function ConnectionsSettings() {
         return (
           <SettingsRow
             {...searchableSetting("wsl-backend")}
-            description={t("settingsA.connectionsWslLoadFailed")}
+            description={currentTranslator()("settingsA.connectionsWslLoadFailed")}
             status={<span className="block text-destructive">{desktopWslError}</span>}
             control={
               <Button
@@ -819,7 +818,9 @@ export function ConnectionsSettings() {
                 onClick={loadWslState}
                 disabled={isLoadingWslState}
               >
-                {isLoadingWslState ? t("settingsA.connectionsRetrying") : t("common.retry")}
+                {isLoadingWslState
+                  ? currentTranslator()("settingsA.connectionsRetrying")
+                  : currentTranslator()("common.retry")}
               </Button>
             }
           />
@@ -834,7 +835,7 @@ export function ConnectionsSettings() {
       return (
         <SettingsRow
           {...searchableSetting("wsl-backend")}
-          description={t("settingsA.connectionsWslUnavailable")}
+          description={currentTranslator()("settingsA.connectionsWslUnavailable")}
           status={
             desktopWslError ? (
               <span className="block text-destructive">{desktopWslError}</span>
@@ -847,7 +848,7 @@ export function ConnectionsSettings() {
               disabled={isUpdatingWslBackend}
               onClick={() => handleSelectWslMode(BACKEND_VALUE_WSL_OFF)}
             >
-              {t("settingsA.connectionsSwitchToWindows")}
+              {currentTranslator()("settingsA.connectionsSwitchToWindows")}
             </Button>
           }
         />
@@ -860,21 +861,21 @@ export function ConnectionsSettings() {
       : (desktopWslState.distro ?? defaultDistroName ?? BACKEND_VALUE_DEFAULT_WSL);
     const selectLabel =
       selectValue === BACKEND_VALUE_WSL_OFF
-        ? t("settingsA.connectionsStatusOff")
+        ? currentTranslator()("settingsA.connectionsStatusOff")
         : selectValue === BACKEND_VALUE_DEFAULT_WSL
-          ? t("settingsA.connectionsDefaultDistro")
+          ? currentTranslator()("settingsA.connectionsDefaultDistro")
           : selectValue;
     return (
       <>
         <SettingsRow
           {...searchableSetting("wsl-backend")}
-          description={t("settingsA.connectionsWslRunDescription")}
+          description={currentTranslator()("settingsA.connectionsWslRunDescription")}
           status={
             desktopWslError ? (
               <span className="block text-destructive">{desktopWslError}</span>
             ) : desktopWslState.preflightError ? (
               <span className="block text-destructive">
-                {t("settingsA.connectionsWslPreflightFailed", {
+                {currentTranslator()("settingsA.connectionsWslPreflightFailed", {
                   error: desktopWslState.preflightError,
                 })}
               </span>
@@ -891,24 +892,26 @@ export function ConnectionsSettings() {
               <SelectTrigger
                 size="sm"
                 className="w-full sm:w-56"
-                aria-label={t("settingsA.connectionsWslBackendAria")}
+                aria-label={currentTranslator()("settingsA.connectionsWslBackendAria")}
                 disabled={isUpdatingWslBackend}
               >
                 <SelectValue>{selectLabel}</SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 <SelectItem hideIndicator value={BACKEND_VALUE_WSL_OFF}>
-                  {t("settingsA.connectionsStatusOff")}
+                  {currentTranslator()("settingsA.connectionsStatusOff")}
                 </SelectItem>
                 {desktopWslState.distros.length === 0 ? (
                   <SelectItem hideIndicator value={BACKEND_VALUE_DEFAULT_WSL}>
-                    {t("settingsA.connectionsDefaultDistro")}
+                    {currentTranslator()("settingsA.connectionsDefaultDistro")}
                   </SelectItem>
                 ) : (
                   desktopWslState.distros.map((distro) => (
                     <SelectItem hideIndicator key={distro.name} value={distro.name}>
                       {distro.name}
-                      {distro.isDefault ? t("settingsA.connectionsDistroDefaultSuffix") : ""}
+                      {distro.isDefault
+                        ? currentTranslator()("settingsA.connectionsDistroDefaultSuffix")
+                        : ""}
                     </SelectItem>
                   ))
                 )}
@@ -918,15 +921,15 @@ export function ConnectionsSettings() {
         />
         {desktopWslState.enabled ? (
           <SettingsRow
-            title={t("settingsA.connectionsWslOnly")}
-            description={t("settingsA.connectionsWslOnlyDescription")}
+            title={currentTranslator()("settingsA.connectionsWslOnly")}
+            description={currentTranslator()("settingsA.connectionsWslOnlyDescription")}
             className="bg-muted/20 pl-7 sm:pl-8"
             control={
               <Switch
                 checked={desktopWslState.wslOnly}
                 disabled={isUpdatingWslBackend}
                 onCheckedChange={(checked) => handleToggleWslOnly(checked)}
-                aria-label={t("settingsA.connectionsRunWslOnlyAria")}
+                aria-label={currentTranslator()("settingsA.connectionsRunWslOnlyAria")}
               />
             }
           />
@@ -942,7 +945,7 @@ export function ConnectionsSettings() {
         tailscaleHttpsEndpoint
           ? tailscaleHttpsEndpoint.status === "available"
             ? tailscaleHttpsEndpoint.httpBaseUrl
-            : t("settingsA.connectionsTailscaleServeHint")
+            : currentTranslator()("settingsA.connectionsTailscaleServeHint")
           : missingTailscaleEndpointDescription(desktopServerExposureState)
       }
       control={
@@ -957,16 +960,16 @@ export function ConnectionsSettings() {
               }
               handleStartTailscaleServeDisable(tailscaleHttpsEndpoint);
             }}
-            aria-label={t("settingsA.connectionsEnableTailscaleAria")}
+            aria-label={currentTranslator()("settingsA.connectionsEnableTailscaleAria")}
           />
         ) : null
       }
     />
   );
-  const renderAuthorizedClients = (presentation: AccessSectionPresentation) => (
+  const renderAuthorizedClients = () => (
     <>
       {desktopAccessManagementError ? (
-        <div className={accessRowClassName(presentation)}>
+        <div className={ITEM_ROW_CLASSNAME}>
           <p className="text-xs text-destructive">{desktopAccessManagementError}</p>
         </div>
       ) : null}
@@ -974,7 +977,6 @@ export function ConnectionsSettings() {
         endpointUrl={desktopServerExposureState?.endpointUrl}
         endpoints={visibleDesktopAdvertisedEndpoints}
         defaultEndpointKey={defaultDesktopAdvertisedEndpointKey}
-        presentation={presentation}
         isLoading={isLoadingDesktopAccessManagement}
         pairingLinks={visibleDesktopPairingLinks}
         createdPairingCredentials={createdPairingCredentials}
@@ -999,20 +1001,20 @@ export function ConnectionsSettings() {
             onToggleExpanded={() => setIsAdvertisedEndpointListExpanded((expanded) => !expanded)}
             fallback={
               desktopServerExposureState?.endpointUrl
-                ? t("settingsA.connectionsReachableAtUrl", {
+                ? currentTranslator()("settingsA.connectionsReachableAtUrl", {
                     url: desktopServerExposureState.endpointUrl,
                   })
                 : desktopServerExposureState?.advertisedHost
-                  ? t("settingsA.connectionsExposedHostHint", {
+                  ? currentTranslator()("settingsA.connectionsExposedHostHint", {
                       host: desktopServerExposureState.advertisedHost,
                     })
-                  : t("settingsA.connectionsExposedAllInterfaces")
+                  : currentTranslator()("settingsA.connectionsExposedAllInterfaces")
             }
           />
         ) : desktopServerExposureState ? (
-          t("settingsA.connectionsLimitedToMachine")
+          currentTranslator()("settingsA.connectionsLimitedToMachine")
         ) : (
-          t("settingsA.connectionsLoading")
+          currentTranslator()("settingsA.connectionsLoading")
         )
       }
       status={
@@ -1028,12 +1030,12 @@ export function ConnectionsSettings() {
       title={searchableSetting("network-access").title}
       description={
         desktopBridge
-          ? t("settingsA.connectionsCannotChangeExposure")
+          ? currentTranslator()("settingsA.connectionsCannotChangeExposure")
           : currentAuthPolicy === "remote-reachable"
-            ? t("settingsA.connectionsRemoteAlreadyConfigured")
+            ? currentTranslator()("settingsA.connectionsRemoteAlreadyConfigured")
             : currentAuthPolicy === "loopback-browser"
-              ? t("settingsA.connectionsOnlyThisMachine")
-              : t("settingsA.connectionsExposureUnavailable")
+              ? currentTranslator()("settingsA.connectionsOnlyThisMachine")
+              : currentTranslator()("settingsA.connectionsExposureUnavailable")
       }
       control={
         !desktopBridge &&
@@ -1045,13 +1047,13 @@ export function ConnectionsSettings() {
                   <Switch
                     checked={isLocalBackendNetworkAccessible}
                     disabled
-                    aria-label={t("settingsA.connectionsEnableNetworkAccess")}
+                    aria-label={currentTranslator()("settingsA.connectionsEnableNetworkAccess")}
                   />
                 </span>
               }
             />
             <TooltipPopup side="top">
-              {t("settingsA.connectionsExposureRestartTooltip")}
+              {currentTranslator()("settingsA.connectionsExposureRestartTooltip")}
             </TooltipPopup>
           </Tooltip>
         ) : undefined
@@ -1068,8 +1070,8 @@ export function ConnectionsSettings() {
             title={
               primaryEnvironment?.label ??
               (desktopBridge
-                ? t("settingsA.connectionsThisMachine")
-                : t("settingsA.connectionsPrimaryEnvironment"))
+                ? currentTranslator()("settingsA.connectionsThisMachine")
+                : currentTranslator()("settingsA.connectionsPrimaryEnvironment"))
             }
             icon={
               <EnvironmentMachineIcon
@@ -1091,7 +1093,9 @@ export function ConnectionsSettings() {
                         type="button"
                         variant="ghost-muted"
                         size="icon-xs"
-                        aria-label={t("settingsA.connectionsMoreActionsThisMachine")}
+                        aria-label={currentTranslator()(
+                          "settingsA.connectionsMoreActionsThisMachine",
+                        )}
                       />
                     }
                   >
@@ -1107,10 +1111,9 @@ export function ConnectionsSettings() {
               ) : null
             }
           >
-            <LocalEnvironmentSetting />
             {canManageLocalBackend ? (
               <SettingsRow
-                title={t("settingsA.connectionsVersion")}
+                title={currentTranslator()("settingsA.connectionsVersion")}
                 description={
                   primaryServerUpdateState.status !== "idle" ? (
                     <ServerUpdateProgress state={primaryServerUpdateState} />
@@ -1120,7 +1123,7 @@ export function ConnectionsSettings() {
                       primaryEnvironment?.displayUrl ?? null,
                     ]
                       .filter((value): value is string => value !== null)
-                      .join(" · ") || t("settingsA.connectionsLoading")
+                      .join(" · ") || currentTranslator()("settingsA.connectionsLoading")
                   )
                 }
                 control={
@@ -1132,24 +1135,21 @@ export function ConnectionsSettings() {
                       environmentId={primaryEnvironmentId}
                       serverLabel={
                         primaryEnvironment
-                          ? t("settingsA.connectionsServerLabel", {
+                          ? currentTranslator()("settingsA.connectionsServerLabel", {
                               name: primaryEnvironment.label,
                             })
-                          : t("settingsA.connectionsServerFallback")
+                          : currentTranslator()("settingsA.connectionsServerFallback")
                       }
                       selfUpdate={resolveServerSelfUpdateCapability(primaryServerConfig)}
                       installation={
                         primaryServerConfig?.environment.capabilities.serverInstallation
                       }
                       desktopAppUpdate={supportsDesktopAppUpdate(primaryServerConfig)}
-                      threadContinuation={supportsServerUpdateThreadContinuation(
-                        primaryServerConfig,
-                      )}
                       targetVersion={primaryVersionMismatch.clientVersion}
                       label={
                         primaryServerUpdateState.status === "failed"
-                          ? t("settingsA.connectionsRetryUpdate")
-                          : t("settingsA.connectionsUpdateTo", {
+                          ? currentTranslator()("settingsA.connectionsRetryUpdate")
+                          : currentTranslator()("settingsA.connectionsUpdateTo", {
                               version: primaryVersionMismatch.clientVersion,
                             })
                       }
@@ -1163,7 +1163,7 @@ export function ConnectionsSettings() {
             {canManageLocalBackend && desktopBridge ? (
               <>
                 {renderNetworkAccessRow()}
-                {renderEndpointRows("endpoint-rail")}
+                {renderEndpointRows()}
                 {renderTailscaleRow()}
                 {renderWslRow()}
                 {canReadRelay || canManageRelay ? (
@@ -1181,7 +1181,7 @@ export function ConnectionsSettings() {
             {primaryEnvironment ? (
               <details className="group px-3 sm:px-4">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-                  {t("settingsA.connectionsPermissions")}
+                  {currentTranslator()("settingsA.connectionsPermissions")}
                   <ChevronRightIcon
                     aria-hidden
                     className="size-3 text-muted-foreground group-open:rotate-90"
@@ -1198,7 +1198,7 @@ export function ConnectionsSettings() {
           {canReadAccess || canWriteAccess ? (
             <FoldedSettingsSection
               id="authorized-clients"
-              title={t("settingsA.connectionsAuthorizedClients")}
+              title={currentTranslator()("settingsA.connectionsAuthorizedClients")}
               summary={summarizeAuthorizedClients(
                 desktopClientSessions,
                 visibleDesktopPairingLinks,
@@ -1228,10 +1228,10 @@ export function ConnectionsSettings() {
                 data-testid="authorized-clients-scroll-area"
               >
                 {canReadAccess ? (
-                  renderAuthorizedClients("current")
+                  renderAuthorizedClients()
                 ) : (
                   <p className="px-4 py-3 text-xs text-muted-foreground">
-                    {t("settingsA.connectionsCanCreateLinksOnly")}
+                    {currentTranslator()("settingsA.connectionsCanCreateLinksOnly")}
                   </p>
                 )}
               </ScrollArea>
@@ -1248,13 +1248,13 @@ export function ConnectionsSettings() {
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {pendingDesktopServerExposureMode === "network-accessible"
-                    ? t("settingsA.connectionsEnableNetworkAccessQ")
-                    : t("settingsA.connectionsDisableNetworkAccessQ")}
+                    ? currentTranslator()("settingsA.connectionsEnableNetworkAccessQ")
+                    : currentTranslator()("settingsA.connectionsDisableNetworkAccessQ")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
-                    ? t("settingsA.connectionsEnableExposureDescription")
-                    : t("settingsA.connectionsDisableExposureDescription")}
+                    ? currentTranslator()("settingsA.connectionsEnableExposureDescription")
+                    : currentTranslator()("settingsA.connectionsDisableExposureDescription")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1262,7 +1262,9 @@ export function ConnectionsSettings() {
                   disabled={isUpdatingDesktopServerExposure}
                   render={<Button variant="outline" disabled={isUpdatingDesktopServerExposure} />}
                 >
-                  <span className="[text-box:trim-both_cap_alphabetic]">{t("common.cancel")}</span>
+                  <span className="[text-box:trim-both_cap_alphabetic]">
+                    {currentTranslator()("common.cancel")}
+                  </span>
                 </AlertDialogClose>
                 <Button
                   variant="default"
@@ -1276,10 +1278,10 @@ export function ConnectionsSettings() {
                   {isUpdatingDesktopServerExposure && <Spinner size="sm" />}
                   <span className="[text-box:trim-both_cap_alphabetic]">
                     {isUpdatingDesktopServerExposure
-                      ? t("settingsA.connectionsRestarting")
+                      ? currentTranslator()("settingsA.connectionsRestarting")
                       : pendingDesktopServerExposureMode === "network-accessible"
-                        ? t("settingsA.connectionsRestartAndEnable")
-                        : t("settingsA.connectionsRestartAndDisable")}
+                        ? currentTranslator()("settingsA.connectionsRestartAndEnable")
+                        : currentTranslator()("settingsA.connectionsRestartAndDisable")}
                   </span>
                 </Button>
               </AlertDialogFooter>
@@ -1297,28 +1299,30 @@ export function ConnectionsSettings() {
                 <AlertDialogTitle>
                   {pendingWslChange?.kind === "disable"
                     ? pendingWslChange.wasWslOnly
-                      ? t("settingsA.connectionsWslTurnOffTitle")
-                      : t("settingsA.connectionsWslDisableTitle")
+                      ? currentTranslator()("settingsA.connectionsWslTurnOffTitle")
+                      : currentTranslator()("settingsA.connectionsWslDisableTitle")
                     : pendingWslChange?.kind === "distro"
-                      ? t("settingsA.connectionsWslSwitchDistroTitle")
+                      ? currentTranslator()("settingsA.connectionsWslSwitchDistroTitle")
                       : pendingWslChange?.kind === "enable"
-                        ? t("settingsA.connectionsWslStartTitle")
+                        ? currentTranslator()("settingsA.connectionsWslStartTitle")
                         : pendingWslChange?.nextValue
-                          ? t("settingsA.connectionsWslRunOnlyTitle")
-                          : t("settingsA.connectionsWslReenableWindowsTitle")}
+                          ? currentTranslator()("settingsA.connectionsWslRunOnlyTitle")
+                          : currentTranslator()("settingsA.connectionsWslReenableWindowsTitle")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {pendingWslChange?.kind === "disable"
                     ? pendingWslChange.wasWslOnly
-                      ? t("settingsA.connectionsWslTurnOffDescription")
-                      : t("settingsA.connectionsWslDisableDescription")
+                      ? currentTranslator()("settingsA.connectionsWslTurnOffDescription")
+                      : currentTranslator()("settingsA.connectionsWslDisableDescription")
                     : pendingWslChange?.kind === "distro"
-                      ? t("settingsA.connectionsWslSwitchDistroDescription")
+                      ? currentTranslator()("settingsA.connectionsWslSwitchDistroDescription")
                       : pendingWslChange?.kind === "enable"
-                        ? t("settingsA.connectionsWslStartDescription")
+                        ? currentTranslator()("settingsA.connectionsWslStartDescription")
                         : pendingWslChange?.nextValue
-                          ? t("settingsA.connectionsWslRunOnlyDescription")
-                          : t("settingsA.connectionsWslReenableWindowsDescription")}
+                          ? currentTranslator()("settingsA.connectionsWslRunOnlyDescription")
+                          : currentTranslator()(
+                              "settingsA.connectionsWslReenableWindowsDescription",
+                            )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1326,7 +1330,7 @@ export function ConnectionsSettings() {
                   disabled={isUpdatingWslBackend}
                   render={<Button variant="outline" disabled={isUpdatingWslBackend} />}
                 >
-                  {t("common.cancel")}
+                  {currentTranslator()("common.cancel")}
                 </AlertDialogClose>
                 {pendingWslChange?.kind === "enable" ? (
                   <>
@@ -1338,10 +1342,10 @@ export function ConnectionsSettings() {
                       {isUpdatingWslBackend ? (
                         <>
                           <Spinner size="sm" />
-                          {t("settingsA.connectionsApplying")}
+                          {currentTranslator()("settingsA.connectionsApplying")}
                         </>
                       ) : (
-                        t("settingsA.connectionsUseOnlyWsl")
+                        currentTranslator()("settingsA.connectionsUseOnlyWsl")
                       )}
                     </Button>
                     <Button
@@ -1352,10 +1356,10 @@ export function ConnectionsSettings() {
                       {isUpdatingWslBackend ? (
                         <>
                           <Spinner size="sm" />
-                          {t("settingsA.connectionsApplying")}
+                          {currentTranslator()("settingsA.connectionsApplying")}
                         </>
                       ) : (
-                        t("settingsA.connectionsRunBothBackends")
+                        currentTranslator()("settingsA.connectionsRunBothBackends")
                       )}
                     </Button>
                   </>
@@ -1373,20 +1377,20 @@ export function ConnectionsSettings() {
                     {isUpdatingWslBackend ? (
                       <>
                         <Spinner size="sm" />
-                        {t("settingsA.connectionsApplying")}
+                        {currentTranslator()("settingsA.connectionsApplying")}
                       </>
                     ) : pendingWslChange?.kind === "disable" ? (
                       pendingWslChange.wasWslOnly ? (
-                        t("settingsA.connectionsSwitchToWindows")
+                        currentTranslator()("settingsA.connectionsSwitchToWindows")
                       ) : (
-                        t("settingsA.connectionsDisableWsl")
+                        currentTranslator()("settingsA.connectionsDisableWsl")
                       )
                     ) : pendingWslChange?.kind === "distro" ? (
-                      t("settingsA.connectionsSwitchDistro")
+                      currentTranslator()("settingsA.connectionsSwitchDistro")
                     ) : pendingWslChange?.nextValue ? (
-                      t("settingsA.connectionsRestartAndEnable")
+                      currentTranslator()("settingsA.connectionsRestartAndEnable")
                     ) : (
-                      t("settingsA.connectionsRestartAndDisable")
+                      currentTranslator()("settingsA.connectionsRestartAndDisable")
                     )}
                   </Button>
                 )}
@@ -1402,9 +1406,11 @@ export function ConnectionsSettings() {
           >
             <AlertDialogPopup>
               <AlertDialogHeader>
-                <AlertDialogTitle>{t("settingsA.connectionsDisableTailscaleQ")}</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {currentTranslator()("settingsA.connectionsDisableTailscaleQ")}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t("settingsA.connectionsDisableTailscaleDescription")}
+                  {currentTranslator()("settingsA.connectionsDisableTailscaleDescription")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1412,7 +1418,7 @@ export function ConnectionsSettings() {
                   disabled={isUpdatingTailscaleServe}
                   render={<Button variant="outline" disabled={isUpdatingTailscaleServe} />}
                 >
-                  {t("common.cancel")}
+                  {currentTranslator()("common.cancel")}
                 </AlertDialogClose>
                 <Button
                   variant="destructive"
@@ -1422,10 +1428,10 @@ export function ConnectionsSettings() {
                   {isUpdatingTailscaleServe ? (
                     <>
                       <Spinner size="sm" />
-                      {t("settingsA.connectionsRestarting")}
+                      {currentTranslator()("settingsA.connectionsRestarting")}
                     </>
                   ) : (
-                    t("settingsA.connectionsRestartAndDisable")
+                    currentTranslator()("settingsA.connectionsRestartAndDisable")
                   )}
                 </Button>
               </AlertDialogFooter>
@@ -1440,15 +1446,17 @@ export function ConnectionsSettings() {
           >
             <DialogPopup className="max-w-md">
               <DialogHeader>
-                <DialogTitle>{t("settingsA.connectionsSetUpTailscaleQ")}</DialogTitle>
+                <DialogTitle>
+                  {currentTranslator()("settingsA.connectionsSetUpTailscaleQ")}
+                </DialogTitle>
                 <DialogDescription>
-                  {t("settingsA.connectionsSetUpTailscaleDescription")}
+                  {currentTranslator()("settingsA.connectionsSetUpTailscaleDescription")}
                 </DialogDescription>
               </DialogHeader>
               <DialogPanel>
                 <label className="block">
                   <span className="text-sm font-medium text-foreground">
-                    {t("settingsA.connectionsHttpsPort")}
+                    {currentTranslator()("settingsA.connectionsHttpsPort")}
                   </span>
                   <Input
                     className="mt-2"
@@ -1464,19 +1472,19 @@ export function ConnectionsSettings() {
                 </label>
                 {!isTailscaleServePortValid ? (
                   <p className="mt-2 text-xs text-destructive">
-                    {t("settingsA.connectionsPortRangeHint")}
+                    {currentTranslator()("settingsA.connectionsPortRangeHint")}
                   </p>
                 ) : null}
                 <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    {t("settingsA.connectionsHttpsEndpoint")}
+                    {currentTranslator()("settingsA.connectionsHttpsEndpoint")}
                   </p>
                   <Tooltip>
                     <TooltipTrigger
                       render={
                         <p className="mt-1 truncate text-sm text-foreground">
                           {pendingTailscaleServeBaseUrl ??
-                            t("settingsA.connectionsPendingMagicDns")}
+                            currentTranslator()("settingsA.connectionsPendingMagicDns")}
                         </p>
                       }
                     />
@@ -1491,7 +1499,7 @@ export function ConnectionsSettings() {
                   disabled={isUpdatingTailscaleServe}
                   render={<Button variant="outline" disabled={isUpdatingTailscaleServe} />}
                 >
-                  {t("common.cancel")}
+                  {currentTranslator()("common.cancel")}
                 </DialogClose>
                 <Button
                   onClick={() => void handleConfirmTailscaleServeSetup()}
@@ -1500,10 +1508,10 @@ export function ConnectionsSettings() {
                   {isUpdatingTailscaleServe ? (
                     <>
                       <Spinner size="sm" />
-                      {t("settingsA.connectionsRestarting")}
+                      {currentTranslator()("settingsA.connectionsRestarting")}
                     </>
                   ) : (
-                    t("settingsA.connectionsEnable")
+                    currentTranslator()("settingsA.connectionsEnable")
                   )}
                 </Button>
               </DialogFooter>
@@ -1513,10 +1521,9 @@ export function ConnectionsSettings() {
       ) : (
         <SettingsSection {...searchableSetting("connections-environment")}>
           <SettingsRow
-            title={t("settingsA.connectionsNoEnvironmentSelected")}
-            description={t("settingsA.connectionsConnectEnvironmentHint")}
+            title={currentTranslator()("settingsA.connectionsNoEnvironmentSelected")}
+            description={currentTranslator()("settingsA.connectionsConnectEnvironmentHint")}
           />
-          <LocalEnvironmentSetting />
           {canReadRelay || canManageRelay ? (
             <CloudLinkRow canReadRelay={canReadRelay} canManageRelay={canManageRelay} />
           ) : null}
@@ -1525,12 +1532,18 @@ export function ConnectionsSettings() {
     </>
   );
 
+  if (showsAccess) return <SettingsPageContainer>{primarySettings}</SettingsPageContainer>;
+
   return (
     <SettingsPageContainer>
-      {primarySettings}
+      {desktopBridge ? (
+        <SettingsSection id="this-app" title="This app">
+          <LocalEnvironmentSetting />
+        </SettingsSection>
+      ) : null}
       <SettingsSection
         {...searchableSetting("remote-environments")}
-        title={t("settingsA.connectionsEnvironments")}
+        title={currentTranslator()("settingsA.connectionsEnvironments")}
         headerAction={
           <div className="flex items-center gap-1">
             {savedServerUpdateTargets.length > 0 ? (
@@ -1577,6 +1590,14 @@ export function ConnectionsSettings() {
           }}
         />
       ) : null}
+      {peerLinkHosts.map((environment, index) => (
+        <LinkedEnvironmentsSettings
+          key={environment.environmentId}
+          environmentId={environment.environmentId}
+          environmentLabel={peerLinkHosts.length > 1 ? environment.label : null}
+          isSearchTarget={index === 0}
+        />
+      ))}
       <LoadBalancingSettings environments={loadBalancingEnvironments} />
       <PullRequestRoutingSettings environments={loadBalancingEnvironments} />
     </SettingsPageContainer>

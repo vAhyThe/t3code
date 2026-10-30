@@ -1,23 +1,14 @@
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { ChevronDownIcon } from "lucide-react";
-import * as Duration from "effect/Duration";
 import * as Option from "effect/Option";
 import { useState, type ReactNode } from "react";
 import type {
-  BackgroundActivitySettings,
   SourceControlDiscoveryResult,
   SourceControlProviderAuth,
   SourceControlProviderDiscoveryItem,
   VcsDriverKind,
   VcsDiscoveryItem,
 } from "@t3tools/contracts";
-import {
-  getBackgroundActivityBaseProfile,
-  getBackgroundActivityPresetSettings,
-  resolveServerBackgroundActivitySettings,
-} from "@t3tools/shared/backgroundActivitySettings";
-
-import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { cn } from "../../lib/utils";
@@ -35,35 +26,23 @@ import {
   EmptyTitle,
 } from "../ui/empty";
 import { Skeleton } from "../ui/skeleton";
-import {
-  NumberField,
-  NumberFieldDecrement,
-  NumberFieldGroup,
-  NumberFieldIncrement,
-  NumberFieldInput,
-} from "../ui/number-field";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
 import { GitIcon, JujutsuIcon, type Icon } from "../Icons";
 import { SourceControlHostSettings } from "./SourceControlHostSettings";
 import { SourceControlAccountSettings } from "./SourceControlAccountSettings";
+import { SourceControlAppSignInSettings } from "./SourceControlAppSignInSettings";
 import { SourceControlTokenSettings } from "./SourceControlTokenSettings";
 import { RedactedSensitiveText } from "./RedactedSensitiveText";
 import { SourceControlWritingSettingsSection } from "./SourceControlWritingSettings";
 import {
-  PolicyTooltip,
-  SettingResetButton,
   SettingsPageContainer,
   SettingsSearchTarget,
   SettingsSection,
   useSettingsSearchTargetId,
 } from "./settingsLayout";
-import {
-  searchableSetting,
-  searchableSettingTitleKey,
-  sourceControlHostSettingsSearchId,
-} from "./settingsSearch";
+import { searchableSetting, sourceControlHostSettingsSearchId } from "./settingsSearch";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { sourceControlIcon } from "~/sourceControlPresentation";
@@ -81,47 +60,6 @@ const VCS_ICONS: Partial<Record<VcsDriverKind, Icon>> = {
 };
 
 const SOURCE_CONTROL_SKELETON_ROWS = ["primary", "secondary"] as const;
-const GIT_FETCH_INTERVAL_STEP_SECONDS = 5;
-type BackgroundActivityOverridePatch = Partial<{
-  [K in keyof BackgroundActivitySettings["overrides"]]:
-    | BackgroundActivitySettings["overrides"][K]
-    | undefined;
-}>;
-
-function durationToSeconds(duration: Duration.Duration): number {
-  return Math.round(Duration.toMillis(duration) / 1_000);
-}
-
-function normalizeFetchIntervalSeconds(value: number | null): number {
-  if (value === null || !Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.max(0, Math.round(value));
-}
-
-function backgroundActivityOverrideSettings(
-  current: BackgroundActivitySettings,
-  overrides: BackgroundActivityOverridePatch,
-) {
-  const nextOverrides: BackgroundActivityOverridePatch = {
-    ...current.overrides,
-    ...overrides,
-  };
-  for (const [key, value] of Object.entries(nextOverrides)) {
-    if (value === undefined) {
-      delete nextOverrides[key as keyof typeof nextOverrides];
-    }
-  }
-  return {
-    backgroundActivity: {
-      schemaVersion: 1 as const,
-      profile: "custom" as const,
-      baseProfile: getBackgroundActivityBaseProfile(current),
-      overrides: nextOverrides as BackgroundActivitySettings["overrides"],
-    },
-  };
-}
-
 function optionLabel(value: Option.Option<string>): string | null {
   return Option.getOrNull(value);
 }
@@ -138,14 +76,14 @@ function isVcsNotReady(item: VcsDiscoveryItem | SourceControlProviderDiscoveryIt
 
 function authPresentation(auth: SourceControlProviderAuth): {
   readonly label: string;
-  readonly badge: "warning" | null;
+  readonly badge: "secondary" | null;
 } {
   const t = currentTranslator();
   if (auth.status === "authenticated") {
     return { label: t("settingsD.authenticated"), badge: null };
   }
   if (auth.status === "unauthenticated") {
-    return { label: t("settingsD.notAuthenticated"), badge: "warning" };
+    return { label: currentTranslator()("settingsD.notAuthenticated"), badge: "secondary" };
   }
   return { label: t("settingsD.statusUnknown"), badge: null };
 }
@@ -164,8 +102,12 @@ function RedactedAccount(props: { readonly account: string | null }) {
 
 function itemStatusDot(item: VcsDiscoveryItem | SourceControlProviderDiscoveryItem): string {
   if (isVcsNotReady(item)) return "bg-muted-foreground/35";
+  if (isProviderDiscoveryItem(item)) {
+    return item.status === "available" && item.auth.status === "authenticated"
+      ? "bg-success"
+      : "bg-muted-foreground/35";
+  }
   if (item.status !== "available") return "bg-warning";
-  if (isProviderDiscoveryItem(item) && item.auth.status !== "authenticated") return "bg-warning";
   return "bg-success";
 }
 
@@ -300,9 +242,7 @@ function DiscoveryItemRow({
   const hasDetails = children !== undefined;
   const searchTargetId = useSettingsSearchTargetId();
   const [seenSearchTargetId, setSeenSearchTargetId] = useState<string | null>(null);
-  const targetsThisRow =
-    (item.kind === "git" && searchTargetId === searchableSetting("git-fetch-interval").id) ||
-    searchTargetId === sourceControlHostSettingsSearchId(item.kind);
+  const targetsThisRow = searchTargetId === sourceControlHostSettingsSearchId(item.kind);
   if (targetsThisRow && !isExpanded && seenSearchTargetId !== searchTargetId) {
     setIsExpanded(true);
   }
@@ -370,88 +310,6 @@ function DiscoveryItemRow({
         </Collapsible>
       ) : null}
     </div>
-  );
-}
-
-function GitFetchIntervalSettings() {
-  const t = useT();
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-  const resolvedBackgroundActivity = resolveServerBackgroundActivitySettings(settings);
-  const automaticGitFetchIntervalSeconds = durationToSeconds(
-    resolvedBackgroundActivity.automaticGitFetchInterval,
-  );
-  const defaultAutomaticGitFetchIntervalSeconds = durationToSeconds(
-    getBackgroundActivityPresetSettings(
-      getBackgroundActivityBaseProfile(settings.backgroundActivity),
-    ).automaticGitFetchInterval,
-  );
-  const canResetFetchInterval =
-    automaticGitFetchIntervalSeconds !== defaultAutomaticGitFetchIntervalSeconds;
-  const setting = searchableSetting("git-fetch-interval");
-
-  return (
-    <SettingsSearchTarget id={setting.id} className="grid gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <div className="flex min-w-0 items-center gap-1">
-            <span className="text-xs font-medium text-foreground">
-              {t(
-                searchableSettingTitleKey("git-fetch-interval") ??
-                  "settingsD.searchGitFetchInterval",
-              )}
-            </span>
-            <PolicyTooltip>{t("settingsD.gitFetchIntervalPolicy")}</PolicyTooltip>
-            <span
-              className={cn(
-                "inline-flex size-5 shrink-0 items-center justify-center transition-opacity",
-                canResetFetchInterval ? "opacity-100" : "pointer-events-none opacity-0",
-              )}
-              aria-hidden={!canResetFetchInterval}
-            >
-              {canResetFetchInterval ? (
-                <SettingResetButton
-                  label={t("settingsD.fetchIntervalLower")}
-                  onClick={() =>
-                    updateSettings(
-                      backgroundActivityOverrideSettings(settings.backgroundActivity, {
-                        automaticGitFetchInterval: undefined,
-                      }),
-                    )
-                  }
-                />
-              ) : null}
-            </span>
-          </div>
-          <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            {t("settingsD.refreshRemoteBranches")}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <NumberField
-            value={automaticGitFetchIntervalSeconds}
-            min={0}
-            step={GIT_FETCH_INTERVAL_STEP_SECONDS}
-            size="sm"
-            className="w-32"
-            onValueChange={(value) =>
-              updateSettings(
-                backgroundActivityOverrideSettings(settings.backgroundActivity, {
-                  automaticGitFetchInterval: Duration.seconds(normalizeFetchIntervalSeconds(value)),
-                }),
-              )
-            }
-          >
-            <NumberFieldGroup>
-              <NumberFieldDecrement aria-label={t("settingsD.decreaseFetchInterval")} />
-              <NumberFieldInput aria-label={t("settingsD.automaticGitFetchIntervalSeconds")} />
-              <NumberFieldIncrement aria-label={t("settingsD.increaseFetchInterval")} />
-            </NumberFieldGroup>
-          </NumberField>
-          <span className="text-xs text-muted-foreground">{t("settingsD.seconds")}</span>
-        </div>
-      </div>
-    </SettingsSearchTarget>
   );
 }
 
@@ -566,6 +424,23 @@ export function SourceControlSettingsPanel() {
       return (
         <SettingsSearchTarget id={sourceControlHostSettingsSearchId(item.kind)}>
           <div className="grid gap-6">
+            {credentials.appSignIn && item.appSignIn === true ? (
+              <SourceControlAppSignInSettings
+                key={`sign-in-${environmentId}`}
+                environmentId={environmentId}
+                definition={definition}
+                appSignIn={credentials.appSignIn}
+                account={Option.getOrNull(item.auth.account)}
+                onChanged={handleScan}
+              />
+            ) : null}
+            {credentials.appSignIn && item.appSignIn === true ? (
+              <div className="flex items-center gap-3 text-2xs text-muted-foreground">
+                <span aria-hidden className="h-px flex-1 bg-border" />
+                Or use your own credentials
+                <span aria-hidden className="h-px flex-1 bg-border" />
+              </div>
+            ) : null}
             <SourceControlTokenSettings
               key={`token-${environmentId}`}
               environmentId={environmentId}
@@ -648,9 +523,7 @@ export function SourceControlSettingsPanel() {
               headerAction={scanButton}
             >
               {result.versionControlSystems.map((item) => (
-                <DiscoveryItemRow key={`vcs:${item.kind}`} item={item}>
-                  {item.kind === "git" ? <GitFetchIntervalSettings /> : undefined}
-                </DiscoveryItemRow>
+                <DiscoveryItemRow key={`vcs:${item.kind}`} item={item} />
               ))}
             </SettingsSection>
           ) : null}

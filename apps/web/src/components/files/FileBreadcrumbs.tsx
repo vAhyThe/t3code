@@ -1,4 +1,5 @@
 import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { Spinner } from "~/components/ui/spinner";
 import type { EnvironmentId } from "@t3tools/contracts";
@@ -18,7 +19,7 @@ import {
 } from "~/components/ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useTheme } from "~/hooks/useTheme";
-import { useWorkspaceMutationRefresh } from "~/hooks/useWorkspaceMutationRefresh";
+
 import { useT } from "~/i18n/I18nProvider";
 import { cn } from "~/lib/utils";
 import { isHostPath } from "@t3tools/shared/path";
@@ -87,13 +88,12 @@ function BreadcrumbMenuContent(props: {
   readonly rootPath: string;
   readonly workspaceMutationId: string | null;
 }) {
-  const t = useT();
-  const entriesQuery = useProjectEntriesQuery(props.environmentId, props.cwd, props.directoryPath);
-  useWorkspaceMutationRefresh({
-    mutationId: props.workspaceMutationId,
-    refresh: entriesQuery.refresh,
-    resourceKey: `files:${props.environmentId}:${props.cwd}`,
-  });
+  const entriesQuery = useProjectEntriesQuery(
+    props.environmentId,
+    props.cwd,
+    props.directoryPath,
+    props.workspaceMutationId,
+  );
   const { resolvedTheme } = useTheme();
   const entries = entriesQuery.data?.entries ?? [];
   const entriesTruncated = entriesQuery.data?.truncated ?? false;
@@ -123,7 +123,9 @@ function BreadcrumbMenuContent(props: {
           <MenuItem closeOnClick={false} onClick={() => props.onDirectoryChange(parentPath)}>
             <ArrowLeftIcon />
             <span className="truncate">
-              {t("chat.fileBreadcrumbBackTo", { name: pathLabel(parentPath, props.projectName) })}
+              {currentTranslator()("chat.fileBreadcrumbBackTo", {
+                name: pathLabel(parentPath, props.projectName),
+              })}
             </span>
           </MenuItem>
           <MenuSeparator />
@@ -133,20 +135,22 @@ function BreadcrumbMenuContent(props: {
         {entriesQuery.isPending && entriesQuery.data === null ? (
           <MenuItem disabled>
             <Spinner />
-            {t("chat.fileBreadcrumbLoadingFolder")}
+            {currentTranslator()("chat.fileBreadcrumbLoadingFolder")}
           </MenuItem>
         ) : entriesQuery.error && entriesQuery.data === null ? (
           <MenuItem closeOnClick={false} onClick={entriesQuery.refresh}>
             <RefreshIcon refreshing={entriesQuery.isPending} />
-            <span className="min-w-0 flex-1 truncate">{t("chat.fileBreadcrumbRetryFolder")}</span>
+            <span className="min-w-0 flex-1 truncate">
+              {currentTranslator()("chat.fileBreadcrumbRetryFolder")}
+            </span>
           </MenuItem>
         ) : !directoryAvailable && !entriesTruncated ? (
-          <MenuItem disabled>{t("chat.fileBreadcrumbFolderGone")}</MenuItem>
+          <MenuItem disabled>{currentTranslator()("chat.fileBreadcrumbFolderGone")}</MenuItem>
         ) : children.length === 0 ? (
           <MenuItem disabled>
             {entriesTruncated
-              ? t("chat.fileBreadcrumbPartialIndexEmpty")
-              : t("chat.fileBreadcrumbFolderEmpty")}
+              ? currentTranslator()("chat.fileBreadcrumbPartialIndexEmpty")
+              : currentTranslator()("chat.fileBreadcrumbFolderEmpty")}
           </MenuItem>
         ) : (
           <MenuRadioGroup
@@ -213,7 +217,7 @@ function BreadcrumbMenuContent(props: {
       {entriesTruncated ? (
         <>
           <MenuSeparator />
-          <MenuItem disabled>{t("chat.fileBreadcrumbEntriesHidden")}</MenuItem>
+          <MenuItem disabled>{currentTranslator()("chat.fileBreadcrumbEntriesHidden")}</MenuItem>
         </>
       ) : null}
     </MenuPopup>

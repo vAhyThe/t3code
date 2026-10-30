@@ -1,11 +1,11 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { DeviceHostUpdates } from "../device/DeviceHostUpdates";
 import { DeviceToolVersions } from "../device/DeviceToolVersions";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 import { ScopedSwitch } from "./ScopedSwitch";
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { useT } from "../../i18n/I18nProvider";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
-import { DeviceHostsSettings } from "./DeviceHostsSettings";
-import { EasDeviceHostsSettings } from "./EasDeviceHostsSettings";
+import { DeviceSourcesSettings } from "./DeviceSourcesSettings";
 import {
   AuthSettingsWriteScope,
   BrowserImportFailureReason,
@@ -44,7 +44,6 @@ import { MoreVertical, Plus as PlusIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { ScreenRotationIcon } from "~/browser/ScreenRotationIcon";
-import { AnimatedHeight } from "~/components/AnimatedHeight";
 import { resolveEnvironmentOptionLabel } from "~/components/BranchToolbar.logic";
 import { previewBridge } from "~/components/preview/previewBridge";
 import { cn, randomUUID } from "~/lib/utils";
@@ -60,11 +59,6 @@ import {
   AgentDeviceSetupStatus,
   DeviceHubSetupStatus,
   deviceHubReadiness,
-  PlatformStatus,
-  platformSetupStatus,
-  deviceHubDescription,
-  agentDeviceDescription,
-  DeviceHostDiagnostics,
 } from "~/components/device/DeviceSetup";
 import { isElectron } from "../../env";
 
@@ -120,6 +114,7 @@ import {
   SettingsSection,
 } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
+import { AdvancedSettings } from "./AdvancedSettings";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { BrowserImportWizard, type WizardTarget } from "./BrowserImportWizard";
 import type { ImportOutcome } from "./browserImportWizard.logic";
@@ -796,8 +791,7 @@ function BrowserSearchEngineSetting() {
   );
 }
 
-function PullRequestLinksOpenInAppSetting() {
-  const t = useT();
+export function PullRequestLinksOpenInAppSetting() {
   const openInApp = useClientSettings((settings) => settings.pullRequestLinksOpenInApp);
   const updateSettings = useUpdatePrimarySettings();
 
@@ -808,7 +802,7 @@ function PullRequestLinksOpenInAppSetting() {
       resetAction={
         openInApp ? null : (
           <SettingResetButton
-            label={t("settingsB.integrationsPrLabel")}
+            label={currentTranslator()("settingsB.integrationsPrLabel")}
             onClick={() => updateSettings({ pullRequestLinksOpenInApp: true })}
           />
         )
@@ -819,7 +813,7 @@ function PullRequestLinksOpenInAppSetting() {
           onCheckedChange={(checked) =>
             updateSettings({ pullRequestLinksOpenInApp: Boolean(checked) })
           }
-          aria-label={t("settingsB.integrationsPrAria")}
+          aria-label={currentTranslator()("settingsB.integrationsPrAria")}
         />
       }
     />
@@ -827,21 +821,29 @@ function PullRequestLinksOpenInAppSetting() {
 }
 
 function DeviceIntegrationSettings() {
-  const t = useT();
+  useT();
   const { search, environment: selected } = useSettingsScope();
   const settings = useScopedSettings();
   const connected = selected?.connection.phase === "connected" && selected.serverConfig !== null;
   const environmentId = connected ? selected.environmentId : null;
 
+  const { state } = useDeviceState(environmentId);
+
   return (
-    <SettingsSection id="devices" title={t("settingsB.integrationsDevices")}>
-      <DeviceIntegrationControls
-        key={`${environmentId}:${JSON.stringify(search)}`}
-        environmentId={environmentId}
-        enabled={settings.enableDeviceSupport}
-        agentAccessEnabled={settings.enableAgentDeviceAccess}
+    <>
+      <SettingsSection id="devices" title={currentTranslator()("settingsB.integrationsDevices")}>
+        <DeviceIntegrationControls
+          key={`${environmentId}:${JSON.stringify(search)}`}
+          environmentId={environmentId}
+          enabled={settings.enableDeviceSupport}
+          agentAccessEnabled={settings.enableAgentDeviceAccess}
+        />
+      </SettingsSection>
+      <DeviceSourcesSettings
+        supportsEas={state.supportsEasHosts === true}
+        supportsSimlock={state.supportsSimlockHosts === true}
       />
-    </SettingsSection>
+    </>
   );
 }
 
@@ -868,20 +870,7 @@ function DeviceIntegrationControls({
   const [pending, setPending] = useState<
     "hub" | "check" | "agent" | "update-hub" | "update-agent" | null
   >(null);
-  const { ready: hubReady, busy } = deviceHubReadiness(state);
-  const localPlatformsUnavailable = state.hosts.some(
-    (host) => host.kind === "local" && !host.platforms.some((platform) => platform.available),
-  );
-  const [platformsRevealed, setPlatformsRevealed] = useState(false);
-  if (platformsRevealed && !enabled) setPlatformsRevealed(false);
-  if (
-    enabled &&
-    !platformsRevealed &&
-    (hubReady || localPlatformsUnavailable) &&
-    pending !== "hub"
-  ) {
-    setPlatformsRevealed(true);
-  }
+  const { busy } = deviceHubReadiness(state);
 
   const update = async (
     kind: NonNullable<typeof pending>,
@@ -984,14 +973,18 @@ function DeviceIntegrationControls({
         {...searchableSetting("device-hub")}
         serverScoped
         settingKeys={["enableDeviceSupport"]}
-        description={deviceHubDescription}
-        control={
+        description={
           <>
+            Open simulators and emulators in the Device panel. Hub:{" "}
             <DeviceToolVersions
               action={versionActions("hub")}
               kind="hub"
               tools={state.hosts.find((host) => host.kind === "local")?.tools}
             />
+          </>
+        }
+        control={
+          <>
             {pending === "hub" ? <DeviceHubSetupStatus state={state} pending compact /> : null}
             <ScopedSwitch
               settingKeys={["enableDeviceSupport"]}
@@ -1015,72 +1008,22 @@ function DeviceIntegrationControls({
           </>
         }
       />
-      <AnimatedHeight>
-        {platformsRevealed ? (
-          <SettingsRow
-            {...searchableSetting("device-platform-support")}
-            description={
-              connectedEnvironments.length > 1
-                ? t("settingsB.integrationsStatusFor", {
-                    name:
-                      connectedEnvironments.find(
-                        (environment) => environment.environmentId === environmentId,
-                      )?.label ?? "",
-                  })
-                : undefined
-            }
-            status={
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  <PlatformStatus
-                    compact
-                    platform="iOS"
-                    status={platformSetupStatus(state, "ios")}
-                  />
-                  <PlatformStatus
-                    compact
-                    platform="Android"
-                    status={platformSetupStatus(state, "android")}
-                  />
-                </div>
-                {/* Remote hosts report their own warnings in the device host list below. */}
-                <DeviceHostDiagnostics
-                  hosts={state.hosts.filter((host) => host.kind === "local")}
-                  hostStatuses={state.hostStatuses}
-                />
-              </div>
-            }
-            control={
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!environmentId || !enabled || busy || pending !== null}
-                onClick={() => {
-                  if (!environmentId) return;
-                  setPending("check");
-                  void list({ environmentId, input: {} }).finally(() => setPending(null));
-                }}
-              >
-                {pending === "check"
-                  ? t("settingsB.integrationsChecking")
-                  : t("settingsB.integrationsRefresh")}
-              </Button>
-            }
-          />
-        ) : null}
-      </AnimatedHeight>
       <SettingsRow
         {...searchableSetting("agent-device-access")}
         serverScoped
         settingKeys={["enableAgentDeviceAccess"]}
-        description={agentDeviceDescription}
-        control={
+        description={
           <>
+            New agent sessions can open and drive these devices. agent-device:{" "}
             <DeviceToolVersions
               action={versionActions("agent")}
               kind="agent"
               tools={state.hosts.find((host) => host.kind === "local")?.tools}
             />
+          </>
+        }
+        control={
+          <>
             {pending === "agent" ? <AgentDeviceSetupStatus state={state} pending compact /> : null}
             <ScopedSwitch
               settingKeys={["enableAgentDeviceAccess"]}
@@ -1107,8 +1050,6 @@ function DeviceIntegrationControls({
           environmentId={environmentId}
         />
       ) : null}
-      <DeviceHostsSettings environmentId={environmentId} />
-      {state.supportsEasHosts ? <EasDeviceHostsSettings environmentId={environmentId} /> : null}
     </>
   );
 }
@@ -1633,8 +1574,8 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
           }
           onRefreshSource={() => refreshImportSource(importSession.source.id)}
           onCheckFullDiskAccess={
-            window.desktopBridge?.checkSystemPermission
-              ? () => window.desktopBridge!.checkSystemPermission!("full-disk-access")
+            window.desktopBridge
+              ? () => window.desktopBridge!.checkSystemPermission("full-disk-access")
               : undefined
           }
           onOpenFullDiskAccessSettings={async () => {
@@ -1655,37 +1596,50 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
   );
 }
 
-export function IntegrationsSettingsPanel() {
-  const t = useT();
-  const previewDefaultsDisabled = !isElectron;
-  const previewDefaults = (
-    <>
-      <BrowserProfilesSetting disabled={previewDefaultsDisabled} />
-      <BrowserViewportSetting disabled={previewDefaultsDisabled} />
-      <BrowserZoomSetting disabled={previewDefaultsDisabled} />
-      <BrowserAppearanceSetting disabled={previewDefaultsDisabled} />
-      <BrowserRecordingFrameRateSetting disabled={previewDefaultsDisabled} />
-      <BrowserRecordingInputSettings disabled={previewDefaultsDisabled} />
-      <BrowserLinkTargetSetting disabled={previewDefaultsDisabled} />
-      <BrowserAutoShowFloatingPreviewSetting disabled={previewDefaultsDisabled} />
-    </>
-  );
+export function BrowserSettingsPanel() {
+  const desktopOnly = !isElectron;
+  const desktopOnlyMessage = desktopOnly ? "Only available in the desktop app." : undefined;
 
   return (
     <SettingsPageContainer>
-      <SettingsSection id="browser" title={t("settingsB.integrationsBrowser")}>
+      <SettingsSection id="browser-agent-access" title="Agent access">
         <AgentBrowserAccessSetting />
-        {previewDefaultsDisabled ? (
-          <SettingsUnavailableGroup message={t("settingsB.integrationsOnlyDesktop")}>
-            {previewDefaults}
-          </SettingsUnavailableGroup>
-        ) : (
-          previewDefaults
-        )}
+      </SettingsSection>
+      <SettingsSection id="browser" title="Browsing">
+        <SettingsUnavailableGroup message={desktopOnlyMessage}>
+          <BrowserProfilesSetting disabled={desktopOnly} />
+          <BrowserLinkTargetSetting disabled={desktopOnly} />
+          <BrowserAutoShowFloatingPreviewSetting disabled={desktopOnly} />
+        </SettingsUnavailableGroup>
         {/* Not desktop-only: web clients search from server-run browser tabs too. */}
         <BrowserSearchEngineSetting />
-        <PullRequestLinksOpenInAppSetting />
+        <AdvancedSettings
+          targetIds={[
+            searchableSetting("browser-default-viewport").id,
+            searchableSetting("browser-default-zoom").id,
+            searchableSetting("browser-default-appearance").id,
+          ]}
+        >
+          <SettingsUnavailableGroup message={desktopOnlyMessage}>
+            <BrowserViewportSetting disabled={desktopOnly} />
+            <BrowserZoomSetting disabled={desktopOnly} />
+            <BrowserAppearanceSetting disabled={desktopOnly} />
+          </SettingsUnavailableGroup>
+        </AdvancedSettings>
       </SettingsSection>
+      <SettingsSection id="browser-recordings" title="Recordings">
+        <SettingsUnavailableGroup message={desktopOnlyMessage}>
+          <BrowserRecordingFrameRateSetting disabled={desktopOnly} />
+          <BrowserRecordingInputSettings disabled={desktopOnly} />
+        </SettingsUnavailableGroup>
+      </SettingsSection>
+    </SettingsPageContainer>
+  );
+}
+
+export function DevicesSettingsPanel() {
+  return (
+    <SettingsPageContainer>
       <DeviceIntegrationSettings />
     </SettingsPageContainer>
   );

@@ -9,8 +9,9 @@ import {
   resolveSelectableProviderInstanceEntry,
   type ProviderInstanceEntry,
 } from "../../providerInstances";
-import { getTriggerDisplayModelName, type ModelEsque } from "./providerIconUtils";
+import { type ModelEsque } from "./providerIconUtils";
 import { currentTranslator } from "~/i18n/I18nProvider";
+import { getDisplayModelName } from "./providerIconUtils";
 
 // Fallback TTL: Claude's 1h cache plus slack.
 const CLAUDE_RESUME_COMPACTION_FALLBACK_MS = 70 * 60_000;
@@ -98,7 +99,7 @@ export function resolveContextWindowModelDisplayName(
     .get(selection.instanceId)
     ?.find((model) => model.slug === selection.model);
 
-  return selectedModel ? getTriggerDisplayModelName(selectedModel) : selection.model;
+  return selectedModel ? getDisplayModelName(selectedModel) : selection.model;
 }
 
 export function formatContextWindowCompactionMessage(

@@ -1,6 +1,9 @@
+import { useT } from "~/i18n/I18nProvider";
 import { type EnvironmentId, sessionGrantsScope } from "@t3tools/contracts";
-import { AUTH_SCOPE_OPTIONS } from "@t3tools/shared/authScopeOptions";
-import { useT } from "../../i18n/I18nProvider";
+import {
+  AUTH_SCOPE_OPTIONS,
+  sessionPermissionsUnavailableMessage,
+} from "@t3tools/shared/authScopeOptions";
 import { useEnvironmentSessionState } from "~/state/session";
 
 export function SessionPermissions({
@@ -36,7 +39,11 @@ export function SessionPermissions({
     </div>
   ) : (
     <p className="py-3 text-xs text-muted-foreground">
-      {t("settingsC.sessionPermissionsNotChecked")}
+      {sessionPermissionsUnavailableMessage({
+        connected,
+        failed: session.hasError,
+        rejected: !session.hasError && !session.isPending && session.data?.authenticated === false,
+      })}
     </p>
   );
 }

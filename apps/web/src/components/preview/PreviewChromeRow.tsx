@@ -1,4 +1,5 @@
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import {
   ArrowLeft,
@@ -12,8 +13,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
-  useEffect,
-  useRef,
+  type RefObject,
   useState,
 } from "react";
 
@@ -29,7 +29,8 @@ interface Props {
   canGoForward: boolean;
   refreshDisabled: boolean;
   inputDisabled?: boolean | undefined;
-  focusUrlNonce?: number | undefined;
+  /** Owned by the caller so its shortcut handler can focus the address bar directly. */
+  urlInputRef: RefObject<HTMLInputElement | null>;
   onBack: () => void;
   onForward: () => void;
   onRefresh: () => void;
@@ -58,7 +59,7 @@ export function PreviewChromeRow({
   canGoForward,
   refreshDisabled,
   inputDisabled,
-  focusUrlNonce,
+  urlInputRef: inputRef,
   onBack,
   onForward,
   onRefresh,
@@ -77,17 +78,8 @@ export function PreviewChromeRow({
   trailingActions,
   leadingActions,
 }: Props) {
-  const t = useT();
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState(url);
   const [inputFocused, setInputFocused] = useState(false);
-
-  useEffect(() => {
-    if (focusUrlNonce == null) return;
-    const node = inputRef.current;
-    if (!node) return;
-    node.focus();
-  }, [focusUrlNonce]);
 
   const submit = (event?: FormEvent | KeyboardEvent) => {
     event?.preventDefault();
@@ -107,7 +99,7 @@ export function PreviewChromeRow({
         <div
           className="flex items-center gap-0.5"
           role="group"
-          aria-label={t("shellDevice.previewNavigation")}
+          aria-label={currentTranslator()("shellDevice.previewNavigation")}
         >
           <Tooltip>
             <TooltipTrigger
@@ -117,14 +109,14 @@ export function PreviewChromeRow({
                   size="icon-xs"
                   onClick={canGoBack ? onBack : NOOP}
                   disabled={!canGoBack}
-                  aria-label={t("shellDevice.previewBack")}
+                  aria-label={currentTranslator()("shellDevice.previewBack")}
                   type="button"
                 />
               }
             >
               <ArrowLeft />
             </TooltipTrigger>
-            <TooltipPopup>{t("shellDevice.previewBack")}</TooltipPopup>
+            <TooltipPopup>{currentTranslator()("shellDevice.previewBack")}</TooltipPopup>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
@@ -134,14 +126,14 @@ export function PreviewChromeRow({
                   size="icon-xs"
                   onClick={canGoForward ? onForward : NOOP}
                   disabled={!canGoForward}
-                  aria-label={t("shellDevice.previewForward")}
+                  aria-label={currentTranslator()("shellDevice.previewForward")}
                   type="button"
                 />
               }
             >
               <ArrowRight />
             </TooltipTrigger>
-            <TooltipPopup>{t("shellDevice.previewForward")}</TooltipPopup>
+            <TooltipPopup>{currentTranslator()("shellDevice.previewForward")}</TooltipPopup>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
@@ -151,7 +143,11 @@ export function PreviewChromeRow({
                   size="icon-xs"
                   onClick={refreshDisabled ? NOOP : onRefresh}
                   disabled={refreshDisabled}
-                  aria-label={loading ? t("shellDevice.previewStop") : t("common.refresh")}
+                  aria-label={
+                    loading
+                      ? currentTranslator()("shellDevice.previewStop")
+                      : currentTranslator()("common.refresh")
+                  }
                   type="button"
                 />
               }
@@ -159,7 +155,9 @@ export function PreviewChromeRow({
               <RefreshIcon refreshing={loading} />
             </TooltipTrigger>
             <TooltipPopup>
-              {loading ? t("shellDevice.previewLoading") : t("common.refresh")}
+              {loading
+                ? currentTranslator()("shellDevice.previewLoading")
+                : currentTranslator()("common.refresh")}
             </TooltipPopup>
           </Tooltip>
         </div>
@@ -190,7 +188,9 @@ export function PreviewChromeRow({
                       inputRef.current?.blur();
                     }
                   }}
-                  placeholder={t("shellDevice.previewUrlPlaceholder")}
+                  placeholder={currentTranslator()("shellDevice.previewUrlPlaceholder")}
+                  aria-label={currentTranslator()("shellDevice.previewUrlPlaceholder")}
+                  data-workspace-focus-default
                   spellCheck={false}
                   disabled={inputDisabled}
                   data-preview-url-input
@@ -210,14 +210,16 @@ export function PreviewChromeRow({
                         variant="ghost"
                         size="icon-xs"
                         onClick={onOpenInBrowser}
-                        aria-label={t("shellDevice.previewOpenInBrowser")}
+                        aria-label={currentTranslator()("shellDevice.previewOpenInBrowser")}
                         type="button"
                       />
                     }
                   >
                     <ExternalLink />
                   </TooltipTrigger>
-                  <TooltipPopup>{t("shellDevice.previewOpenInBrowser")}</TooltipPopup>
+                  <TooltipPopup>
+                    {currentTranslator()("shellDevice.previewOpenInBrowser")}
+                  </TooltipPopup>
                 </Tooltip>
               </span>
             </InputGroupAddon>
@@ -235,8 +237,8 @@ export function PreviewChromeRow({
                   disabled={pickDisabled}
                   aria-label={
                     pickActive
-                      ? t("shellDevice.previewCancelAnnotation")
-                      : t("shellDevice.previewAnnotate")
+                      ? currentTranslator()("shellDevice.previewCancelAnnotation")
+                      : currentTranslator()("shellDevice.previewAnnotate")
                   }
                   aria-pressed={pickActive ? "true" : "false"}
                   type="button"
@@ -249,8 +251,8 @@ export function PreviewChromeRow({
               {pickDisabled && pickDisabledReason
                 ? pickDisabledReason
                 : pickActive
-                  ? t("shellDevice.previewCancelAnnotationEsc")
-                  : t("shellDevice.previewAnnotateHint")}
+                  ? currentTranslator()("shellDevice.previewCancelAnnotationEsc")
+                  : currentTranslator()("shellDevice.previewAnnotateHint")}
             </TooltipPopup>
           </Tooltip>
         ) : null}
@@ -264,8 +266,8 @@ export function PreviewChromeRow({
                   onClick={(event) => onCapture(event.shiftKey)}
                   aria-label={
                     recording
-                      ? t("shellDevice.previewStopRecording")
-                      : t("shellDevice.previewCaptureScreenshot")
+                      ? currentTranslator()("shellDevice.previewStopRecording")
+                      : currentTranslator()("shellDevice.previewCaptureScreenshot")
                   }
                   type="button"
                   className="relative"
@@ -280,8 +282,8 @@ export function PreviewChromeRow({
             </TooltipTrigger>
             <TooltipPopup>
               {recording
-                ? t("shellDevice.previewStopRecording")
-                : t("shellDevice.previewScreenshotHint")}
+                ? currentTranslator()("shellDevice.previewStopRecording")
+                : currentTranslator()("shellDevice.previewScreenshotHint")}
             </TooltipPopup>
           </Tooltip>
         ) : null}
@@ -295,8 +297,8 @@ export function PreviewChromeRow({
                   onClick={onPictureInPicture}
                   aria-label={
                     pictureInPicture
-                      ? t("shellDevice.previewCloseFloating")
-                      : t("shellDevice.previewFloatOverChat")
+                      ? currentTranslator()("shellDevice.previewCloseFloating")
+                      : currentTranslator()("shellDevice.previewFloatOverChat")
                   }
                   aria-pressed={pictureInPicture ? "true" : "false"}
                   type="button"
@@ -308,8 +310,8 @@ export function PreviewChromeRow({
             </TooltipTrigger>
             <TooltipPopup>
               {pictureInPicture
-                ? t("shellDevice.previewCloseFloating")
-                : t("shellDevice.previewFloatOverChat")}
+                ? currentTranslator()("shellDevice.previewCloseFloating")
+                : currentTranslator()("shellDevice.previewFloatOverChat")}
             </TooltipPopup>
           </Tooltip>
         ) : null}

@@ -3,14 +3,14 @@ import type { MessageKey } from "@t3tools/client-runtime/i18n";
 
 import { currentTranslator } from "~/i18n/I18nProvider";
 
-export type ExternalLinkContextMenuAction =
+type ExternalLinkContextMenuAction =
   | "open-in-preview"
   | "open-external"
   | "copy-link"
   | "link-to-thread"
   | "unlink-from-thread";
 
-export type ExternalLinkContextMenuFailureOperation =
+type ExternalLinkContextMenuFailureOperation =
   | "show-link-context-menu"
   | "open-link-in-preview"
   | "open-link-external"

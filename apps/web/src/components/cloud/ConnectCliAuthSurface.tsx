@@ -1,4 +1,5 @@
-import type { Translate } from "@t3tools/client-runtime/i18n";
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { useT } from "~/i18n/I18nProvider";
 import { useAuth, useClerk } from "@clerk/react";
 import { readConnectAuthorizeRequest } from "@t3tools/shared/connectAuth";
@@ -9,37 +10,15 @@ import {
   connectCliSignInRedirectUrl,
 } from "../../cloud/connectCliAuth";
 import { isElectron } from "../../env";
-import { AuthSurfaceShell } from "../auth/AuthSurfaceShell";
+import { StandalonePage, StandalonePageHeader } from "../ui/standalone-page";
 import { resolveClerkSignInProps } from "../clerk/authRedirect";
 import { Button } from "../ui/button";
 
-function ConnectCliAuthMessage({
-  eyebrow,
-  title,
-  description,
-}: {
-  readonly eyebrow?: string;
-  readonly title: string;
-  readonly description: string;
-}) {
-  return (
-    <>
-      {eyebrow ? (
-        <p className="text-3xs font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>
-      ) : null}
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-    </>
-  );
-}
-
-function invalidLinkMessage(t: Translate) {
-  return {
-    eyebrow: t("shellDevice.connectCliInvalidEyebrow"),
-    title: t("shellDevice.connectCliInvalidTitle"),
-    description: t("shellDevice.connectCliInvalidDescription"),
-  };
-}
+const invalidLinkMessage = {
+  context: "Authorization request",
+  title: currentTranslator()("shellDevice.connectCliInvalidTitle"),
+  description: currentTranslator()("shellDevice.connectCliInvalidDescription"),
+} as const;
 
 export function ConnectCliAuthorizeSurface() {
   const t = useT();
@@ -62,6 +41,7 @@ export function ConnectCliAuthorizeSurface() {
   };
   const openSignInOnLoad = useEffectEvent(openSignIn);
 
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens Clerk sign-in or navigates the window to the authorize URL once Clerk has loaded
   useEffect(() => {
     if (!request || !isLoaded || redirecting.current) {
       return;
@@ -83,17 +63,17 @@ export function ConnectCliAuthorizeSurface() {
 
   if (!request) {
     return (
-      <AuthSurfaceShell>
-        <ConnectCliAuthMessage {...invalidLinkMessage(t)} />
-      </AuthSurfaceShell>
+      <StandalonePage>
+        <StandalonePageHeader {...invalidLinkMessage} />
+      </StandalonePage>
     );
   }
 
   return (
-    <AuthSurfaceShell>
-      <ConnectCliAuthMessage
-        eyebrow={t("shellDevice.connectCliBrowserEyebrow")}
-        title={t("shellDevice.connectCliConnectingTitle")}
+    <StandalonePage>
+      <StandalonePageHeader
+        context="Browser authorization"
+        title={currentTranslator()("shellDevice.connectCliConnectingTitle")}
         description={
           isSignedIn
             ? t("shellDevice.connectCliRedirecting")
@@ -107,6 +87,6 @@ export function ConnectCliAuthorizeSurface() {
           </Button>
         </div>
       ) : null}
-    </AuthSurfaceShell>
+    </StandalonePage>
   );
 }

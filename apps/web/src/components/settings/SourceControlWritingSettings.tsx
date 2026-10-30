@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import type {
@@ -19,11 +20,7 @@ import {
 } from "./useScopedSettings";
 import { useScopedModelDisabledReason } from "./useScopedModelAvailability";
 import { useSettingsScope } from "./SettingsScopeContext";
-import {
-  applyProviderInstanceSettings,
-  deriveProviderInstanceEntries,
-  sortProviderInstanceEntries,
-} from "../../providerInstances";
+import { providerInstanceEntriesFor } from "../../providerInstances";
 import {
   getCustomModelOptionsByInstance,
   resolveAppModelSelectionState,
@@ -44,7 +41,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "./settingsLayout";
-import { BranchNamingSettings } from "./BranchNamingSettings";
+import { AdvancedSettings } from "./AdvancedSettings";
 import { searchableSetting } from "./settingsSearch";
 import { createTranslator, type MessageKey, type Translate } from "@t3tools/client-runtime/i18n";
 
@@ -120,12 +117,10 @@ export function SourceControlWritingSettingsSection({
   const textGenerationProviders = serverProviders.filter(
     (provider) => provider.supportsTextGeneration !== false,
   );
-  const instanceEntries = sortProviderInstanceEntries(
-    applyProviderInstanceSettings(
-      deriveProviderInstanceEntries(textGenerationProviders),
-      settings,
-      target?.projectId ?? null,
-    ),
+  const instanceEntries = providerInstanceEntriesFor(
+    textGenerationProviders,
+    settings,
+    target?.projectId ?? null,
   );
   const projectEnabledInstanceIds = new Set(
     instanceEntries
@@ -188,8 +183,7 @@ export function SourceControlWritingSettingsSection({
   );
 
   return (
-    <SettingsSection id="source-control-text-generation" title={t("settingsD.textGeneration")}>
-      <BranchNamingSettings />
+    <SettingsSection id="source-control-text-generation" title="Writing & review">
       <SettingsRow
         serverScoped
         settingKeys={["sourceControlWritingStyle"]}
@@ -307,144 +301,6 @@ export function SourceControlWritingSettingsSection({
           </div>
         ) : null}
       </SettingsRow>
-
-      <SettingsRow
-        serverScoped
-        settingKeys={["sourceControlWritingStyle"]}
-        mixed={templatesMixed}
-        {...searchableSetting("follow-change-request-templates")}
-        description={t("settingsD.followTemplatesDescription")}
-        resetAction={
-          templatesMixed ||
-          style.followChangeRequestTemplates !== defaults.followChangeRequestTemplates ? (
-            <SettingResetButton
-              label={t("settingsD.changeRequestTemplatesResetLabel")}
-              onClick={() =>
-                updateSettings({
-                  sourceControlWritingStyle: {
-                    followChangeRequestTemplates: defaults.followChangeRequestTemplates,
-                  },
-                })
-              }
-            />
-          ) : null
-        }
-        control={
-          <Switch
-            mixed={templatesMixed}
-            checked={templatesMixed ? false : style.followChangeRequestTemplates}
-            onCheckedChange={(checked) =>
-              updateSettings({
-                sourceControlWritingStyle: {
-                  followChangeRequestTemplates: Boolean(checked),
-                },
-              })
-            }
-            aria-label={t("settingsD.followChangeRequestTemplates")}
-          />
-        }
-      />
-
-      <SettingsRow
-        serverScoped
-        settingKeys={["sourceControlWriterModelSelection"]}
-        {...searchableSetting("source-control-writer-model")}
-        description={t("settingsD.writerModelDescription")}
-        control={
-          !hasServerTargets ? (
-            <span className="text-sm text-muted-foreground">
-              {t("settingsD.connectForWriterModel")}
-            </span>
-          ) : (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {usesDedicatedModel && !canEnableDedicatedModel ? (
-                <span className="text-sm text-muted-foreground">
-                  {t("settingsD.noTextGenerationProviders")}
-                </span>
-              ) : null}
-              {usesDedicatedModel && canEnableDedicatedModel ? (
-                <ProviderModelPicker
-                  environmentId={environmentId}
-                  activeInstanceId={activeSelection.instanceId}
-                  model={activeSelection.model}
-                  lockedProvider={null}
-                  instanceEntries={instanceEntries}
-                  modelOptionsByInstance={modelOptionsByInstance}
-                  triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
-                  triggerAriaLabel={t("settingsD.sourceControlWriterModel")}
-                  {...(mixedWriterModel ? { triggerLabel: t("settingsD.mixed") } : {})}
-                  {...(environmentId
-                    ? {
-                        onOpenProviderSetup: (instanceId: ProviderInstanceId) => {
-                          void navigate({
-                            to: "/settings/providers",
-                            search: { environmentId, instanceId },
-                          });
-                        },
-                      }
-                    : {})}
-                  getModelDisabledReason={writerModelDisabledReason}
-                  onInstanceModelChange={(instanceId, model) => {
-                    const reason = writerModelDisabledReason(instanceId, model);
-                    if (reason) {
-                      toastManager.add({
-                        type: "error",
-                        title: t("settingsD.writerModelNotSaved"),
-                        description: reason,
-                      });
-                      return;
-                    }
-                    updateSettings({
-                      sourceControlWriterModelSelection: createModelSelection(instanceId, model),
-                    });
-                  }}
-                />
-              ) : null}
-              {usesDedicatedModel &&
-              canEnableDedicatedModel &&
-              !mixedWriterModel &&
-              writerInstanceEntry ? (
-                <TraitsPicker
-                  provider={writerInstanceEntry.driverKind}
-                  models={writerInstanceEntry.models}
-                  model={activeSelection.model}
-                  modelOptions={activeSelection.options ?? []}
-                  allowPromptInjectedEffort={false}
-                  planModeEnabled={
-                    settings.planModeEnabled || selectsPlanAgent(activeSelection.options)
-                  }
-                  triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
-                  onModelOptionsChange={(options) =>
-                    updateSettings({
-                      sourceControlWriterModelSelection: createModelSelection(
-                        activeSelection.instanceId,
-                        activeSelection.model,
-                        options,
-                      ),
-                    })
-                  }
-                />
-              ) : null}
-              <Switch
-                checked={usesDedicatedModel}
-                disabled={!usesDedicatedModel && !canEnableDedicatedModel}
-                onCheckedChange={(checked) =>
-                  updateSettings({
-                    sourceControlWriterModelSelection: checked
-                      ? createModelSelection(
-                          defaultModelSelection.instanceId,
-                          defaultModelSelection.model,
-                          defaultModelSelection.options,
-                        )
-                      : null,
-                  })
-                }
-                aria-label={t("settingsD.useSeparateWriterModel")}
-              />
-            </div>
-          )
-        }
-      />
 
       <SettingsRow
         serverScoped
@@ -607,6 +463,150 @@ export function SourceControlWritingSettingsSection({
           </SettingsRow>
         </>
       ) : null}
+      <AdvancedSettings
+        targetIds={[
+          searchableSetting("follow-change-request-templates").id,
+          searchableSetting("source-control-writer-model").id,
+        ]}
+      >
+        <SettingsRow
+          serverScoped
+          settingKeys={["sourceControlWritingStyle"]}
+          mixed={templatesMixed}
+          {...searchableSetting("follow-change-request-templates")}
+          description={currentTranslator()("settingsD.followTemplatesDescription")}
+          resetAction={
+            templatesMixed ||
+            style.followChangeRequestTemplates !== defaults.followChangeRequestTemplates ? (
+              <SettingResetButton
+                label={currentTranslator()("settingsD.changeRequestTemplatesResetLabel")}
+                onClick={() =>
+                  updateSettings({
+                    sourceControlWritingStyle: {
+                      followChangeRequestTemplates: defaults.followChangeRequestTemplates,
+                    },
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              mixed={templatesMixed}
+              checked={templatesMixed ? false : style.followChangeRequestTemplates}
+              onCheckedChange={(checked) =>
+                updateSettings({
+                  sourceControlWritingStyle: {
+                    followChangeRequestTemplates: Boolean(checked),
+                  },
+                })
+              }
+              aria-label="Follow change request templates"
+            />
+          }
+        />
+
+        <SettingsRow
+          serverScoped
+          settingKeys={["sourceControlWriterModelSelection"]}
+          {...searchableSetting("source-control-writer-model")}
+          description={currentTranslator()("settingsD.writerModelDescription")}
+          control={
+            !hasServerTargets ? (
+              <span className="text-sm text-muted-foreground">
+                {currentTranslator()("settingsD.connectForWriterModel")}
+              </span>
+            ) : (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {usesDedicatedModel && !canEnableDedicatedModel ? (
+                  <span className="text-sm text-muted-foreground">
+                    No text generation providers available.
+                  </span>
+                ) : null}
+                {usesDedicatedModel && canEnableDedicatedModel ? (
+                  <ProviderModelPicker
+                    environmentId={environmentId}
+                    activeInstanceId={activeSelection.instanceId}
+                    model={activeSelection.model}
+                    lockedProvider={null}
+                    instanceEntries={instanceEntries}
+                    modelOptionsByInstance={modelOptionsByInstance}
+                    triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
+                    triggerAriaLabel="Source control writer model"
+                    {...(mixedWriterModel ? { triggerLabel: "Mixed" } : {})}
+                    {...(environmentId
+                      ? {
+                          onOpenProviderSetup: (instanceId: ProviderInstanceId) => {
+                            void navigate({
+                              to: "/settings/providers",
+                              search: { environmentId, instanceId },
+                            });
+                          },
+                        }
+                      : {})}
+                    getModelDisabledReason={writerModelDisabledReason}
+                    onInstanceModelChange={(instanceId, model) => {
+                      const reason = writerModelDisabledReason(instanceId, model);
+                      if (reason) {
+                        toastManager.add({
+                          type: "error",
+                          title: currentTranslator()("settingsD.writerModelNotSaved"),
+                          description: reason,
+                        });
+                        return;
+                      }
+                      updateSettings({
+                        sourceControlWriterModelSelection: createModelSelection(instanceId, model),
+                      });
+                    }}
+                  />
+                ) : null}
+                {usesDedicatedModel &&
+                canEnableDedicatedModel &&
+                !mixedWriterModel &&
+                writerInstanceEntry ? (
+                  <TraitsPicker
+                    provider={writerInstanceEntry.driverKind}
+                    models={writerInstanceEntry.models}
+                    model={activeSelection.model}
+                    modelOptions={activeSelection.options ?? []}
+                    allowPromptInjectedEffort={false}
+                    planModeEnabled={
+                      settings.planModeEnabled || selectsPlanAgent(activeSelection.options)
+                    }
+                    triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
+                    onModelOptionsChange={(options) =>
+                      updateSettings({
+                        sourceControlWriterModelSelection: createModelSelection(
+                          activeSelection.instanceId,
+                          activeSelection.model,
+                          options,
+                        ),
+                      })
+                    }
+                  />
+                ) : null}
+                <Switch
+                  checked={usesDedicatedModel}
+                  disabled={!usesDedicatedModel && !canEnableDedicatedModel}
+                  onCheckedChange={(checked) =>
+                    updateSettings({
+                      sourceControlWriterModelSelection: checked
+                        ? createModelSelection(
+                            defaultModelSelection.instanceId,
+                            defaultModelSelection.model,
+                            defaultModelSelection.options,
+                          )
+                        : null,
+                    })
+                  }
+                  aria-label={currentTranslator()("settingsD.useSeparateWriterModel")}
+                />
+              </div>
+            )
+          }
+        />
+      </AdvancedSettings>
     </SettingsSection>
   );
 }

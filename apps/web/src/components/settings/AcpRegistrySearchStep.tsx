@@ -1,3 +1,5 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+import { pipe } from "effect/Function";
 import { ACP_REGISTRY_MAX_AGENTS, AuthProvidersManageScope } from "@t3tools/contracts";
 import { readEnvironmentScope, useEnvironmentScope } from "../../state/session";
 import {
@@ -11,8 +13,9 @@ import type {
   ProviderInstanceConfig,
 } from "@t3tools/contracts";
 import { ExternalLinkIcon, SearchIcon } from "lucide-react";
-import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 
+import { useDeadlinePassed } from "../../hooks/useDeadline";
 import { serverEnvironment } from "../../state/server";
 import { useEnvironmentQuery } from "../../state/query";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -24,7 +27,8 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { isConfiguredAcpRegistryAgent } from "./AddProviderInstanceDialog.logic";
 import { ProviderDriverKind } from "@t3tools/contracts";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { useT } from "../../i18n/I18nProvider";
+import { providerClients } from "./providerDriverMeta";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim()
@@ -32,15 +36,10 @@ function errorMessage(error: unknown): string {
     : currentTranslator()("settingsA.acpRegistryPrepareFailed");
 }
 
-interface AcpRegistrySearchStepProps {
-  readonly environmentId: EnvironmentId;
-  readonly providerInstances: Readonly<Record<string, ProviderInstanceConfig>>;
-  readonly onPrepared: (agent: AcpRegistrySearchAgent) => void;
-  readonly onManualConfiguration: () => void;
-  readonly onLocalConfiguration?: () => void;
-  readonly onLoadingChange?: (loading: boolean) => void;
-  readonly onPreparingChange?: (preparing: boolean) => void;
-}
+const ACP_REGISTRY_SEARCH_DEBOUNCE_MS = 300;
+const FIRST_CLASS_REGISTRY_AGENT_IDS = new Set(
+  providerClients.definitions.flatMap((definition) => definition.acpRegistryAgentIds ?? []),
+);
 
 function applyAcpRegistryPrepareResult(
   agent: AcpRegistrySearchAgent,
@@ -54,94 +53,114 @@ function applyAcpRegistryPrepareResult(
   };
 }
 
-export function AcpRegistrySearchStep({
-  environmentId,
-  providerInstances,
-  onPrepared,
-  onManualConfiguration,
-  onLocalConfiguration,
-  onLoadingChange,
-  onPreparingChange,
-}: AcpRegistrySearchStepProps) {
-  const t = useT();
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const canManageProviders = useEnvironmentScope(environmentId, AuthProvidersManageScope);
+/**
+ * Registry search and agent preparation. Owned by the dialog, which needs the
+ * loading and preparing state for its layout and navigation, and rendered by
+ * AcpRegistrySearchStep. Pass `enabled: false` while the step is hidden so the
+ * search is not kept subscribed.
+ */
+export function useAcpRegistrySearch(environmentId: EnvironmentId, enabled: boolean) {
+  const [input, setInput] = useState<{
+    readonly text: string;
+    readonly submitted: string;
+    readonly typedAt: number | null;
+  }>({ text: "", submitted: "", typedAt: null });
+  const typingSettled = useDeadlinePassed(
+    input.typedAt === null ? null : input.typedAt + ACP_REGISTRY_SEARCH_DEBOUNCE_MS,
+  );
+  const submittedQuery = typingSettled ? input.text.trim() : input.submitted;
   const [preparingId, setPreparingId] = useState<string | null>(null);
   const [prepareError, setPrepareError] = useState<string | null>(null);
-  const prepareGeneration = useRef(0);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const search = useEnvironmentQuery(
-    serverEnvironment.searchAcpRegistry({
-      environmentId,
-      input: submittedQuery
-        ? { query: submittedQuery }
-        : { query: "", limit: ACP_REGISTRY_MAX_AGENTS },
-    }),
+    enabled
+      ? serverEnvironment.searchAcpRegistry({
+          environmentId,
+          input: submittedQuery
+            ? { query: submittedQuery }
+            : { query: "", limit: ACP_REGISTRY_MAX_AGENTS },
+        })
+      : null,
   );
   const prepareAgent = useAtomCommand(serverEnvironment.prepareAcpRegistryAgent, {
     reportFailure: false,
   });
 
-  useEffect(
-    () => () => {
-      prepareGeneration.current += 1;
-      if (searchTimer.current !== null) clearTimeout(searchTimer.current);
-      onPreparingChange?.(false);
+  return {
+    query: input.text,
+    search,
+    preparingId,
+    prepareError,
+    type: (text: string) => {
+      setPrepareError(null);
+      setInput({ text, submitted: submittedQuery, typedAt: Date.now() });
     },
-    [onPreparingChange],
-  );
-
-  const submitSearch = (nextQuery: string) => {
-    if (searchTimer.current !== null) clearTimeout(searchTimer.current);
-    const trimmed = nextQuery.trim();
-    setQuery(trimmed);
-    setPrepareError(null);
-    if (trimmed === submittedQuery) {
-      search.refresh();
-    } else {
-      setSubmittedQuery(trimmed);
-    }
+    submit: () => {
+      const trimmed = input.text.trim();
+      setPrepareError(null);
+      setInput({ text: trimmed, submitted: trimmed, typedAt: null });
+      if (trimmed === submittedQuery) search.refresh();
+    },
+    prepare: async (
+      agent: AcpRegistrySearchAgent,
+      onPrepared: (agent: AcpRegistrySearchAgent) => void,
+    ) => {
+      if (!readEnvironmentScope(environmentId, AuthProvidersManageScope)) return;
+      setPrepareError(null);
+      setPreparingId(agent.id);
+      const result = await prepareAgent({ environmentId, input: { agentId: agent.id } });
+      setPreparingId(null);
+      if (result._tag === "Success") {
+        onPrepared(applyAcpRegistryPrepareResult(agent, result.value));
+        return;
+      }
+      if (!isAtomCommandInterrupted(result)) {
+        pipe(squashAtomCommandFailure(result), errorMessage, setPrepareError);
+      }
+    },
   };
+}
+
+export type AcpRegistrySearch = ReturnType<typeof useAcpRegistrySearch>;
+
+interface AcpRegistrySearchStepProps {
+  readonly environmentId: EnvironmentId;
+  readonly registry: AcpRegistrySearch;
+  readonly providerInstances: Readonly<Record<string, ProviderInstanceConfig>>;
+  readonly onPrepared: (agent: AcpRegistrySearchAgent) => void;
+  readonly onManualConfiguration: () => void;
+  readonly onLocalConfiguration?: () => void;
+}
+
+export function AcpRegistrySearchStep({
+  environmentId,
+  registry,
+  providerInstances,
+  onPrepared,
+  onManualConfiguration,
+  onLocalConfiguration,
+}: AcpRegistrySearchStepProps) {
+  const canManageProviders = useEnvironmentScope(environmentId, AuthProvidersManageScope);
+  const { query, search, preparingId, prepareError } = registry;
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    submitSearch(query);
+    registry.submit();
   };
 
-  const handlePrepare = async (agent: AcpRegistrySearchAgent) => {
-    if (!readEnvironmentScope(environmentId, AuthProvidersManageScope)) return;
-    const generation = ++prepareGeneration.current;
-    setPrepareError(null);
-    setPreparingId(agent.id);
-    onPreparingChange?.(true);
-    const result = await prepareAgent({ environmentId, input: { agentId: agent.id } });
-    if (prepareGeneration.current !== generation) return;
-    setPreparingId(null);
-    onPreparingChange?.(false);
-    if (result._tag === "Success") {
-      onPrepared(applyAcpRegistryPrepareResult(agent, result.value));
-      return;
-    }
-    if (!isAtomCommandInterrupted(result)) {
-      setPrepareError(errorMessage(squashAtomCommandFailure(result)));
-    }
+  const handlePrepare = (agent: AcpRegistrySearchAgent) => {
+    void registry.prepare(agent, onPrepared);
   };
 
-  const results = search.data?.agents ?? null;
+  const results =
+    search.data?.agents.filter((agent) => !FIRST_CLASS_REGISTRY_AGENT_IDS.has(agent.id)) ?? null;
   const isInitialSearch = search.isPending && results === null;
   const isRefreshing = search.isPending && results !== null;
   const resultCount = results?.length ?? 0;
 
-  useLayoutEffect(() => {
-    onLoadingChange?.(search.isPending);
-    return () => onLoadingChange?.(false);
-  }, [onLoadingChange, search.isPending]);
-
   return (
     <section className="grid gap-3" aria-labelledby="acp-registry-search-heading">
       <h3 className="sr-only" id="acp-registry-search-heading">
-        {t("settingsA.acpRegistryChooseAgent")}
+        {currentTranslator()("settingsA.acpRegistryChooseAgent")}
       </h3>
 
       <form className="flex flex-wrap items-center gap-2" onSubmit={handleSearch}>
@@ -150,19 +169,10 @@ export function AcpRegistrySearchStep({
             <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
-            aria-label={t("settingsA.acpRegistrySearchLabel")}
+            aria-label={currentTranslator()("settingsA.acpRegistrySearchLabel")}
             disabled={preparingId !== null}
-            onChange={(event) => {
-              const nextQuery = event.currentTarget.value;
-              setQuery(nextQuery);
-              setPrepareError(null);
-              if (searchTimer.current !== null) clearTimeout(searchTimer.current);
-              searchTimer.current = setTimeout(() => {
-                searchTimer.current = null;
-                setSubmittedQuery(nextQuery.trim());
-              }, 300);
-            }}
-            placeholder={t("settingsA.acpRegistrySearchPlaceholder")}
+            onChange={(event) => registry.type(event.currentTarget.value)}
+            placeholder={currentTranslator()("settingsA.acpRegistrySearchPlaceholder")}
             size="sm"
             type="search"
             value={query}
@@ -175,7 +185,7 @@ export function AcpRegistrySearchStep({
           type="button"
           variant="ghost-muted"
         >
-          {t("settingsA.acpRegistryEnterManually")}
+          {currentTranslator()("settingsA.acpRegistryEnterManually")}
         </Button>
         {onLocalConfiguration ? (
           <Button
@@ -185,18 +195,18 @@ export function AcpRegistrySearchStep({
             type="button"
             variant="outline"
           >
-            {t("settingsA.acpRegistryLocalCommand")}
+            {currentTranslator()("settingsA.acpRegistryLocalCommand")}
           </Button>
         ) : null}
       </form>
 
       <div className="sr-only" role="status">
         {isInitialSearch
-          ? t("settingsA.acpRegistrySearching")
+          ? currentTranslator()("settingsA.acpRegistrySearching")
           : isRefreshing
-            ? t("settingsA.acpRegistryRefreshing")
+            ? currentTranslator()("settingsA.acpRegistryRefreshing")
             : results
-              ? t("settingsA.acpRegistryResultCount", { count: resultCount })
+              ? currentTranslator()("settingsA.acpRegistryResultCount", { count: resultCount })
               : ""}
       </div>
 
@@ -208,16 +218,18 @@ export function AcpRegistrySearchStep({
 
       {isInitialSearch ? (
         <div className="flex min-h-20 items-center justify-center text-sm text-muted-foreground">
-          {t("settingsA.acpRegistrySearchingRegistry")}
+          {currentTranslator()("settingsA.acpRegistrySearchingRegistry")}
         </div>
       ) : null}
 
       {results ? (
         results.length === 0 ? (
           <div className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-dashed px-4 text-center">
-            <p className="text-sm font-medium">{t("settingsA.acpRegistryNoResults")}</p>
+            <p className="text-sm font-medium">
+              {currentTranslator()("settingsA.acpRegistryNoResults")}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t("settingsA.acpRegistryTryBroader")}
+              {currentTranslator()("settingsA.acpRegistryTryBroader")}
             </p>
           </div>
         ) : (

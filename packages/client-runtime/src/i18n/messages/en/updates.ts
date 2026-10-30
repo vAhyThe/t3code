@@ -1,6 +1,7 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const updates = {
+  languageAndCurrency: "Language and currency",
   addToAnotherMachine: "Add to another machine",
   machineToAddTheProjectTo: "Machine to add the project to",
   noMachineAvailable: "No machine available",

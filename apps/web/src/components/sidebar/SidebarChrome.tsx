@@ -44,7 +44,7 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
   const backdropVariant = resolveSidebarStageBackdropVariant(
     stageLabel,
-    environmentIdentificationMode === "artwork",
+    environmentIdentificationMode,
   );
   const pillLabel =
     environmentIdentificationMode === "pill"
@@ -105,10 +105,10 @@ export function SidebarBrandWidthProbe({
 }
 
 function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
-  const t = useT();
+  useT();
   return (
     <Link
-      aria-label={t("shellNav.goToThreads")}
+      aria-label="T3 Code home"
       className={cn(
         "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 w-fit min-w-0 shrink-0 items-center overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2 focus-visible:ring-inset md:flex",
         onBackdrop ? "text-white" : "text-foreground",
@@ -230,6 +230,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
           />
         </>
       )}
+      <SidebarThreadUndoNotice />
       <SidebarUpdatePill />
     </SidebarMenu>
   );
@@ -238,7 +239,6 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
 export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   return (
     <SidebarFooter>
-      <SidebarThreadUndoNotice />
       <SidebarProviderUpdatePill />
       <SidebarUpdateArchitectureWarning />
       <SidebarUtilityMenu />

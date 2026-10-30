@@ -4,7 +4,6 @@ import type { Translate } from "@t3tools/client-runtime/i18n";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import React, { startTransition, useEffect, useEffectEvent, useRef, useState } from "react";
 
-import { APP_DISPLAY_NAME } from "../../branding";
 import { connectPairing } from "../../connection/onboarding";
 import {
   peekPairingTokenFromUrl,
@@ -20,13 +19,12 @@ import { StandalonePage, StandalonePageHeader } from "../ui/standalone-page";
 import { useAtomCommand } from "../../state/use-atom-command";
 
 export function PairingPendingSurface() {
-  const t = useT();
+  useT();
   return (
-    <StandalonePage tone="pairing">
+    <StandalonePage>
       <StandalonePageHeader
-        eyebrow={APP_DISPLAY_NAME}
-        title={t("shellDevice.pairingWithEnvironment")}
-        description={t("shellDevice.pairingValidating")}
+        title={currentTranslator()("shellDevice.pairingWithEnvironment")}
+        description={currentTranslator()("shellDevice.pairingValidating")}
       />
     </StandalonePage>
   );
@@ -78,6 +76,7 @@ export function PairingRouteSurface({
     void submitCredential(token);
   });
 
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- strips the pairing token from the URL and submits it once when the route carries one
   useEffect(() => {
     if (!autoPairToken || autoSubmitAttemptedRef.current) {
       return;
@@ -89,11 +88,10 @@ export function PairingRouteSurface({
   }, [autoPairToken]);
 
   return (
-    <StandalonePage tone="pairing">
+    <StandalonePage>
       <StandalonePageHeader
-        eyebrow={APP_DISPLAY_NAME}
-        title={t("shellDevice.pairEnvironment")}
-        description={describeAuthGate(auth.bootstrapMethods, t)}
+        title={currentTranslator()("shellDevice.pairEnvironment")}
+        description={describeAuthGate(auth.bootstrapMethods, currentTranslator())}
       />
 
       <form className="mt-6 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
@@ -209,6 +207,7 @@ export function HostedPairingRouteSurface() {
     void submitHostedPairingRequest();
   });
 
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- strips the pairing token from the URL and submits the hosted pairing request once on mount
   useEffect(() => {
     if (submitAttemptedRef.current) {
       return;
@@ -220,9 +219,8 @@ export function HostedPairingRouteSurface() {
   }, []);
 
   return (
-    <StandalonePage tone="pairing">
+    <StandalonePage>
       <StandalonePageHeader
-        eyebrow={APP_DISPLAY_NAME}
         title={
           status === "paired"
             ? t("shellDevice.pairingBackendPaired")

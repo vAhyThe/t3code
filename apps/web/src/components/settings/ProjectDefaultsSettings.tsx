@@ -1,24 +1,21 @@
-import { currentTranslator, useT } from "../../i18n/I18nProvider";
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import {
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,
-  type ProviderInstanceId,
   type WorktreeSubmodules,
 } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import { useNavigate } from "@tanstack/react-router";
 
-import { mergeEnvironmentSettings } from "../../hooks/useSettings";
 import {
   getCustomModelOptionsByInstance,
   resolveEffectiveDefaultModelSelection,
 } from "../../modelSelection";
 import {
-  applyProviderInstanceSettings,
-  deriveProviderInstanceEntries,
+  providerInstanceEntriesFor,
   resolveDefaultProviderModelSelection,
-  sortProviderInstanceEntries,
 } from "../../providerInstances";
 import { useEnvironmentProviders, useEnvironments } from "../../state/environments";
 import { EMPTY_SERVER_PROVIDERS } from "../../state/server";
@@ -39,6 +36,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "./settingsLayout";
+import { useScopedModelDisabledReason } from "./useScopedModelAvailability";
 import {
   useScopedSettings,
   useScopedSettingsMixed,
@@ -52,8 +50,7 @@ function isWorktreeSubmodules(value: string | null): value is WorktreeSubmodules
 }
 
 export function ProjectDefaultsSettings({ category }: { category: ProjectSettingsCategory }) {
-  const t = useT();
-  const { scope, target, targets, connectedEnvironments } = useSettingsScope();
+  const { scope, target, connectedEnvironments } = useSettingsScope();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const navigate = useNavigate();
@@ -73,13 +70,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
   const selection = storedSelection
     ? resolveEffectiveDefaultModelSelection(settings, providers, storedSelection)
     : null;
-  const entries = sortProviderInstanceEntries(
-    applyProviderInstanceSettings(
-      deriveProviderInstanceEntries(providers),
-      settings,
-      target?.projectId ?? null,
-    ),
-  );
+  const entries = providerInstanceEntriesFor(providers, settings, target?.projectId ?? null);
   const modelOptions = getCustomModelOptionsByInstance(
     settings,
     providers,
@@ -88,10 +79,17 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
   );
   const activeEntry = entries.find((entry) => entry.instanceId === selection?.instanceId);
   const mixedModel = useScopedSettingsMixed(["defaultModelSelection"]);
+  const mixedFallback = useScopedSettingsMixed(["fallbackModelSelection"]);
+  const fallbackSelection = settings.fallbackModelSelection ?? selection;
+  const fallbackModelOptions = getCustomModelOptionsByInstance(
+    settings,
+    providers,
+    fallbackSelection?.instanceId,
+    fallbackSelection?.model,
+  );
   const mixedPermissions = useScopedSettingsMixed(["defaultRuntimeMode"]);
   const PermissionIcon = runtimeModeConfig[settings.defaultRuntimeMode].icon;
   const mixedWorkspace = useScopedSettingsMixed(["defaultThreadEnvMode"]);
-  const mixedSubmodules = useScopedSettingsMixed(["worktreeSubmodules"]);
   const mixedAutoPull = useScopedSettingsMixed(["defaultAutoPull"]);
   const mixedAgentCredits = useScopedSettingsMixed(["removeAgentCreditsOnMerge"]);
   const mixedMergeMethod = useScopedSettingsMixed(["pullRequestMergeMethod"]);
@@ -102,45 +100,14 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
     ? resolveProjectSettings(target.settings, null, null, null).settings
     : null;
 
-  function modelDisabledReason(instanceId: ProviderInstanceId, model: string): string | null {
-    const sourceEntry = entries.find((entry) => entry.instanceId === instanceId);
-    for (const candidate of targets) {
-      const environment = environments.find(
-        (entry) => entry.environmentId === candidate.environmentId,
-      );
-      const providers = providersByEnvironment.get(candidate.environmentId);
-      if (!environment?.serverConfig || !providers) continue;
-      const entry = applyProviderInstanceSettings(
-        deriveProviderInstanceEntries(providers),
-        candidate.settings,
-        candidate.projectId,
-      ).find((option) => option.instanceId === instanceId);
-      const options = getCustomModelOptionsByInstance(
-        mergeEnvironmentSettings(candidate.settings, settings),
-        providers,
-      ).get(instanceId);
-      if (
-        !entry?.enabled ||
-        !entry.isAvailable ||
-        entry.driverKind !== sourceEntry?.driverKind ||
-        !options?.some((option) => option.slug === model && !option.isUnavailable)
-      ) {
-        return currentTranslator()("settingsB.projectDefaultsModelUnavailable", {
-          environment:
-            environment?.label ??
-            currentTranslator()("settingsB.projectDefaultsSelectedEnvironment"),
-        });
-      }
-    }
-    return null;
-  }
+  const modelDisabledReason = useScopedModelDisabledReason(settings, entries);
 
   const setModel = (value: ModelSelection | null) => {
     const reason = value ? modelDisabledReason(value.instanceId, value.model) : null;
     if (reason) {
       toastManager.add({
         type: "error",
-        title: t("settingsB.projectDefaultsModelNotSaved"),
+        title: currentTranslator()("settingsB.projectDefaultsModelNotSaved"),
         description: reason,
       });
       return;
@@ -154,7 +121,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       settingKeys={["defaultModelSelection"]}
       mixed={mixedModel}
       id="default-model"
-      title={t("settingsB.projectDefaultsModelTitle")}
+      title={currentTranslator()("settingsB.projectDefaultsModelTitle")}
       description={
         isProjectScope
           ? currentTranslator()("settingsB.projectDefaultsModelDescProject")
@@ -168,7 +135,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       resetAction={
         settings.defaultModelSelection !== null ? (
           <SettingResetButton
-            label={t("settingsB.projectDefaultsModelResetLabel")}
+            label={currentTranslator()("settingsB.projectDefaultsModelResetLabel")}
             onClick={() => setModel(null)}
           />
         ) : null
@@ -214,7 +181,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
           </div>
         ) : (
           <span className="text-sm text-muted-foreground">
-            {t("settingsB.projectDefaultsNoProviders")}
+            {currentTranslator()("settingsB.projectDefaultsNoProviders")}
           </span>
         )
       }
@@ -226,16 +193,16 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
       settingKeys={["defaultThreadEnvMode"]}
       mixed={mixedWorkspace}
       id={searchableSetting("new-threads").id}
-      title={t("settingsB.projectDefaultsWorkspaceTitle")}
+      title={currentTranslator()("settingsB.projectDefaultsWorkspaceTitle")}
       description={
         isProjectScope
-          ? t("settingsB.projectDefaultsWorkspaceDescProject")
-          : t("settingsB.projectDefaultsWorkspaceDesc")
+          ? currentTranslator()("settingsB.projectDefaultsWorkspaceDescProject")
+          : currentTranslator()("settingsB.projectDefaultsWorkspaceDesc")
       }
       resetAction={
         !isProjectScope && settings.defaultThreadEnvMode !== null ? (
           <SettingResetButton
-            label={t("settingsB.projectDefaultsWorkspaceResetLabel")}
+            label={currentTranslator()("settingsB.projectDefaultsWorkspaceResetLabel")}
             onClick={() => updateSettings({ defaultThreadEnvMode: null })}
           />
         ) : null
@@ -248,7 +215,10 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
               updateSettings({ defaultThreadEnvMode: value });
           }}
         >
-          <SelectTrigger size="sm" aria-label={t("settingsB.projectDefaultsWorkspaceAria")}>
+          <SelectTrigger
+            size="sm"
+            aria-label={currentTranslator()("settingsB.projectDefaultsWorkspaceAria")}
+          >
             <SelectValue>
               {(value: string | null) =>
                 value === "local" || value === "worktree"
@@ -268,23 +238,80 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
     />
   );
 
+  const fallbackRow = !isProjectScope ? (
+    <SettingsRow
+      serverScoped
+      settingKeys={["fallbackModelSelection"]}
+      mixed={mixedFallback}
+      id="fallback-model"
+      title="Fallback model"
+      description="Used for new threads when the default model's provider is out of usage."
+      resetAction={
+        mixedFallback || settings.fallbackModelSelection !== null ? (
+          <SettingResetButton
+            label="fallback model"
+            onClick={() => updateSettings({ fallbackModelSelection: null })}
+          />
+        ) : null
+      }
+      control={
+        fallbackSelection ? (
+          <ProviderModelPicker
+            environmentId={representative?.environmentId ?? null}
+            activeInstanceId={fallbackSelection.instanceId}
+            model={fallbackSelection.model}
+            lockedProvider={null}
+            instanceEntries={entries}
+            modelOptionsByInstance={fallbackModelOptions}
+            triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
+            triggerAriaLabel="Fallback model"
+            {...(mixedFallback
+              ? { triggerLabel: "Mixed" }
+              : settings.fallbackModelSelection === null
+                ? { triggerLabel: "None" }
+                : {})}
+            getModelDisabledReason={modelDisabledReason}
+            onInstanceModelChange={(instanceId, model) => {
+              const reason = modelDisabledReason(instanceId, model);
+              if (reason) {
+                toastManager.add({
+                  type: "error",
+                  title: "Fallback model not saved",
+                  description: reason,
+                });
+                return;
+              }
+              updateSettings({ fallbackModelSelection: createModelSelection(instanceId, model) });
+            }}
+          />
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {currentTranslator()("settingsB.projectDefaultsNoProviders")}
+          </span>
+        )
+      }
+    />
+  ) : null;
+
   return (
     <SettingsSection
       id={category === "source-control" ? "source-control-defaults" : "project-defaults"}
       title={
         category === "source-control"
-          ? t("settingsB.projectDefaultsRepositories")
-          : t("settingsB.projectDefaultsNewThreads")
+          ? currentTranslator()("settingsB.projectDefaultsRepositories")
+          : currentTranslator()("settingsB.projectDefaultsNewThreads")
       }
     >
       {category === "project" ? (
         <>
           {modelRow}
+          {fallbackRow}
           {workspaceRow}
         </>
       ) : category === "general" ? (
         <>
           {modelRow}
+          {fallbackRow}
           <SettingsRow
             serverScoped
             settingKeys={["defaultRuntimeMode"]}
@@ -292,13 +319,13 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("default-permissions")}
             description={
               isProjectScope
-                ? t("settingsB.projectDefaultsPermissionsDescProject")
-                : t("settingsB.projectDefaultsPermissionsDesc")
+                ? currentTranslator()("settingsB.projectDefaultsPermissionsDescProject")
+                : currentTranslator()("settingsB.projectDefaultsPermissionsDesc")
             }
             resetAction={
               settings.defaultRuntimeMode !== DEFAULT_SERVER_SETTINGS.defaultRuntimeMode ? (
                 <SettingResetButton
-                  label={t("settingsB.projectDefaultsPermissionsResetLabel")}
+                  label={currentTranslator()("settingsB.projectDefaultsPermissionsResetLabel")}
                   onClick={() =>
                     updateSettings({
                       defaultRuntimeMode: DEFAULT_SERVER_SETTINGS.defaultRuntimeMode,
@@ -314,14 +341,19 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                   if (value) updateSettings({ defaultRuntimeMode: value });
                 }}
               >
-                <SelectTrigger size="sm" aria-label={t("settingsB.projectDefaultsPermissionsAria")}>
+                <SelectTrigger
+                  size="sm"
+                  aria-label={currentTranslator()("settingsB.projectDefaultsPermissionsAria")}
+                >
                   {!mixedPermissions && (
                     <PermissionIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
                   <SelectValue>
                     {mixedPermissions
-                      ? t("settingsB.projectDefaultsMixed")
-                      : t(runtimeModeConfig[settings.defaultRuntimeMode].labelKey)}
+                      ? currentTranslator()("settingsB.projectDefaultsMixed")
+                      : currentTranslator()(
+                          runtimeModeConfig[settings.defaultRuntimeMode].labelKey,
+                        )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
@@ -333,10 +365,10 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                         <div className="grid gap-0.5">
                           <span className="inline-flex items-center gap-1.5 font-medium">
                             <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-                            {t(option.labelKey)}
+                            {currentTranslator()(option.labelKey)}
                           </span>
                           <span className="text-xs leading-4 text-muted-foreground">
-                            {t(option.descriptionKey)}
+                            {currentTranslator()(option.descriptionKey)}
                           </span>
                         </div>
                       </SelectItem>
@@ -347,52 +379,6 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             }
           />
           {workspaceRow}
-          <SettingsRow
-            serverScoped
-            settingKeys={["worktreeSubmodules"]}
-            mixed={mixedSubmodules}
-            {...searchableSetting("worktree-submodules")}
-            description={
-              isProjectScope
-                ? t("settingsB.projectDefaultsSubmodulesDescProject")
-                : t("settingsB.projectDefaultsSubmodulesDesc")
-            }
-            resetAction={
-              !isProjectScope && settings.worktreeSubmodules !== null ? (
-                <SettingResetButton
-                  label={t("settingsB.projectDefaultsSubmodulesResetLabel")}
-                  onClick={() => updateSettings({ worktreeSubmodules: null })}
-                />
-              ) : null
-            }
-            control={
-              <Select
-                value={mixedSubmodules ? null : (effective?.worktreeSubmodules ?? null)}
-                onValueChange={(value) => {
-                  if (isWorktreeSubmodules(value)) updateSettings({ worktreeSubmodules: value });
-                }}
-              >
-                <SelectTrigger size="sm" aria-label={t("settingsB.projectDefaultsSubmodulesAria")}>
-                  <SelectValue>
-                    {(value: string | null) =>
-                      isWorktreeSubmodules(value)
-                        ? WORKTREE_SUBMODULES_LABELS[value]
-                        : unavailable
-                          ? "Unavailable"
-                          : "Mixed"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectPopup align="end" alignItemWithTrigger={false}>
-                  {WORKTREE_SUBMODULES_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {WORKTREE_SUBMODULES_LABELS[option]}
-                    </SelectItem>
-                  ))}
-                </SelectPopup>
-              </Select>
-            }
-          />
         </>
       ) : (
         <>
@@ -401,24 +387,24 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["defaultAutoPull"]}
             mixed={mixedAutoPull}
             id="automatic-pull"
-            title={t("settingsB.projectDefaultsAutoPullTitle")}
+            title={currentTranslator()("settingsB.projectDefaultsAutoPullTitle")}
             description={
               isProjectScope
-                ? t("settingsB.projectDefaultsAutoPullDescProject")
-                : t("settingsB.projectDefaultsAutoPullDesc")
+                ? currentTranslator()("settingsB.projectDefaultsAutoPullDescProject")
+                : currentTranslator()("settingsB.projectDefaultsAutoPullDesc")
             }
             resetAction={
               settings.defaultAutoPull ? (
                 <SettingResetButton
-                  label={t("settingsB.projectDefaultsAutoPullResetLabel")}
-                  tooltip={t("settingsB.projectDefaultsAutoPullResetTooltip")}
+                  label={currentTranslator()("settingsB.projectDefaultsAutoPullResetLabel")}
+                  tooltip={currentTranslator()("settingsB.projectDefaultsAutoPullResetTooltip")}
                   onClick={() => updateSettings({ defaultAutoPull: false })}
                 />
               ) : null
             }
             control={
               <Switch
-                aria-label={t("settingsB.projectDefaultsAutoPullAria")}
+                aria-label={currentTranslator()("settingsB.projectDefaultsAutoPullAria")}
                 mixed={mixedAutoPull}
                 checked={mixedAutoPull ? false : settings.defaultAutoPull}
                 onCheckedChange={(enabled) => updateSettings({ defaultAutoPull: enabled })}
@@ -436,15 +422,15 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             resetAction={
               settings.removeAgentCreditsOnMerge ? (
                 <SettingResetButton
-                  label={t("settingsB.projectDefaultsAgentCreditsResetLabel")}
-                  tooltip={t("settingsB.projectDefaultsAgentCreditsResetTooltip")}
+                  label={currentTranslator()("settingsB.projectDefaultsAgentCreditsResetLabel")}
+                  tooltip={currentTranslator()("settingsB.projectDefaultsAgentCreditsResetTooltip")}
                   onClick={() => updateSettings({ removeAgentCreditsOnMerge: false })}
                 />
               ) : null
             }
             control={
               <Switch
-                aria-label={t("settingsB.projectDefaultsAgentCreditsAria")}
+                aria-label={currentTranslator()("settingsB.projectDefaultsAgentCreditsAria")}
                 mixed={mixedAgentCredits}
                 checked={mixedAgentCredits ? false : settings.removeAgentCreditsOnMerge}
                 onCheckedChange={(enabled) =>
@@ -460,14 +446,14 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             {...searchableSetting("pull-request-merge-method")}
             description={
               isProjectScope
-                ? t("settingsB.projectDefaultsMergeDescProject")
-                : t("settingsB.projectDefaultsMergeDesc")
+                ? currentTranslator()("settingsB.projectDefaultsMergeDescProject")
+                : currentTranslator()("settingsB.projectDefaultsMergeDesc")
             }
             resetAction={
               settings.pullRequestMergeMethod !== null ? (
                 <SettingResetButton
-                  label={t("settingsB.projectDefaultsMergeResetLabel")}
-                  tooltip={t("settingsB.projectDefaultsMergeResetTooltip")}
+                  label={currentTranslator()("settingsB.projectDefaultsMergeResetLabel")}
+                  tooltip={currentTranslator()("settingsB.projectDefaultsMergeResetTooltip")}
                   onClick={() => updateSettings({ pullRequestMergeMethod: null })}
                 />
               ) : null
@@ -481,19 +467,24 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
                     updateSettings({ pullRequestMergeMethod: value });
                 }}
               >
-                <SelectTrigger size="sm" aria-label={t("settingsB.projectDefaultsMergeAria")}>
+                <SelectTrigger
+                  size="sm"
+                  aria-label={currentTranslator()("settingsB.projectDefaultsMergeAria")}
+                >
                   <SelectValue>
                     {(value: string | null) =>
                       value === "merge" || value === "squash" || value === "rebase"
                         ? PULL_REQUEST_MERGE_METHOD_LABELS[value]
                         : value === "last"
-                          ? t("settingsB.projectDefaultsLastSelected")
-                          : t("settingsB.projectDefaultsMixed")
+                          ? currentTranslator()("settingsB.projectDefaultsLastSelected")
+                          : currentTranslator()("settingsB.projectDefaultsMixed")
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  <SelectItem value="last">{t("settingsB.projectDefaultsLastSelected")}</SelectItem>
+                  <SelectItem value="last">
+                    {currentTranslator()("settingsB.projectDefaultsLastSelected")}
+                  </SelectItem>
                   <SelectItem value="merge">{PULL_REQUEST_MERGE_METHOD_LABELS.merge}</SelectItem>
                   <SelectItem value="squash">{PULL_REQUEST_MERGE_METHOD_LABELS.squash}</SelectItem>
                   <SelectItem value="rebase">{PULL_REQUEST_MERGE_METHOD_LABELS.rebase}</SelectItem>
@@ -504,5 +495,69 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
         </>
       )}
     </SettingsSection>
+  );
+}
+
+export function WorktreeSubmodulesRow() {
+  const { scope, target, connectedEnvironments } = useSettingsScope();
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const mixedSubmodules = useScopedSettingsMixed(["worktreeSubmodules"]);
+  const isProjectScope = scope.kind === "project" || scope.kind === "checkout";
+  const unavailable = connectedEnvironments.length === 0;
+  const effective = target
+    ? resolveProjectSettings(target.settings, null, null, null).settings
+    : null;
+
+  return (
+    <SettingsRow
+      serverScoped
+      settingKeys={["worktreeSubmodules"]}
+      mixed={mixedSubmodules}
+      {...searchableSetting("worktree-submodules")}
+      description={
+        isProjectScope
+          ? currentTranslator()("settingsB.projectDefaultsSubmodulesDescProject")
+          : currentTranslator()("settingsB.projectDefaultsSubmodulesDesc")
+      }
+      resetAction={
+        !isProjectScope && settings.worktreeSubmodules !== null ? (
+          <SettingResetButton
+            label={currentTranslator()("settingsB.projectDefaultsSubmodulesResetLabel")}
+            onClick={() => updateSettings({ worktreeSubmodules: null })}
+          />
+        ) : null
+      }
+      control={
+        <Select
+          value={mixedSubmodules ? null : (effective?.worktreeSubmodules ?? null)}
+          onValueChange={(value) => {
+            if (isWorktreeSubmodules(value)) updateSettings({ worktreeSubmodules: value });
+          }}
+        >
+          <SelectTrigger
+            size="sm"
+            aria-label={currentTranslator()("settingsB.projectDefaultsSubmodulesAria")}
+          >
+            <SelectValue>
+              {(value: string | null) =>
+                isWorktreeSubmodules(value)
+                  ? WORKTREE_SUBMODULES_LABELS[value]
+                  : unavailable
+                    ? "Unavailable"
+                    : "Mixed"
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectPopup align="end" alignItemWithTrigger={false}>
+            {WORKTREE_SUBMODULES_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {WORKTREE_SUBMODULES_LABELS[option]}
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </Select>
+      }
+    />
   );
 }

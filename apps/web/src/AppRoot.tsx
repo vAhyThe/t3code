@@ -1,38 +1,21 @@
 import { RouterProvider } from "@tanstack/react-router";
-import { useEffect } from "react";
 
-import { subscribeComposerDraftModelReconciliation } from "./composerDraftStore";
-import { environmentThreadShells } from "./state/threads";
-import { environmentShell } from "./state/shell";
-
-import { BrowserProfileReporter } from "./browser/BrowserProfileReporter";
 import { ElectronBrowserHost } from "./browser/ElectronBrowserHost";
 import { QuitHoldOverlay } from "./components/QuitHoldOverlay";
 import { I18nSettingsSync } from "./i18n/I18nSettingsSync";
 import { AppAtomRegistryProvider } from "./rpc/atomRegistry";
-import { appAtomRegistry } from "./rpc/atomRegistry";
+
 import type { AppRouter } from "./router";
 
 // Keep webviews outside the router but inside its atom registry so route changes preserve them.
 export function AppRoot({ router }: { readonly router: AppRouter }) {
-  useEffect(
-    () =>
-      subscribeComposerDraftModelReconciliation({
-        registry: appAtomRegistry,
-        threadShellAtom: environmentThreadShells.threadShellAtom,
-        threadRefsAtom: environmentThreadShells.threadRefsAtom,
-        shellStateAtom: environmentShell.stateAtom,
-      }),
-    [],
-  );
   return (
-    <I18nSettingsSync>
-      <AppAtomRegistryProvider>
+    <AppAtomRegistryProvider>
+      <I18nSettingsSync>
         <RouterProvider router={router} />
         <ElectronBrowserHost />
-        <BrowserProfileReporter />
         <QuitHoldOverlay />
-      </AppAtomRegistryProvider>
-    </I18nSettingsSync>
+      </I18nSettingsSync>
+    </AppAtomRegistryProvider>
   );
 }

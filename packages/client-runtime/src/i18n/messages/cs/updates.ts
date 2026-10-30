@@ -1,6 +1,7 @@
 import type { CatalogNamespace } from "../types.ts";
 
 export const updates = {
+  languageAndCurrency: "Jazyk a měna",
   addToAnotherMachine: "Přidat na jiný počítač",
   machineToAddTheProjectTo: "Počítač, na který se má projekt přidat",
   noMachineAvailable: "Žádný počítač není dostupný",

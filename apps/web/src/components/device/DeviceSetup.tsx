@@ -23,19 +23,10 @@ import { cn } from "~/lib/utils";
 
 const platformName = (platform: DevicePlatform) => (platform === "ios" ? "iOS" : "Android");
 
-function DeviceHubDescriptionText() {
-  const t = useT();
-  return <>{t("shellDevice.deviceHubDescription")}</>;
-}
-
-function AgentDeviceDescriptionText() {
-  const t = useT();
-  return <>{t("shellDevice.agentDeviceDescription")}</>;
-}
-
-/** Rendered as a node so consumers keep passing a plain prop and the text follows the locale. */
-export const deviceHubDescription = <DeviceHubDescriptionText />;
-export const agentDeviceDescription = <AgentDeviceDescriptionText />;
+const deviceHubDescription =
+  "Enable this environment to open simulators and emulators, whether they run here or on a remote device host.";
+const agentDeviceDescription =
+  "Allow new agent sessions in this environment to start and control local and remote devices, with required tools set up automatically.";
 
 export const isAndroidDiscoveryUncertain = (state: DeviceServiceState) =>
   Object.values(state.hostStatuses).some(
@@ -70,7 +61,7 @@ function deviceHostDiagnostics(
   });
 }
 
-export function DeviceHostDiagnostics(props: {
+function DeviceHostDiagnostics(props: {
   readonly hosts: ReadonlyArray<Pick<DeviceServiceState["hosts"][number], "id" | "label">>;
   readonly hostStatuses: DeviceServiceState["hostStatuses"];
   readonly className?: string;
@@ -138,9 +129,7 @@ export function platformSetupStatus(state: DeviceServiceState, platform: DeviceP
     ready: true,
     message:
       remoteHost?.kind === "eas"
-        ? currentTranslator()("updates.hostStartsIOSSimulatorsInTheCloudWith", {
-            host: remoteHost.label,
-          })
+        ? `${remoteHost.label} starts ${platform === "ios" ? "iOS Simulators" : "Android emulators"} in the cloud with EAS Simulator.`
         : platform === "ios"
           ? currentTranslator()("updates.xcodeAndIOSSimulatorAreAvailableLocation", {
               location: location,
@@ -391,7 +380,7 @@ export function AgentDeviceSetupStatus(props: {
   return null;
 }
 
-export function PlatformStatus(props: {
+function PlatformStatus(props: {
   readonly platform: string;
   readonly status: { readonly ready: boolean; readonly message: string };
   readonly compact?: boolean;

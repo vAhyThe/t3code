@@ -1,19 +1,19 @@
 import { currentTranslator } from "~/i18n/I18nProvider";
 import { memo } from "react";
-import { useT } from "~/i18n/I18nProvider";
+
 import { cn } from "~/lib/utils";
 
 export function hasNonZeroStat(stat: { additions: number; deletions: number }): boolean {
   return stat.additions > 0 || stat.deletions > 0;
 }
 
-function formatCompactDiffCount(value: number): string {
+export function formatCompactDiffCount(value: number): string {
   if (value < 1000) return String(value);
-  if (value < 1_000_000) {
+  if (value < 999_500) {
     const k = value / 1000;
     return `${k < 10 ? k.toFixed(1).replace(/\.0$/, "") : Math.round(k)}k`;
   }
-  if (value < 1_000_000_000) {
+  if (value < 999_500_000) {
     const m = value / 1_000_000;
     return currentTranslator()("shellNav.elapsedMinutes", {
       minutes: m < 10 ? m.toFixed(1).replace(/\.0$/, "") : Math.round(m),
@@ -27,32 +27,29 @@ export const DiffStatLabel = memo(function DiffStatLabel(props: {
   additions: number;
   deletions: number;
   className?: string;
-  showParentheses?: boolean;
   layout?: "aligned" | "inline";
 }) {
-  const t = useT();
-  const { additions, deletions, className, showParentheses = false, layout = "aligned" } = props;
+  const { additions, deletions, className, layout = "aligned" } = props;
   return (
-    <>
-      {showParentheses && <span className="text-muted-foreground/70">(</span>}
-      <span
-        role="group"
-        aria-label={t("chat.diffStatAdditionsDeletions", { additions, deletions })}
-        className={cn(
-          layout === "inline"
-            ? "inline-flex items-center gap-1 tabular-nums align-middle"
-            : "inline-grid grid-cols-[4ch_4ch] gap-2 text-right tabular-nums align-middle",
-          className,
-        )}
-      >
-        <span aria-hidden="true" className="font-mono text-diff-addition-foreground">
-          +{formatCompactDiffCount(additions)}
-        </span>
-        <span aria-hidden="true" className="font-mono text-diff-deletion-foreground">
-          -{formatCompactDiffCount(deletions)}
-        </span>
+    <span
+      role="group"
+      aria-label={currentTranslator()("chat.diffStatAdditionsDeletions", {
+        additions: additions,
+        deletions: deletions,
+      })}
+      className={cn(
+        layout === "inline"
+          ? "inline-flex items-center gap-1 tabular-nums align-middle"
+          : "inline-grid grid-cols-[4ch_4ch] gap-2 text-right tabular-nums align-middle",
+        className,
+      )}
+    >
+      <span aria-hidden="true" className="font-mono text-diff-addition-foreground">
+        +{formatCompactDiffCount(additions)}
       </span>
-      {showParentheses && <span className="text-muted-foreground/70">)</span>}
-    </>
+      <span aria-hidden="true" className="font-mono text-diff-deletion-foreground">
+        -{formatCompactDiffCount(deletions)}
+      </span>
+    </span>
   );
 });

@@ -37,7 +37,7 @@ function resolveTimestampLocale(systemLocale: string | null | undefined): string
 
 function readHostSystemLocale(): string | null {
   if (typeof window === "undefined") return null;
-  return window.desktopBridge?.getSystemLocale?.() ?? null;
+  return window.desktopBridge?.getSystemLocale() ?? null;
 }
 
 const timestampLocale = resolveTimestampLocale(readHostSystemLocale());
@@ -284,17 +284,6 @@ export function formatRelativeTimeLabel(isoDate: string, nowMs: number = Date.no
   const relative = formatRelativeTime(isoDate, nowMs);
   if (!relative) return "";
   return relative.suffix ? `${relative.value} ${relative.suffix}` : relative.value;
-}
-
-/** Sidebar label such as "now" or "15m"; the English "ago" is dropped, other languages keep the phrase. */
-export function formatCompactRelativeTimeLabel(
-  isoDate: string,
-  nowMs: number = Date.now(),
-): string {
-  const date = parseTimestampDate(isoDate);
-  if (!date) return "";
-  if (nowMs - date.getTime() < 60_000) return currentTranslator()("shellRest.justNowCompact");
-  return formatRelativeTime(isoDate, nowMs)?.value ?? "";
 }
 
 export function formatElapsedDurationLabel(isoDate: string, nowMs: number = Date.now()): string {

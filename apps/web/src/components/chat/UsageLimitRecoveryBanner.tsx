@@ -31,7 +31,6 @@ export function usageLimitRecoveryBannerItem(props: RecoveryProps): ComposerBann
   return {
     id: `usage-limit-recovery:${runId}`,
     variant: "warning",
-    priority: "urgent",
     icon: <GaugeIcon />,
     title: t("chat.usageLimitRecoveryTitle"),
     description: resetAt

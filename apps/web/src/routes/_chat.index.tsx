@@ -1,3 +1,5 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
+import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -19,8 +21,6 @@ import {
   useThreadShells,
 } from "../state/entities";
 import { useEnvironments } from "../state/environments";
-
-import { useT } from "../i18n/I18nProvider";
 
 function ChatIndexRouteView() {
   const { authGateState } = Route.useRouteContext();
@@ -49,6 +49,7 @@ function IndexDraftLanding() {
     sortScopedProjectsForSidebar(projects, threads, "updated_at")[0] ?? null;
   const attempt = startState.retryRequest;
 
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- starts a draft thread in the most recent project and navigates to it while still on the index
   useEffect(() => {
     // Starting a draft after the user has left would replace the page they picked.
     if (mostRecentProject === null || startedAttemptRef.current === attempt || !isStillOnIndex()) {
@@ -87,18 +88,24 @@ function IndexDraftLanding() {
 }
 
 function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
-  const t = useT();
+  const contentArea = workspaceAreaProps("home", 1, "Home");
   return (
-    <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none">
+    <SidebarInset
+      {...contentArea}
+      role="main"
+      className="h-dvh min-h-0 overflow-hidden overscroll-y-none"
+    >
       {isElectron ? <WorkspacePageHeader electron /> : null}
       <Empty className="flex-1">
         <EmptyHeader className="max-w-md">
-          <EmptyTitle>{t("shellNav.draftStartErrorTitle")}</EmptyTitle>
-          <EmptyDescription>{t("shellNav.draftStartErrorDescription")}</EmptyDescription>
+          <EmptyTitle>{currentTranslator()("shellNav.draftStartErrorTitle")}</EmptyTitle>
+          <EmptyDescription>
+            {currentTranslator()("shellNav.draftStartErrorDescription")}
+          </EmptyDescription>
           <div className="mt-5 flex justify-center">
             <Button size="sm" onClick={onRetry}>
               <RefreshIcon size="md" />
-              {t("common.tryAgain")}
+              {currentTranslator()("common.tryAgain")}
             </Button>
           </div>
         </EmptyHeader>
