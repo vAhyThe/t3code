@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,
@@ -727,6 +728,7 @@ function useKeybindingRowEditor({
   onSave: (input: ServerUpsertKeybindingInput) => void;
 }) {
   const [draft, setDraft] = useReducer(keybindingRowDraftReducer, row, createKeybindingRowDraft);
+  const pillRef = useRef<HTMLButtonElement>(null);
   const { keyDraft, whenDraft, isRecording, isWhenDraftValid } = draft;
   const whenDraftExpression = whenAstToExpression(whenDraft);
   const isDirty = keyDraft !== row.key || whenDraftExpression !== row.when;
@@ -749,7 +751,13 @@ function useKeybindingRowEditor({
     if (event.key === "Tab" && !isRecording) return;
     event.preventDefault();
     if (event.key === "Escape") {
-      setDraft({ keyDraft: row.key, isRecording: false });
+      // An unhandled Escape closes the settings page.
+      event.stopPropagation();
+      const field = event.currentTarget;
+      flushSync(() => setDraft({ keyDraft: row.key, isRecording: false }));
+      // The field may unmount for the pill; focus would otherwise drop to the page.
+      if (pillRef.current) pillRef.current.focus();
+      else field.blur();
       return;
     }
     const next = keybindingFromKeyboardEvent(event.nativeEvent, navigator.platform, {
@@ -770,6 +778,7 @@ function useKeybindingRowEditor({
     setDraft,
     save,
     captureKeybinding,
+    pillRef,
   };
 }
 
@@ -800,9 +809,16 @@ function KeybindingKeyControl({
   isSaving: boolean;
   pillClassName?: string | undefined;
 }) {
-  const t = useT();
-  const { keyDraft, isRecording, isDirty, isWhenDraftValid, setDraft, save, captureKeybinding } =
-    editor;
+  const {
+    keyDraft,
+    isRecording,
+    isDirty,
+    isWhenDraftValid,
+    setDraft,
+    save,
+    captureKeybinding,
+    pillRef,
+  } = editor;
   const showPill = !isRecording && keyDraft === row.key && row.key.length > 0 && !isDirty;
 
   return (
@@ -813,14 +829,17 @@ function KeybindingKeyControl({
           disabled={isSaving || keyDraft.trim().length === 0 || !isWhenDraftValid}
           onClick={save}
         >
-          {isSaving ? t("settingsB.keybindingSaving") : t("settingsB.keybindingSave")}
+          {isSaving
+            ? currentTranslator()("settingsB.keybindingSaving")
+            : currentTranslator()("settingsB.keybindingSave")}
         </Button>
       ) : null}
       {showPill ? (
         <button
+          ref={pillRef}
           type="button"
           onClick={() => setDraft({ isRecording: true })}
-          aria-label={t("settingsB.keybindingEditShortcutFor", {
+          aria-label={currentTranslator()("settingsB.keybindingEditShortcutFor", {
             command: commandLabel(row.command),
             shortcut: formatShortcutLabel(row.binding.shortcut),
           })}
@@ -835,12 +854,14 @@ function KeybindingKeyControl({
         <Input
           data-keybinding-capture=""
           autoFocus={isRecording}
-          aria-label={t("settingsB.keybindingFor", { command: commandLabel(row.command) })}
+          aria-label={currentTranslator()("settingsB.keybindingFor", {
+            command: commandLabel(row.command),
+          })}
           value={isRecording ? "" : keyDraft}
           placeholder={
             isRecording
-              ? t("settingsB.keybindingPressShortcut")
-              : t("settingsB.keybindingUnassigned")
+              ? currentTranslator()("settingsB.keybindingPressShortcut")
+              : currentTranslator()("settingsB.keybindingUnassigned")
           }
           size="sm"
           font="mono"
@@ -870,9 +891,13 @@ function WhenClauseControl({
   onChange: (value: KeybindingWhenNode | undefined) => void;
   onValidityChange: (valid: boolean) => void;
 }) {
-  const t = useT();
+  // Closing unmounts the builder, which drops an unparsed draft and keeps the last valid value.
+  const handleOpenChange = (open: boolean) => {
+    if (!open) onValidityChange(true);
+  };
+
   return (
-    <Popover>
+    <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <Button
@@ -881,9 +906,11 @@ function WhenClauseControl({
             className="min-w-0 shrink"
           />
         }
-        aria-label={t("settingsB.keybindingEditWhenClause", { label })}
+        aria-label={currentTranslator()("settingsB.keybindingEditWhenClause", { label })}
       >
-        <span className="truncate font-mono">{expression || t("settingsB.keybindingAlways")}</span>
+        <span className="truncate font-mono">
+          {expression || currentTranslator()("settingsB.keybindingAlways")}
+        </span>
         <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={6}>
@@ -1077,7 +1104,10 @@ function useNewKeybindingDraft({
     if (event.key === "Tab" && !isRecording) return;
     event.preventDefault();
     if (event.key === "Escape") {
+      // An unhandled Escape closes the settings page.
+      event.stopPropagation();
       setDraft({ keyDraft: "", isRecording: false });
+      event.currentTarget.blur();
       return;
     }
     const next = keybindingFromKeyboardEvent(event.nativeEvent, navigator.platform, {

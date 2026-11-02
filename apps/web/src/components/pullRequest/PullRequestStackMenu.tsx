@@ -28,6 +28,7 @@ import { PullRequestStackHeader } from "./PullRequestStackHeader";
 import { PullRequestStackLayerContent } from "./PullRequestStackLayerContent";
 import { PullRequestGlyph } from "./pullRequestIcons";
 import { useT, currentTranslator } from "../../i18n/I18nProvider";
+import { readableFailure } from "./pullRequestDetail.logic";
 
 export function PullRequestStackMenu({
   hostLabel,
@@ -35,6 +36,7 @@ export function PullRequestStackMenu({
   stack,
   reference,
   environmentId,
+  stale,
   canMerge,
   canRebase,
   mergeMethod,
@@ -50,6 +52,7 @@ export function PullRequestStackMenu({
   stack: PullRequestStack;
   reference: PullRequestRef;
   environmentId: EnvironmentId;
+  stale: boolean;
   canMerge: boolean;
   canRebase: boolean;
   mergeMethod: PullRequestMergeMethod;
@@ -74,12 +77,13 @@ export function PullRequestStackMenu({
   const hasUnknownHead = expectedStackHeads.length !== unmerged.length;
   const mergeDisabled =
     pending ||
+    stale ||
     selectedLayer?.state !== "open" ||
     mergeLayers.some((layer) => !layer.headSha) ||
     mergeHasClosed ||
     mergeLayers.length === 0 ||
     mergeLayers.some((layer) => layer.isDraft);
-  const rebaseDisabled = pending || hasUnknownHead || hasClosed || unmerged.length === 0;
+  const rebaseDisabled = pending || stale || hasUnknownHead || hasClosed || unmerged.length === 0;
   const run = async () => {
     if (
       pending ||
@@ -122,7 +126,12 @@ export function PullRequestStackMenu({
           action === "merge"
             ? currentTranslator()("pullRequest.couldNotMergeStack")
             : currentTranslator()("pullRequest.couldNotRebaseStack"),
-        description: String(squashAtomCommandFailure(result)),
+        description: readableFailure(
+          squashAtomCommandFailure(result),
+          action === "merge"
+            ? "The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting."
+            : "The host refused the rebase. A rebase stops at the first commit that does not apply cleanly.",
+        ),
       });
     } else {
       toastManager.update(toastId, {
@@ -228,8 +237,10 @@ export function PullRequestStackMenu({
                 <Button
                   variant="default"
                   size="xs"
-                  disabled={mergeDisabled}
-                  onClick={() => setConfirmation("merge")}
+                  disabled={mergeDisabled && !stale}
+                  aria-disabled={mergeDisabled || undefined}
+                  aria-description={stale ? (notice ?? undefined) : undefined}
+                  onClick={mergeDisabled ? undefined : () => setConfirmation("merge")}
                 >
                   <PullRequestGlyph.merged aria-hidden className="size-3.5" />
                   {t("pullRequest.mergeStack")}
@@ -238,9 +249,9 @@ export function PullRequestStackMenu({
             }
           />
           <TooltipPopup>
-            {currentTranslator()("updates.mergeStackThrough")}
-            {reference.number} into {stack.base} ({mergeLayers.length}{" "}
-            {mergeLayers.length === 1 ? terminology.singular : terminology.plural})
+            {stale
+              ? notice
+              : `Merge stack through #${reference.number} into ${stack.base} (${mergeLayers.length} ${mergeLayers.length === 1 ? terminology.singular : terminology.plural})`}
           </TooltipPopup>
         </Tooltip>
       ) : null}

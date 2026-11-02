@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useEffect, useId, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { create } from "zustand";
@@ -126,8 +127,10 @@ function CustomSnoozeDialog() {
               <div className="flex flex-col gap-4">
                 {mode === "date" ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="flex min-w-0 flex-col gap-1.5">
-                      <Label htmlFor={`${id}-date`}>{t("shellNav.dateLabel")}</Label>
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <Label htmlFor={`${id}-date`}>
+                        {currentTranslator()("shellNav.dateLabel")}
+                      </Label>
                       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                         <PopoverTrigger
                           render={

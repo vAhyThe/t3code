@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { formatProviderSkillDisplayName } from "@t3tools/shared/inlineSkills";
 import type { ComposerPathSearchTarget } from "@t3tools/client-runtime/state/threads";
 import {
@@ -157,8 +158,8 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
           <div className="px-5 pt-3.5 pb-7">
             <p className="text-secondary-label text-xs">
               {props.isLoading
-                ? props.triggerKind === "skill"
-                  ? t("chat.commandMenuSearchingSkills")
+                ? props.triggerKind === "skill" || props.triggerKind === "slash-command"
+                  ? currentTranslator()("chat.commandMenuSearchingSkills")
                   : props.triggerKind === "pull-request"
                     ? t("chat.commandMenuFindingPullRequest")
                     : t("chat.commandMenuSearchingFiles")

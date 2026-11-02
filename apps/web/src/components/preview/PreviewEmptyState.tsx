@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useT } from "~/i18n/I18nProvider";
 import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
 import { Globe, History, RadioTower } from "lucide-react";
@@ -40,8 +41,11 @@ export function PreviewEmptyState({
         <EmptyMedia variant="icon">
           <Globe className="size-4.5 text-muted-foreground" />
         </EmptyMedia>
-        <EmptyTitle>{t("shellDevice.previewNoPreviewYet")}</EmptyTitle>
-        <EmptyDescription>{t("shellDevice.previewEmptyDescription")}</EmptyDescription>
+        <EmptyTitle>{currentTranslator()("shellDevice.previewNoPreviewYet")}</EmptyTitle>
+        <EmptyDescription>
+          Type a URL above, or run a dev script. Local servers this thread starts will show up here
+          automatically.
+        </EmptyDescription>
       </Empty>
     );
   }

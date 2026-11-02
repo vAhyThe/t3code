@@ -18,6 +18,7 @@ import {
 } from "@t3tools/contracts";
 import {
   normalizePreviewUrl,
+  isPreviewUrlNormalizationError,
   resolveAddressBarInput,
   previewPdfAssetUrl,
   resolveSearchUrlTemplate,
@@ -266,7 +267,17 @@ export function PreviewView({
       if (await navigateToResolvedUrl(resolved)) {
         recordVisitForThread(threadRef, resolved);
       }
-    } catch {}
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not open this address",
+        description: isPreviewUrlNormalizationError(error)
+          ? "Enter an http or https URL."
+          : error instanceof Error
+            ? error.message
+            : "An error occurred.",
+      });
+    }
   };
 
   const handleOpenServerUrl = async (next: string) => {
@@ -278,7 +289,17 @@ export function PreviewView({
       if (await navigateToResolvedUrl(resolved)) {
         recordVisitForThread(threadRef, next);
       }
-    } catch {}
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not open this address",
+        description: isPreviewUrlNormalizationError(error)
+          ? "Enter an http or https URL."
+          : error instanceof Error
+            ? error.message
+            : "An error occurred.",
+      });
+    }
   };
 
   const handleRefresh = () => {
@@ -881,7 +902,14 @@ export function PreviewView({
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to preview actions while the view is visible
   useEffect(() => {
     if (!visible) return;
-    return subscribePreviewAction((action) => onPreviewAction(action));
+    const unsubscribeAction = subscribePreviewAction((action) => onPreviewAction(action));
+    const unsubscribeMenu = window.desktopBridge?.onMenuAction((action) => {
+      if (action === "preview.focusUrl") onPreviewAction("focus-url");
+    });
+    return () => {
+      unsubscribeAction();
+      unsubscribeMenu?.();
+    };
   }, [visible]);
 
   return (

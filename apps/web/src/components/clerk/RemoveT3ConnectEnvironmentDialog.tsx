@@ -1,7 +1,11 @@
-import { Trans } from "~/i18n/Trans";
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import { useT } from "~/i18n/I18nProvider";
+import { Discovery } from "@t3tools/client-runtime/relay";
+import type { EnvironmentId } from "@t3tools/contracts";
 import { useState } from "react";
 
+import { useRelayEnvironmentDiscovery } from "../../state/environments";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -16,18 +20,41 @@ import { useT3ConnectAccountPage } from "./T3ConnectAccountPages";
 
 export function RemoveT3ConnectEnvironmentDialog({
   environmentLabel,
+  environmentId,
   onCancel,
   onConfirm,
 }: {
   readonly environmentLabel: string | null;
+  readonly environmentId: EnvironmentId | null;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
 }) {
   const t = useT();
   const accountPage = useT3ConnectAccountPage();
-  const [shownLabel, setShownLabel] = useState(environmentLabel);
-  if (environmentLabel !== null && environmentLabel !== shownLabel) setShownLabel(environmentLabel);
+  const discovery = useRelayEnvironmentDiscovery();
+  const registration = environmentId
+    ? Discovery.relayEnvironmentRegistration(discovery, environmentId)
+    : "unknown";
+  const [shown, setShown] = useState({ label: environmentLabel, registration });
+  if (
+    environmentLabel !== null &&
+    (environmentLabel !== shown.label || registration !== shown.registration)
+  ) {
+    setShown({ label: environmentLabel, registration });
+  }
   const openAccountPage = accountPage.open;
+  const accountPageLink = openAccountPage ? (
+    <InlineButton
+      onClick={() => {
+        onCancel();
+        openAccountPage();
+      }}
+    >
+      T3 Connect settings
+    </InlineButton>
+  ) : (
+    "T3 Connect settings"
+  );
 
   return (
     <>
@@ -39,29 +66,24 @@ export function RemoveT3ConnectEnvironmentDialog({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("shellDevice.clerkRemoveTitle", { label: shownLabel ?? "" })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>{t("shellDevice.clerkRemoveForgets")}</AlertDialogDescription>
+            <AlertDialogTitle>Remove {shown.label} from this device?</AlertDialogTitle>
             <AlertDialogDescription>
-              <Trans
-                k="shellDevice.clerkRemoveStays"
-                components={{
-                  // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
-                  settings: (children) =>
-                    openAccountPage ? (
-                      <InlineButton
-                        onClick={() => {
-                          openAccountPage();
-                        }}
-                      >
-                        {children}
-                      </InlineButton>
-                    ) : (
-                      children
-                    ),
-                }}
-              />
+              {currentTranslator()("shellDevice.clerkRemoveForgets")}
+            </AlertDialogDescription>
+            <AlertDialogDescription>
+              {shown.registration === "registered" ? (
+                <>
+                  It stays on your T3 Connect account and keeps its host space. Deregister it in{" "}
+                  {accountPageLink} to free it.
+                </>
+              ) : shown.registration === "unregistered" ? (
+                "It's no longer on your T3 Connect account."
+              ) : (
+                <>
+                  This doesn't change your T3 Connect account. To deregister it there, use{" "}
+                  {accountPageLink}.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

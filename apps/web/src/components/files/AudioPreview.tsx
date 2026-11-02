@@ -16,6 +16,7 @@ type AudioPreviewProps = {
   readonly revision?: string | null;
   readonly onError?: () => void;
   readonly compact?: boolean;
+  readonly variant?: "chip" | "bubble";
   readonly failed?: boolean;
   readonly onOpen?: (() => void) | undefined;
   readonly onRetry?: () => void;
@@ -112,6 +113,7 @@ function AudioChip(props: AudioPreviewProps) {
     <ContextChip
       kind="file"
       {...(props.failed ? { state: "invalid" as const } : {})}
+      {...(props.variant === "bubble" ? { shape: "bubble" as const } : {})}
       className="relative isolate overflow-hidden"
       title={
         props.failed
@@ -145,7 +147,7 @@ function AudioChip(props: AudioPreviewProps) {
       >
         <Icon aria-hidden className={loading && props.src ? "animate-spin" : undefined} />
       </ContextChipAction>
-      <ContextChipLabel className="max-w-72">
+      <ContextChipLabel className={props.variant === "bubble" ? "flex-1" : "max-w-72"}>
         {open ? (
           <button
             type="button"
@@ -159,7 +161,7 @@ function AudioChip(props: AudioPreviewProps) {
           middleTruncateAttachmentName(props.name)
         )}
       </ContextChipLabel>
-      <span className="shrink-0 self-baseline text-3xs text-current">
+      <span dir="ltr" className="shrink-0 self-baseline text-3xs text-current">
         {props.failed
           ? currentTranslator()("chat.providerModelUnavailable")
           : loading

@@ -381,7 +381,9 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           }
         >
           <Minimize2Icon aria-hidden="true" />
-          {keepFullHistory ? "Keep" : currentTranslator()("chat.primaryActionCompact")}
+          <span className="@max-[480px]/composer-surface:hidden">
+            {keepFullHistory ? "Keep" : currentTranslator()("chat.primaryActionCompact")}
+          </span>
           <span className="text-muted-foreground">{compactTokens}</span>
         </TooltipTrigger>
         <TooltipPopup>

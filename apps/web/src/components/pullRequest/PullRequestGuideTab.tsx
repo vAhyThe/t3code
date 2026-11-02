@@ -1,3 +1,4 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import type { EnvironmentId, PullRequestRef, PullRequestReviewGuideStop } from "@t3tools/contracts";
 import { SparklesIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useEffectEvent } from "react";
@@ -106,16 +107,23 @@ export function PullRequestGuideTab({
       );
     }
     return (
-      <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+      <div className="scrollbar-gutter-both flex h-full flex-col items-center justify-center-safe gap-2 overflow-y-auto px-4 py-10 text-center">
         <p className="text-sm font-medium text-foreground">
-          {running ? t("pullRequest.writingReviewGuide") : t("pullRequest.noReviewGuideYet")}
+          {running
+            ? currentTranslator()("pullRequest.writingReviewGuide")
+            : failure === null
+              ? currentTranslator()("pullRequest.noReviewGuideYet")
+              : "Could not write a review guide"}
         </p>
         <p className="max-w-md text-xs text-muted-foreground">
-          {failure ??
-            query.error ??
-            (running ? t("pullRequest.agentReadingChange") : t("pullRequest.guideExplainer"))}
+          {running
+            ? currentTranslator()("pullRequest.agentReadingChange")
+            : failure === null
+              ? (query.error ?? currentTranslator()("pullRequest.guideExplainer"))
+              : FAILURE_HINT}
         </p>
-        {writeButton(failure === null ? t("pullRequest.writeGuide") : t("common.tryAgain"), "sm")}
+        {writeButton(failure === null ? "Write guide" : "Try again", "sm")}
+        {failure === null || running ? null : <FailureDetails detail={failure} />}
       </div>
     );
   }
@@ -125,9 +133,16 @@ export function PullRequestGuideTab({
       <Alert variant={running ? "info" : "warning"}>
         {running ? <Spinner /> : <TriangleAlertIcon />}
         <AlertDescription>
-          {running
-            ? t("pullRequest.rewritingGuide")
-            : (failure ?? t("pullRequest.writtenBeforePush"))}
+          {running ? (
+            currentTranslator()("pullRequest.rewritingGuide")
+          ) : failure === null ? (
+            currentTranslator()("pullRequest.writtenBeforePush")
+          ) : (
+            <>
+              {`Could not rewrite this guide. ${FAILURE_HINT}`}
+              <FailureDetails detail={failure} />
+            </>
+          )}
         </AlertDescription>
         {!running && canWrite ? (
           <AlertAction>{writeButton(t("pullRequest.rewriteGuide"), "xs")}</AlertAction>
@@ -156,5 +171,20 @@ export function PullRequestGuideTab({
         onOpenFile={onOpenFile}
       />
     </GuideProseContext>
+  );
+}
+
+const FAILURE_HINT = "Check the review guide model in Settings → Source control.";
+
+function FailureDetails({ detail }: { detail: string }) {
+  return (
+    <details className="w-full max-w-lg text-xs text-muted-foreground">
+      <summary className="cursor-pointer rounded-sm -outline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+        Technical details
+      </summary>
+      <pre className="scrollbar-gutter-both mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 p-3 text-left font-mono text-xs">
+        {detail}
+      </pre>
+    </details>
   );
 }

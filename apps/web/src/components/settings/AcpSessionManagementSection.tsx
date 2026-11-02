@@ -219,7 +219,7 @@ export function AcpSessionManagementSection(props: {
     reportFailure(t("settingsA.acpCouldNotDeleteSession"), result);
   };
 
-  const loadProviders = async () => {
+  const loadProviders = async (resetProviderId?: string) => {
     if (projectId === null || loadingProviders) return;
     setLoadingProviders(true);
     const result = await listProviders({
@@ -229,11 +229,13 @@ export function AcpSessionManagementSection(props: {
     setLoadingProviders(false);
     if (result._tag === "Success") {
       setProviders(result.value.providers);
-      setProviderDrafts(
+      setProviderDrafts((current) =>
         Object.fromEntries(
           result.value.providers.map((provider) => [
             provider.providerId,
-            {
+            (resetProviderId !== undefined && provider.providerId !== resetProviderId
+              ? current[provider.providerId]
+              : undefined) ?? {
               apiType: provider.current?.apiType ?? provider.supported[0] ?? "",
               baseUrl: provider.current?.baseUrl ?? "",
               headers: "",
@@ -250,7 +252,8 @@ export function AcpSessionManagementSection(props: {
     if (
       !readEnvironmentScope(props.environmentId, AuthProvidersManageScope) ||
       projectId === null ||
-      savingProviderId !== null
+      savingProviderId !== null ||
+      loadingProviders
     )
       return;
     const draft = providerDrafts[provider.providerId];
@@ -279,15 +282,19 @@ export function AcpSessionManagementSection(props: {
     });
     setSavingProviderId(null);
     if (result._tag === "Success") {
-      toastManager.add({ type: "success", title: t("settingsA.acpProviderConfigured") });
-      await loadProviders();
+      toastManager.add({
+        type: "success",
+        title: currentTranslator()("settingsA.acpProviderConfigured"),
+      });
+      await loadProviders(provider.providerId);
       return;
     }
     reportFailure(t("settingsA.acpCouldNotConfigureProvider"), result);
   };
 
   const disableConfiguredProvider = async (provider: AcpRegistryConfigurableProvider) => {
-    if (projectId === null || savingProviderId !== null || provider.required) return;
+    if (projectId === null || savingProviderId !== null || loadingProviders || provider.required)
+      return;
     const confirmed = await ensureLocalApi().dialogs.confirm(
       t("settingsA.acpConfirmDisableProvider", { providerId: provider.providerId }),
       { variant: "destructive" },
@@ -300,8 +307,11 @@ export function AcpSessionManagementSection(props: {
     });
     setSavingProviderId(null);
     if (result._tag === "Success") {
-      toastManager.add({ type: "success", title: t("settingsA.acpProviderDisabled") });
-      await loadProviders();
+      toastManager.add({
+        type: "success",
+        title: currentTranslator()("settingsA.acpProviderDisabled"),
+      });
+      await loadProviders(provider.providerId);
       return;
     }
     reportFailure(t("settingsA.acpCouldNotDisableProvider"), result);
@@ -486,7 +496,9 @@ export function AcpSessionManagementSection(props: {
               type="button"
               size="xs"
               variant="outline"
-              disabled={!canRead || loadingProviders || projectId === null}
+              disabled={
+                !canRead || loadingProviders || savingProviderId !== null || projectId === null
+              }
               onClick={() => void loadProviders()}
             >
               {loadingProviders
@@ -562,6 +574,7 @@ export function AcpSessionManagementSection(props: {
                           disabled={
                             props.readOnly ||
                             savingProviderId !== null ||
+                            loadingProviders ||
                             draft.apiType.length === 0 ||
                             draft.baseUrl.length === 0
                           }
@@ -576,7 +589,9 @@ export function AcpSessionManagementSection(props: {
                             type="button"
                             size="xs"
                             variant="ghost-muted"
-                            disabled={props.readOnly || savingProviderId !== null}
+                            disabled={
+                              props.readOnly || savingProviderId !== null || loadingProviders
+                            }
                             onClick={() => void disableConfiguredProvider(provider)}
                           >
                             {t("settingsA.acpDisable")}

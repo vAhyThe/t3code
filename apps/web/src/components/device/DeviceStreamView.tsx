@@ -1,8 +1,9 @@
-import { useT } from "~/i18n/I18nProvider";
+import { currentTranslator } from "~/i18n/I18nProvider";
+
 import type { DevicePlatform, EnvironmentId } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -202,7 +203,14 @@ export function DeviceStreamView(props: {
   );
   const axElements = AsyncResult.getOrElse(axResult, () => NO_AX_ELEMENTS);
 
-  const pointerActive = useRef(false);
+  const activePointer = useRef<{ id: number; x: number; y: number } | null>(null);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- clears pointer ownership when its device input connection disconnects or is replaced
+  useEffect(() => {
+    if (!client || !inputState.connected) return;
+    return () => {
+      activePointer.current = null;
+    };
+  }, [client, inputState.connected]);
   const normalizedPoint = (event: React.PointerEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
@@ -210,16 +218,23 @@ export function DeviceStreamView(props: {
     return { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) };
   };
 
-  const t = useT();
+  const endPointer = (event: React.PointerEvent<HTMLElement>) => {
+    const pointer = activePointer.current;
+    if (pointer?.id !== event.pointerId) return;
+    activePointer.current = null;
+    const { x, y } = event.type === "lostpointercapture" ? pointer : normalizedPoint(event);
+    client?.sendTouch("end", x, y);
+  };
+
   const phoneUnavailableReason =
     isDuo && !screen?.supportsHingeAngle
-      ? t("shellDevice.deviceDuo3dRequiresHub")
+      ? currentTranslator()("shellDevice.deviceDuo3dRequiresHub")
       : phoneUnavailable
-        ? t("shellDevice.device3dUnavailableBrowser")
+        ? currentTranslator()("shellDevice.device3dUnavailableBrowser")
         : mjpegUrl
-          ? t("shellDevice.device3dRequiresH264")
+          ? currentTranslator()("shellDevice.device3dRequiresH264")
           : props.axOverlay
-            ? t("shellDevice.device3dTurnOffAxFrames")
+            ? currentTranslator()("shellDevice.device3dTurnOffAxFrames")
             : null;
 
   const keyboardSource = deviceKeyboard(props.platform, props.deviceName ?? "");
@@ -311,8 +326,8 @@ export function DeviceStreamView(props: {
         role="application"
         aria-label={
           props.platform === "ios"
-            ? t("shellDevice.deviceIosSimulatorScreen")
-            : t("shellDevice.deviceAndroidEmulatorScreen")
+            ? currentTranslator()("shellDevice.deviceIosSimulatorScreen")
+            : currentTranslator()("shellDevice.deviceAndroidEmulatorScreen")
         }
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
@@ -341,30 +356,23 @@ export function DeviceStreamView(props: {
           className={cn("relative select-none", showPhone && "invisible pointer-events-none")}
           style={{ width: frame.width, height: frame.height }}
           onPointerDown={(event) => {
-            if (event.button !== 0) return;
+            if (event.button !== 0 || !inputState.connected || activePointer.current !== null)
+              return;
             event.currentTarget.setPointerCapture(event.pointerId);
             (event.currentTarget.parentElement as HTMLElement | null)?.focus();
-            pointerActive.current = true;
             const { x, y } = normalizedPoint(event);
+            activePointer.current = { id: event.pointerId, x, y };
             client?.sendTouch("begin", x, y);
           }}
           onPointerMove={(event) => {
-            if (!pointerActive.current) return;
+            if (activePointer.current?.id !== event.pointerId) return;
             const { x, y } = normalizedPoint(event);
+            activePointer.current = { id: event.pointerId, x, y };
             client?.sendTouch("move", x, y);
           }}
-          onPointerUp={(event) => {
-            if (!pointerActive.current) return;
-            pointerActive.current = false;
-            const { x, y } = normalizedPoint(event);
-            client?.sendTouch("end", x, y);
-          }}
-          onPointerCancel={(event) => {
-            if (!pointerActive.current) return;
-            pointerActive.current = false;
-            const { x, y } = normalizedPoint(event);
-            client?.sendTouch("end", x, y);
-          }}
+          onPointerUp={endPointer}
+          onPointerCancel={endPointer}
+          onLostPointerCapture={endPointer}
         >
           <div
             ref={mountCanvas}
@@ -441,7 +449,7 @@ export function DeviceStreamView(props: {
               size="xs"
               aria-pressed={!!showPhone}
               disabled={!!phoneUnavailableReason}
-              title={phoneUnavailableReason ?? t("shellDevice.deviceShow3dPhone")}
+              title={phoneUnavailableReason ?? currentTranslator()("shellDevice.deviceShow3dPhone")}
               onClick={() => setPresentation("phone")}
             >
               3D
@@ -452,7 +460,7 @@ export function DeviceStreamView(props: {
               aria-pressed={!showPhone}
               onClick={() => setPresentation("flat")}
             >
-              {t("shellDevice.deviceFlat")}
+              {currentTranslator()("shellDevice.deviceFlat")}
             </Button>
           </div>
         ) : null}
@@ -460,8 +468,10 @@ export function DeviceStreamView(props: {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2">
             <span className="rounded-md bg-background/85 px-2 py-1 text-xs text-muted-foreground">
               {inputState.detail
-                ? t("shellDevice.deviceInputDisconnectedDetail", { detail: inputState.detail })
-                : t("shellDevice.deviceInputDisconnected")}
+                ? currentTranslator()("shellDevice.deviceInputDisconnectedDetail", {
+                    detail: inputState.detail,
+                  })
+                : currentTranslator()("shellDevice.deviceInputDisconnected")}
             </span>
           </div>
         ) : null}
@@ -469,20 +479,20 @@ export function DeviceStreamView(props: {
           // Shown only once the device has been silent for two seconds.
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2 transition-opacity delay-2000 duration-0 starting:opacity-0">
             <span className="rounded-md bg-background/85 px-2 py-1 text-xs text-muted-foreground">
-              {t("shellDevice.deviceWaitingForVideo")}
+              {currentTranslator()("shellDevice.deviceWaitingForVideo")}
             </span>
           </div>
         ) : null}
         {status !== "streaming" && !(retainingFrame && showPhone) ? (
           <div className="absolute inset-0">
             <DeviceLoadingView
-              name={props.deviceName ?? t("shellDevice.deviceFallbackName")}
+              name={props.deviceName ?? currentTranslator()("shellDevice.deviceFallbackName")}
               description={props.deviceDescription ?? ""}
               stage="stream"
               message={
                 status === "error"
-                  ? (detail ?? t("shellDevice.deviceStreamFailed"))
-                  : t("shellDevice.deviceConnectingVideo")
+                  ? (detail ?? currentTranslator()("shellDevice.deviceStreamFailed"))
+                  : currentTranslator()("shellDevice.deviceConnectingVideo")
               }
               error={status === "error"}
             >
@@ -496,7 +506,7 @@ export function DeviceStreamView(props: {
                     session?.reconnect();
                   }}
                 >
-                  {t("shellDevice.deviceReconnect")}
+                  {currentTranslator()("shellDevice.deviceReconnect")}
                 </Button>
               ) : null}
             </DeviceLoadingView>

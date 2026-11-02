@@ -108,12 +108,22 @@ export const UsagePricing = Schema.Struct({
 });
 export type UsagePricing = typeof UsagePricing.Type;
 
-/** The ČNB daily fixing for USD, valid on `rateDate`. */
-export const UsdCzkRate = Schema.Struct({
-  czkPerUsd: Schema.Finite.check(Schema.isGreaterThan(0)),
-  rateDate: UsageDay,
+/**
+ * Matches a provider's original model ID, before usage model aliases apply. Omit provider to
+ * match any; a string provider lets older clients carry selectors for providers they lack.
+ */
+export const UsageModelSelector = Schema.Struct({
+  provider: Schema.optional(TrimmedNonEmptyString),
+  model: TrimmedNonEmptyString,
 });
-export type UsdCzkRate = typeof UsdCzkRate.Type;
+export type UsageModelSelector = typeof UsageModelSelector.Type;
+
+/** Keeps records matching `include` (all when omitted) and not matching `exclude`. */
+export const UsageModelFilter = Schema.Struct({
+  include: Schema.optional(Schema.Array(UsageModelSelector)),
+  exclude: Schema.optional(Schema.Array(UsageModelSelector)),
+});
+export type UsageModelFilter = typeof UsageModelFilter.Type;
 
 export const UsageSummaryInput = Schema.Struct({
   sinceDay: UsageDay,
@@ -124,6 +134,7 @@ export const UsageSummaryInput = Schema.Struct({
   sinceTime: Schema.optional(TrimmedNonEmptyString),
   untilTime: Schema.optional(TrimmedNonEmptyString),
   awaitRefresh: Schema.optional(Schema.Boolean),
+  modelFilter: Schema.optional(UsageModelFilter),
 });
 export type UsageSummaryInput = typeof UsageSummaryInput.Type;
 
@@ -137,6 +148,8 @@ export const UsageSummary = Schema.Struct({
   sources: ForwardCompatibleArray(UsageSource),
   pricing: UsagePricing,
   scanDurationMs: NonNegativeInt,
+  /** The filter the server applied; absent means unfiltered, including servers that predate filters. */
+  modelFilter: Schema.optional(UsageModelFilter),
 });
 export type UsageSummary = typeof UsageSummary.Type;
 
@@ -149,3 +162,10 @@ export class UsageReadError extends Schema.TaggedError<UsageReadError>()("UsageR
     return `Usage read failed (${this.reason}): ${this.detail}`;
   }
 }
+
+/** The ČNB daily fixing for USD, valid on `rateDate`. */
+export const UsdCzkRate = Schema.Struct({
+  czkPerUsd: Schema.Finite.check(Schema.isGreaterThan(0)),
+  rateDate: UsageDay,
+});
+export type UsdCzkRate = typeof UsdCzkRate.Type;

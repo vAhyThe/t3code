@@ -5,6 +5,7 @@ import type {
   StorageCleanupSettings,
   WorktreeCleanupRules,
 } from "@t3tools/contracts";
+import { resolvePastedPath } from "@t3tools/shared/path";
 import { resolveWorktreeCleanup } from "@t3tools/shared/projectSettings";
 import { useRef, useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
@@ -19,6 +20,8 @@ import { useAtomCommand } from "../../state/use-atom-command";
 import { formatRelativeTimeLabel } from "../../timestampFormat";
 import { useT } from "~/i18n/I18nProvider";
 import { useNowMinute } from "../../hooks/useNowMinute";
+import { useDebouncedValue } from "../../state/queries";
+import { AnimatedHeight } from "../AnimatedHeight";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 
@@ -55,6 +58,7 @@ export function WorktreesDirectoryRow() {
   const updateSettings = useUpdateScopedSettings();
   const mixed = useScopedSettingsMixed(["worktreesDirectory"]);
   const edited = useRef(false);
+  const draft = useRef("");
   if (
     connectedEnvironments.some(
       (environment) =>
@@ -90,8 +94,13 @@ export function WorktreesDirectoryRow() {
               : currentTranslator()("settingsD.defaultMarker")
           }
           defaultValue={mixed ? "" : settings.worktreesDirectory}
-          onChange={() => {
+          onFocus={(event) => {
+            draft.current = event.target.value;
+          }}
+          onChange={(event) => {
             edited.current = true;
+            draft.current = resolvePastedPath(draft.current, event.target.value);
+            event.target.value = draft.current;
           }}
           onBlur={(event) => {
             const value = event.target.value.trim();
@@ -147,9 +156,9 @@ function RetentionControl({
           <NumberFieldGroup>
             <NumberFieldDecrement aria-label={t("settingsD.decreaseLabel", { label })} />
             <NumberFieldInput
-              aria-label={t("settingsD.labelInDays", { label })}
-              size={new Intl.NumberFormat().format(draft ?? value).length}
-              className="field-sizing-content w-auto min-w-[1ch] grow-0 text-right"
+              aria-label={currentTranslator()("settingsD.labelInDays", { label: label })}
+              size={5}
+              className="w-auto grow-0 text-right"
             />
             <span aria-hidden="true" className="self-center pr-2 text-xs">
               {t("settingsD.daysUnit", { count: Number(draft ?? value) })}
@@ -507,6 +516,9 @@ export function WorktreeCleanupSection() {
     )
       ? currentTranslator()("settingsD.mixedAcrossMachines")
       : undefined;
+  // A policy locks these through worktreeCleanup, which also reaches each project's own rules.
+  const lockablePath = (key: keyof WorktreeCleanupRules) =>
+    isProjectScope ? ["worktreeCleanup"] : ["worktreeCleanup", `storageCleanup.${key}`];
   const update = (patch: Partial<StorageCleanupSettings>) =>
     updateSettings({ storageCleanup: patch });
   const updateWorktree = (patch: Partial<WorktreeCleanupRules>) =>
@@ -601,9 +613,8 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title={currentTranslator()("settingsD.deleteWorktreesWithDeletedThreads")}
               status={ruleStatus("worktreeOnDelete")}
-              description={currentTranslator()(
-                "settingsD.deleteWorktreesWithDeletedThreadsDescription",
-              )}
+              managedPaths={lockablePath("worktreeOnDelete")}
+              description="Remove unused worktrees when active or archived threads are deleted. Worktrees with local changes are kept."
               serverScoped={!isProjectScope}
               control={
                 <Switch
@@ -616,6 +627,7 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title={currentTranslator()("settingsD.deleteMergedWorktrees")}
               status={ruleStatus("worktreeOnMerge")}
+              managedPaths={lockablePath("worktreeOnMerge")}
               description={currentTranslator()("settingsD.deleteMergedWorktreesDescription")}
               serverScoped={!isProjectScope}
               control={
@@ -629,6 +641,7 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title={currentTranslator()("settingsD.deleteInactiveWorktrees")}
               status={ruleStatus("worktreeAfterDays")}
+              managedPaths={lockablePath("worktreeAfterDays")}
               description={currentTranslator()("settingsD.deleteInactiveWorktreesDescription")}
               serverScoped={!isProjectScope}
               control={
@@ -651,6 +664,7 @@ export function WorktreeCleanupSection() {
                 ) && (
                   <SettingsRow
                     title={currentTranslator()("settingsD.deleteSettledWorktrees")}
+                    managedPaths={lockablePath("worktreeSettledAfterDays")}
                     status={[
                       ruleStatus("worktreeSettledAfterDays"),
                       environments.length > connectedEnvironments.length
@@ -676,6 +690,7 @@ export function WorktreeCleanupSection() {
               <SettingsRow
                 title={currentTranslator()("settingsD.deleteUnchangedWorktrees")}
                 status={ruleStatus("worktreeUnchanged")}
+                managedPaths={lockablePath("worktreeUnchanged")}
                 description={currentTranslator()("settingsD.deleteUnchangedWorktreesDescription")}
                 serverScoped={!isProjectScope}
                 control={
@@ -693,6 +708,7 @@ export function WorktreeCleanupSection() {
                 <SettingsRow
                   {...searchableSetting("storage-worktree-keep-when")}
                   status={ruleStatus("worktreeKeepWhen")}
+                  managedPaths={lockablePath("worktreeKeepWhen")}
                   description={
                     settings.worktreeKeepWhen === "any-local-files"
                       ? currentTranslator()("settingsD.keepWhenAnyLocalFilesDescription")
@@ -748,12 +764,31 @@ export function StorageCleanupSections() {
   const { scope, connectedEnvironments, targets } = useSettingsScope();
   const scopedSettings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
-  if (scope.kind === "project" || scope.kind === "checkout") return null;
   const settings = scopedSettings.storageCleanup;
-  const ruleStatus = (key: "browserArtifactsAfterDays" | "logsAfterDays") =>
-    targets.some((target) => target.settings.storageCleanup[key] !== settings[key])
+  const targetIdsKey = environmentIdsKey(targets.map((target) => target.environmentId).sort());
+  const artifactsMixed =
+    targets.length > 1 &&
+    targets.some(
+      (target) =>
+        target.settings.storageCleanup.browserArtifactsAfterDays !==
+        settings.browserArtifactsAfterDays,
+    );
+  const logsMixed =
+    targets.length > 1 &&
+    targets.some(
+      (target) => target.settings.storageCleanup.logsAfterDays !== settings.logsAfterDays,
+    );
+  const settledArtifactsStatus = useDebouncedValue(`${targetIdsKey}:${artifactsMixed}`, 300);
+  const settledLogsStatus = useDebouncedValue(`${targetIdsKey}:${logsMixed}`, 300);
+  const artifactsStatus =
+    targets.length > 1 && settledArtifactsStatus === `${targetIdsKey}:true`
       ? "Mixed across selected machines"
       : undefined;
+  const logsStatus =
+    targets.length > 1 && settledLogsStatus === `${targetIdsKey}:true`
+      ? "Mixed across selected machines"
+      : undefined;
+  if (scope.kind === "project" || scope.kind === "checkout") return null;
   const update = (patch: Partial<StorageCleanupSettings>) =>
     updateSettings({ storageCleanup: patch });
   const databaseStorageNotice = (
@@ -779,32 +814,38 @@ export function StorageCleanupSections() {
     <>
       {databaseStorageNotice}
       <SettingsSection id="storage-artifacts" title="Artifacts and logs">
-        <SettingsRow
-          title={currentTranslator()("settingsD.deleteOldBrowserArtifacts")}
-          status={ruleStatus("browserArtifactsAfterDays")}
-          description={currentTranslator()("settingsD.deleteOldBrowserArtifactsDescription")}
-          serverScoped
-          control={
-            <RetentionControl
-              label={currentTranslator()("settingsD.deleteOldBrowserArtifacts")}
-              value={settings.browserArtifactsAfterDays}
-              onChange={(browserArtifactsAfterDays) => update({ browserArtifactsAfterDays })}
-            />
-          }
-        />
-        <SettingsRow
-          title={currentTranslator()("settingsD.deleteOldRotatedLogs")}
-          status={ruleStatus("logsAfterDays")}
-          description={currentTranslator()("settingsD.deleteOldRotatedLogsDescription")}
-          serverScoped
-          control={
-            <RetentionControl
-              label={currentTranslator()("settingsD.deleteOldRotatedLogs")}
-              value={settings.logsAfterDays}
-              onChange={(logsAfterDays) => update({ logsAfterDays })}
-            />
-          }
-        />
+        <AnimatedHeight>
+          <SettingsRow
+            title={currentTranslator()("settingsD.deleteOldBrowserArtifacts")}
+            status={artifactsStatus}
+            managedPaths={["storageCleanup.browserArtifactsAfterDays"]}
+            description={currentTranslator()("settingsD.deleteOldBrowserArtifactsDescription")}
+            serverScoped
+            control={
+              <RetentionControl
+                label={currentTranslator()("settingsD.deleteOldBrowserArtifacts")}
+                value={settings.browserArtifactsAfterDays}
+                onChange={(browserArtifactsAfterDays) => update({ browserArtifactsAfterDays })}
+              />
+            }
+          />
+        </AnimatedHeight>
+        <AnimatedHeight>
+          <SettingsRow
+            title={currentTranslator()("settingsD.deleteOldRotatedLogs")}
+            status={logsStatus}
+            managedPaths={["storageCleanup.logsAfterDays"]}
+            description={currentTranslator()("settingsD.deleteOldRotatedLogsDescription")}
+            serverScoped
+            control={
+              <RetentionControl
+                label={currentTranslator()("settingsD.deleteOldRotatedLogs")}
+                value={settings.logsAfterDays}
+                onChange={(logsAfterDays) => update({ logsAfterDays })}
+              />
+            }
+          />
+        </AnimatedHeight>
       </SettingsSection>
       <CleanupSection />
     </>

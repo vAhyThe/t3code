@@ -1,8 +1,10 @@
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { MessageCircle, Trash2 } from "lucide-react";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
+import { textDirection } from "~/textDirection";
 
 import { isCommentSubmitShortcut } from "./commentSubmitShortcut";
 import { useT } from "../../i18n/I18nProvider";
@@ -67,7 +69,12 @@ export function DiffCommentAnnotation({
         onPointerDown={(event) => event.stopPropagation()}
       >
         <MessageCircle className="size-3.5 h-5 shrink-0 text-primary/70" aria-hidden="true" />
-        <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5">{displayedText}</p>
+        <p
+          className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-5"
+          dir={textDirection(displayedText)}
+        >
+          {displayedText}
+        </p>
         {onDelete ? (
           <span className="-my-1 -mr-1 flex shrink-0 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-within:opacity-100 max-sm:opacity-100">
             <Button
@@ -97,8 +104,9 @@ export function DiffCommentAnnotation({
         autoFocus={focusOnMount}
         size="sm"
         value={displayedText}
-        placeholder={placeholder ?? t("pullRequest.addCommentDots")}
-        aria-label={t("pullRequest.commentOnLines", { range: rangeLabel })}
+        dir={textDirection(displayedText)}
+        placeholder={placeholder}
+        aria-label={currentTranslator()("pullRequest.commentOnLines", { range: rangeLabel })}
         onChange={(event) => (onTextChange ?? setLocalDraftText)(event.target.value)}
         onFocus={(event) => {
           const end = event.currentTarget.value.length;

@@ -9,7 +9,7 @@ import type { EnvironmentPresentation } from "~/state/environments";
 import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
-import { EnvironmentRow, environmentTransportLabel } from "./EnvironmentRow";
+import { EnvironmentRow, EnvironmentTransportLabel } from "./EnvironmentRow";
 import { FoldedSettingsSection } from "./FoldedSettingsSection";
 import { searchableSetting } from "./settingsSearch";
 
@@ -86,7 +86,7 @@ export function LoadBalancingSettings({
           key={environment.environmentId}
           kind={resolveEnvironmentMachineKind(environment.serverConfig)}
           label={environment.label}
-          subtitle={environmentTransportLabel(environment)}
+          subtitle={<EnvironmentTransportLabel environment={environment} />}
         >
           <Select
             items={preferences.map((preference) => ({

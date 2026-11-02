@@ -307,7 +307,7 @@ export function SourceControlWritingSettingsSection({
         settingKeys={["reviewGuidesEnabled"]}
         mixed={mixedReviewGuidesEnabled}
         {...searchableSetting("review-guides")}
-        description={t("settingsD.reviewGuidesDescription")}
+        description="Add a Guide tab to pull requests. An agent explains the changes and points out decisions that need review."
         control={
           <Switch
             mixed={mixedReviewGuidesEnabled}
@@ -510,7 +510,7 @@ export function SourceControlWritingSettingsSection({
           serverScoped
           settingKeys={["sourceControlWriterModelSelection"]}
           {...searchableSetting("source-control-writer-model")}
-          description={currentTranslator()("settingsD.writerModelDescription")}
+          description="Model for source control text and branch or bookmark names. When disabled, use the text generation model configured for this environment."
           control={
             !hasServerTargets ? (
               <span className="text-sm text-muted-foreground">
