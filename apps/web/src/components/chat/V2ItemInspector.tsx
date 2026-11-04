@@ -150,7 +150,7 @@ function ToolOutputImages(props: ToolOutputState) {
       key={resource.index}
       environmentId={props.environmentId}
       resource={resource}
-      alt={t("chat.inspectorToolOutputImage")}
+      alt={currentTranslator()("chat.inspectorToolOutputImage")}
       maxHeightRem={16}
       onImageExpand={props.onImageExpand}
     />
@@ -161,7 +161,9 @@ function ToolOutput(props: ToolOutputState) {
   return props.output ? (
     <StructuredValue value={props.output} highlightJson />
   ) : props.pending ? (
-    <div className="text-muted-foreground italic">{t("chat.inspectorLoadingOutput")}</div>
+    <div className="text-muted-foreground italic">
+      {currentTranslator()("chat.inspectorLoadingOutput")}
+    </div>
   ) : props.error ? (
     <div className="text-destructive">Couldn&apos;t load output: {props.error}</div>
   ) : props.empty && props.images.length === 0 ? (
