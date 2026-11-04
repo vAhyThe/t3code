@@ -1,7 +1,10 @@
-import type { RuntimeMode } from "@t3tools/contracts";
 import type { MessageKey } from "@t3tools/client-runtime/i18n";
-import { type LucideIcon, LockIcon, PenLineIcon, SparklesIcon } from "lucide-react";
-import { ShieldOffIcon } from "lucide-react";
+import {
+  managedRuntimeModeDenial,
+  type ManagedPolicySummary,
+  type RuntimeMode,
+} from "@t3tools/contracts";
+import { type LucideIcon, LockIcon, PenLineIcon, ShieldOffIcon, SparklesIcon } from "lucide-react";
 
 // Keys, not text: render with `t(labelKey)` so the label follows the UI language.
 export const runtimeModeConfig: Record<
@@ -43,4 +46,15 @@ export function resolveCompatibleRuntimeMode(
       ? runtimeModeOptions.filter((mode) => supportedRuntimeModes.includes(mode))
       : runtimeModeOptions;
   return { modes, mode: modes.includes(runtimeMode) ? runtimeMode : (modes[0] ?? runtimeMode) };
+}
+
+export function resolveRuntimeModeOptions(
+  modes: ReadonlyArray<RuntimeMode>,
+  managedPolicy: ManagedPolicySummary | undefined,
+) {
+  return modes.map((mode) => {
+    const option = { mode, ...runtimeModeConfig[mode] };
+    const disabledReason = managedRuntimeModeDenial(managedPolicy, mode);
+    return disabledReason === undefined ? option : { ...option, disabledReason };
+  });
 }
