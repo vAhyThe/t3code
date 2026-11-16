@@ -869,4 +869,21 @@ export const pullRequest = {
   noProjectCanRead: "Žádný projekt v tomto prostředí nemá přístup k {host}/{repository}.",
   pasteFullUrlUnknownHost:
     "Vložte celou URL; hostitel tohoto projektu nemá známou URL pull requestů.",
+  addToChat: "Přidat do chatu",
+  peopleTruncatedSearchable:
+    "Tento repozitář má více lidí s přístupem, než je zde uvedeno. Ostatní najdete vyhledáním.",
+  peopleSearchFailed:
+    "Porovnávají se jen lidé, kteří už jsou uvedeni: vyhledávání na hostiteli selhalo. {error}",
+  peopleSearchTruncated: "Odpovídá více lidí, než hostitel vrátil. Pište dál, abyste výběr zúžili.",
+  referenceOpenIssue: "Otevřený issue",
+  referenceClosedIssue: "Uzavřený issue",
+  mentionUserLabel: "Zmínit uživatele",
+  referenceIssueLabel: "Odkázat na issue nebo žádost o změnu",
+  linkedItemNotLoaded: "Propojená položka není v načtené aktivitě.",
+  mentionPending: "Hledání uživatelů...",
+  mentionFailed: "Uživatele se na hostiteli nepodařilo vyhledat",
+  mentionNone: "Žádní odpovídající uživatelé",
+  referencePending: "Hledání...",
+  referenceFailed: "Hostitele se nepodařilo prohledat",
+  referenceNone: "Žádné odpovídající issues ani žádosti o změnu",
 } satisfies CzechNamespace<"pullRequest">;

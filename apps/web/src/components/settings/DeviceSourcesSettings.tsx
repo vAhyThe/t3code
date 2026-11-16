@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { Fragment, useState, type ReactNode } from "react";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
@@ -28,6 +29,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Spinner } from "../ui/spinner";
 import { toastManager } from "../ui/toast";
+import { incompleteListings } from "../device/DeviceSetup";
 import { DeviceHostEditor } from "./DeviceHostEditor";
 import { updateDeviceHosts, groupDeviceHosts } from "./deviceHostsSettings.logic";
 import { EasDeviceHostEditor } from "./EasDeviceHostEditor";
@@ -115,10 +117,18 @@ function hostStatus(
   if (!state) return { tone: "pending", label: "Loading" };
   const status = state.hostStatuses[hostId];
   switch (status?.status) {
-    case "ready":
-      return status.androidDiscoveryIncomplete
-        ? { tone: "warning", label: "Android list may be incomplete", detail: status.detail }
-        : undefined;
+    case "ready": {
+      const incomplete = incompleteListings(status);
+      if (incomplete.length === 0) return undefined;
+      const label = currentTranslator()(
+        incomplete.length > 1
+          ? "settingsE.deviceListIncompleteDevice"
+          : incomplete[0] === "ios"
+            ? "settingsE.deviceListIncompleteIos"
+            : "settingsE.deviceListIncompleteAndroid",
+      );
+      return { tone: "warning", label, detail: status.detail };
+    }
     case "installing":
     case "starting":
       return { tone: "pending", label: "Starting", detail: status.detail };
@@ -771,10 +781,22 @@ function DeviceSourceRow(props: { row: SourceRow }) {
           >
             <span className="min-w-0 break-words">
               {several ? `${environment.label}: ` : ""}
-              {!several && environment.status.detail
+              {environment.status.tone === "error" && !several && environment.status.detail
                 ? environment.status.detail
                 : environment.status.label}
             </span>
+            {environment.status.tone === "warning" && environment.status.detail ? (
+              <Popover>
+                <PopoverTrigger render={<InlineButton />}>
+                  {currentTranslator()("settingsE.deviceStatusDetails")}
+                </PopoverTrigger>
+                <PopoverPopup side="bottom" align="start" width="lg" padding="compact">
+                  <p className="whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">
+                    {environment.status.detail}
+                  </p>
+                </PopoverPopup>
+              </Popover>
+            ) : null}
             {environment.status.action ? (
               <InlineButton onClick={environment.status.action.run}>
                 {environment.status.action.label}

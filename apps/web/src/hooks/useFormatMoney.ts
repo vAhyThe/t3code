@@ -7,7 +7,7 @@ import { useClientSettings } from "./useSettings";
 const selectDisplayCurrency = (settings: ClientSettings) => settings.displayCurrency;
 
 /** The rate to show USD amounts in CZK, or null to keep USD. */
-export function useDisplayCzkPerUsd(): number | null {
+function useDisplayCzkPerUsd(): number | null {
   const rate = useUsdCzkRate(useClientSettings(selectDisplayCurrency) === "CZK");
   return rate?.czkPerUsd ?? null;
 }

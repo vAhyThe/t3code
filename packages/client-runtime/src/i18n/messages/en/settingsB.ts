@@ -690,4 +690,5 @@ export const settingsB = {
   cookieImportFailed: "Importing cookies from {source} failed: {reason}.",
   failureTitleOnEnvironment: "{title} on {environment}",
   theCurrentEnvironment: "the current environment",
+  integrationsUpdate: "Update",
 } as const satisfies CatalogNamespace;

@@ -1,37 +1,74 @@
-import { currentTranslator } from "~/i18n/I18nProvider";
+import { currentTranslator, useT } from "~/i18n/I18nProvider";
 
 import { useAtomValue } from "@effect/atom-react";
-import type { EnvironmentId } from "@t3tools/contracts";
+import {
+  isAtomCommandInterrupted,
+  squashAtomCommandFailure,
+} from "@t3tools/client-runtime/state/runtime";
+import {
+  databaseReclaimMinutes,
+  type DatabaseStorageStatus,
+  type EnvironmentId,
+} from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
+import { type ReactNode, useState } from "react";
 
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { environmentAtomList, environmentIdsKey } from "../../state/environmentAtomList";
 import { serverEnvironment } from "../../state/server";
+import { useAtomCommand } from "../../state/use-atom-command";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
+import { toastManager } from "../ui/toast";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
 
 const DismissedEnvironmentIds = Schema.Array(Schema.String);
+const reclaimPermissionsAtom = environmentAtomList(
+  "web-database-reclaim-permissions",
+  serverEnvironment.reclaimDatabaseSpace.permissionAtom,
+);
 
-/** Suggests `t3 doctor` on every machine whose database still holds at least 1 GiB of freed pages. */
+const formatGiBValue = (bytes: number) => (bytes / 1024 ** 3).toFixed(1);
+const formatGiB = (bytes: number) => `${formatGiBValue(bytes)} GiB`;
+
+/** Offers to reclaim the space on every machine whose database still holds at least 1 GiB of freed pages. */
 export function DatabaseStorageNotice({
   environments,
 }: {
   environments: ReadonlyArray<{ readonly environmentId: EnvironmentId; readonly label: string }>;
 }) {
+  const environmentIds = environments.map((environment) => environment.environmentId);
   const recommendations = useAtomValue(
-    serverEnvironment.databaseCompactionRecommendations(
-      JSON.stringify(environments.map((environment) => environment.environmentId)),
-    ),
+    serverEnvironment.databaseCompactionRecommendations(JSON.stringify(environmentIds)),
   );
+  const permissions = useAtomValue(reclaimPermissionsAtom(environmentIdsKey(environmentIds)));
   const [dismissed, setDismissed] = useLocalStorage(
     "database-storage-notice-dismissed",
     [],
     DismissedEnvironmentIds,
   );
   const { copyToClipboard } = useCopyToClipboard({ target: "command" });
-  const visible = recommendations.filter(
-    (recommendation) => !dismissed.includes(recommendation.environmentId),
-  );
+  const visible = recommendations
+    .filter((recommendation) => !dismissed.includes(recommendation.environmentId))
+    .map((recommendation) => ({
+      ...recommendation,
+      label:
+        environments.find(
+          (environment) => environment.environmentId === recommendation.environmentId,
+        )?.label ?? recommendation.environmentId,
+      reclaimable:
+        recommendation.status.canReclaim === true &&
+        permissions[environmentIds.indexOf(recommendation.environmentId)] === true,
+    }));
   if (visible.length === 0) return null;
   return (
     <SettingsSection
@@ -40,38 +77,147 @@ export function DatabaseStorageNotice({
     >
       <SettingsRow
         title={currentTranslator()("updates.reclaimFreedDatabaseSpace")}
-        description={currentTranslator()("updates.oldHistoryIsCleanedUpAutomaticallyButThese")}
+        description={
+          visible.every((recommendation) => recommendation.reclaimable)
+            ? currentTranslator()("updates.databasesStillHoldFreedSpace")
+            : `${currentTranslator()("updates.databasesStillHoldFreedSpace")} ${currentTranslator()("updates.runReclaimCommandOnEachMachine")}`
+        }
       />
-      {visible.map(({ environmentId, status }) => (
-        <SettingsRow
-          key={environmentId}
-          title={currentTranslator()("updates.sizeGiBOnEnvironment", {
-            size: (status.reclaimableBytes / 1024 ** 3).toFixed(1),
-            environment:
-              environments.find((environment) => environment.environmentId === environmentId)
-                ?.label ?? environmentId,
-          })}
-          description={<code className="select-text break-all">{status.compactCommand}</code>}
-          control={
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={() => copyToClipboard(status.compactCommand, undefined)}
-              >
-                {currentTranslator()("settingsC.copyCommand")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => setDismissed((current) => [...current, environmentId])}
-              >
-                {currentTranslator()("shellDevice.browserDismiss")}
-              </Button>
-            </div>
-          }
-        />
-      ))}
+      {visible.map(({ environmentId, status, label, reclaimable }) => {
+        const dismiss = (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => setDismissed((current) => [...current, environmentId])}
+          >
+            {currentTranslator()("shellDevice.browserDismiss")}
+          </Button>
+        );
+        return reclaimable ? (
+          <ReclaimRow
+            key={environmentId}
+            environmentId={environmentId}
+            label={label}
+            status={status}
+            dismiss={dismiss}
+          />
+        ) : (
+          <SettingsRow
+            key={environmentId}
+            title={currentTranslator()("updates.sizeGiBOnEnvironment", {
+              size: formatGiBValue(status.reclaimableBytes),
+              environment: label,
+            })}
+            description={<code className="select-text break-all">{status.compactCommand}</code>}
+            control={
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => copyToClipboard(status.compactCommand, undefined)}
+                >
+                  {currentTranslator()("settingsC.copyCommand")}
+                </Button>
+                {dismiss}
+              </div>
+            }
+          />
+        );
+      })}
     </SettingsSection>
+  );
+}
+
+function ReclaimRow({
+  environmentId,
+  label,
+  status,
+  dismiss,
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly label: string;
+  readonly status: DatabaseStorageStatus;
+  readonly dismiss: ReactNode;
+}) {
+  const t = useT();
+  const reclaim = useAtomCommand(serverEnvironment.reclaimDatabaseSpace);
+  const [confirming, setConfirming] = useState(false);
+  const [requested, setRequested] = useState(false);
+  // A failed repair reports back after the restart, which ends the wait.
+  const restarting = requested && status.reclaimFailure === undefined;
+  const minutes = databaseReclaimMinutes(status);
+  const amount = formatGiB(status.reclaimableBytes);
+  const start = async () => {
+    setConfirming(false);
+    setRequested(true);
+    const result = await reclaim({ environmentId, input: {} });
+    if (result._tag === "Success") {
+      toastManager.add({
+        type: "success",
+        title: currentTranslator()("updates.reclaimingAmountOnEnvironment", {
+          amount,
+          environment: label,
+        }),
+        description: currentTranslator()("updates.reclaimRestartsAndReturns", { minutes }),
+      });
+      return;
+    }
+    setRequested(false);
+    if (isAtomCommandInterrupted(result)) return;
+    const error = squashAtomCommandFailure(result);
+    toastManager.add({
+      type: "error",
+      title: currentTranslator()("updates.couldNotReclaimSpaceOnEnvironment", {
+        environment: label,
+      }),
+      description:
+        error instanceof Error ? error.message : currentTranslator()("chat.errorOccurred"),
+    });
+  };
+  return (
+    <SettingsRow
+      title={t("updates.sizeGiBOnEnvironment", {
+        size: formatGiBValue(status.reclaimableBytes),
+        environment: label,
+      })}
+      description={
+        status.reclaimFailure === undefined
+          ? t("updates.reclaimRestartsOffline", { minutes })
+          : t("updates.reclaimLastAttemptFailed", { error: status.reclaimFailure })
+      }
+      control={
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={restarting}
+            onClick={() => setConfirming(true)}
+          >
+            {restarting ? t("settingsA.connectionsRestarting") : t("updates.reclaimAction")}
+          </Button>
+          {dismiss}
+          <AlertDialog open={confirming} onOpenChange={setConfirming}>
+            <AlertDialogPopup>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {t("updates.reclaimConfirmTitle", { amount, environment: label })}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("updates.reclaimConfirmDescription", { environment: label, minutes })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogClose render={<Button variant="outline" />}>
+                  {t("common.cancel")}
+                </AlertDialogClose>
+                <Button onClick={() => void start()}>
+                  {t("updates.reclaimRestartAndReclaim")}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogPopup>
+          </AlertDialog>
+        </div>
+      }
+    />
   );
 }

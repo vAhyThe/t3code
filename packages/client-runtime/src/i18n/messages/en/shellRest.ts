@@ -82,8 +82,14 @@ export const shellRest = {
     one: "Expired terminal context omitted from message",
     other: "Expired terminal contexts omitted from message",
   },
-  expiredTerminalRemoveOrReadd: "Remove it or re-add it to include terminal output.",
-  expiredTerminalReaddIfWanted: "Re-add it if you want that terminal output included.",
+  expiredTerminalRemoveOrReadd: {
+    one: "Remove it or re-add it to include terminal output.",
+    other: "Remove them or re-add them to include terminal output.",
+  },
+  expiredTerminalReaddIfWanted: {
+    one: "Re-add it if you want that terminal output included.",
+    other: "Re-add them if you want that terminal output included.",
+  },
   switchProvidersNewChat: "Start a new chat to switch providers",
   providerSwitchNotSupported:
     "This thread does not support switching providers after it has started.",
@@ -635,4 +641,22 @@ export const shellRest = {
   desktopSecureStorageUnavailable: "Desktop secure storage is unavailable in this system context.",
   onlyThreadLinkedToWorktree: "This thread is the only one linked to this worktree:",
   deleteWorktreeToo: "Delete the worktree too?",
+  chatGptWorkspaceLimitReached:
+    "You've reached your workspace's limit for using your ChatGPT plan in other apps.",
+  composerSlashClearDescription: "Start a fresh session; earlier messages stay visible",
+  secretRequestOpenHost: "Open {host}",
+  steerWaitingToBeRead: "Steer · waiting to be read",
+  steerWaitingToBeReadTooltip:
+    "Waiting for the agent to read this. It reads steers between steps, after a running command finishes.",
+  tokenCountMillions: "{count}m",
+  usageLimitRecoveryResumes: "Resumes {time}",
+  zoomableImagePinchHelp:
+    "Click to zoom in or return to fit. Pinch or Ctrl+scroll to zoom, scroll or drag to pan. Use Enter to toggle zoom, plus or minus to zoom, and 0 to fit.",
+  officeEngineStopped: "The Office engine stopped",
+  officeEngineUnreadable: "The Office engine sent an unreadable reply",
+  officeCallAborted: "The call was aborted",
+  officeTooSlow: "This document took too long to preview. Open it in another app.",
+  officeEngineClosed: "The Office engine was closed",
+  stopActionOnSettle: "Stop this action when the thread settles",
+  providerUpdatesCheckFailed: "Could not check provider updates",
 } as const satisfies CatalogNamespace;

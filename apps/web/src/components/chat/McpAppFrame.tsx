@@ -12,6 +12,7 @@ import {
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import {
   clampMcpAppHeight,
+  MCP_APP_COLOR_SCHEME_PARAM,
   MCP_APP_DEFAULT_HEIGHT,
   MCP_APP_MAX_HEIGHT,
   mcpAppAllowAttribute,
@@ -41,9 +42,12 @@ const commandFailure = (result: {
   readonly cause: Parameters<typeof squashAtomCommandFailure>[0]["cause"];
 }) => {
   const error = squashAtomCommandFailure(result);
-  return new McpAppHostRefusal(
-    error instanceof Error && error.message.trim() !== "" ? error.message : "Request failed.",
-  );
+  return new McpAppHostRefusal({
+    message:
+      error instanceof Error && error.message.trim() !== ""
+        ? error.message
+        : currentTranslator()("mcp.frameRequestFailed"),
+  });
 };
 
 const fullscreenSupported =
@@ -126,7 +130,12 @@ export function McpAppFrame(props: {
   // The frame keeps its first URL: a re-minted one would reload the app.
   const [src, setSrc] = useState<string | null>(null);
   const asset = useLongLivedAssetUrl(src === null ? props.environmentId : null, resource);
-  if (src === null && asset._tag === "Success") setSrc(asset.url);
+  if (src === null && asset._tag === "Success") {
+    // The app paints before `ui/initialize`, so it reads the initial scheme from its URL.
+    const url = new URL(asset.url);
+    url.searchParams.set(MCP_APP_COLOR_SCHEME_PARAM, theme.appearance);
+    setSrc(url.toString());
+  }
 
   const detail = useTurnItemDetail({
     environmentId: props.environmentId,
@@ -255,7 +264,9 @@ export function McpAppFrame(props: {
       flushSync(() => setDisplayMode("inline"));
       const approved = await requestConfirmDialog(message);
       if (approved === undefined) {
-        throw new McpAppHostRefusal("T3 could not ask for approval here.");
+        throw new McpAppHostRefusal({
+          message: currentTranslator()("mcp.frameApprovalUnavailable"),
+        });
       }
       return approved;
     };
@@ -274,7 +285,8 @@ export function McpAppFrame(props: {
         const { environmentId, input } = scope();
         const info = await readLive().toolInfo({ environmentId, input: { ...input, name } });
         if (info._tag !== "Success") throw commandFailure(info);
-        if (!info.value.callable) throw new McpAppHostRefusal("This app cannot call that tool.");
+        if (!info.value.callable)
+          throw new McpAppHostRefusal({ message: currentTranslator()("mcp.frameToolNotCallable") });
         if (!info.value.readOnly) {
           const approved = await ask(
             currentTranslator()("chat.mcpAppAllowToolCall", {
@@ -283,7 +295,8 @@ export function McpAppFrame(props: {
               args: JSON.stringify(args, null, 2),
             }),
           );
-          if (approved !== true) throw new McpAppHostRefusal("Declined by the user.");
+          if (approved !== true)
+            throw new McpAppHostRefusal({ message: currentTranslator()("mcp.frameDeclined") });
         }
         const result = await readLive().callTool({
           environmentId,
@@ -303,17 +316,21 @@ export function McpAppFrame(props: {
       },
       openLink: async (url) => {
         if (document.activeElement !== frameRef.current || !navigator.userActivation?.isActive) {
-          throw new McpAppHostRefusal("Links open only from a click in the app.");
+          throw new McpAppHostRefusal({ message: currentTranslator()("mcp.frameLinksClickOnly") });
         }
         window.open(url, "_blank", "noopener,noreferrer");
       },
       sendMessage: async (text) => {
         const send = readLive().props.onSendMessage;
-        if (send === undefined) throw new McpAppHostRefusal("Messages are not available here.");
+        if (send === undefined)
+          throw new McpAppHostRefusal({
+            message: currentTranslator()("mcp.frameMessagesUnavailable"),
+          });
         const approved = await ask(
           currentTranslator()("chat.mcpAppSendMessage", { server: app.server, text }),
         );
-        if (approved !== true) throw new McpAppHostRefusal("Declined by the user.");
+        if (approved !== true)
+          throw new McpAppHostRefusal({ message: currentTranslator()("mcp.frameDeclined") });
         await send(text);
       },
       updateModelContext: async (context) => {
@@ -350,7 +367,8 @@ export function McpAppFrame(props: {
         const approved = await ask(
           currentTranslator()("chat.mcpAppSaveFiles", { names, server: app.server }),
         );
-        if (approved !== true) throw new McpAppHostRefusal("Declined by the user.");
+        if (approved !== true)
+          throw new McpAppHostRefusal({ message: currentTranslator()("mcp.frameDeclined") });
         for (const file of files) {
           let bytes: Uint8Array | undefined;
           let mimeType = file.mimeType ?? "application/octet-stream";
@@ -368,9 +386,14 @@ export function McpAppFrame(props: {
             const declared = (content as { readonly mimeType?: unknown } | undefined)?.mimeType;
             if (typeof declared === "string") mimeType = declared;
           }
-          if (bytes === undefined) throw new McpAppHostRefusal(`${file.name} has no contents.`);
+          if (bytes === undefined)
+            throw new McpAppHostRefusal({
+              message: currentTranslator()("mcp.frameNoContents", { name: file.name }),
+            });
           if (bytes.byteLength > MAX_DOWNLOAD_BYTES) {
-            throw new McpAppHostRefusal(`${file.name} is too large to save.`);
+            throw new McpAppHostRefusal({
+              message: currentTranslator()("mcp.frameTooLarge", { name: file.name }),
+            });
           }
           saveBlob(new Blob([bytes.slice()], { type: mimeType }), file.name);
         }

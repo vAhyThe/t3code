@@ -4,7 +4,13 @@ import {
   type ManagedPolicySummary,
   type RuntimeMode,
 } from "@t3tools/contracts";
-import { type LucideIcon, LockIcon, PenLineIcon, ShieldOffIcon, SparklesIcon } from "lucide-react";
+import {
+  type LucideIcon,
+  LockIcon,
+  PenLineIcon,
+  ShieldCheckIcon,
+  ShieldOffIcon,
+} from "lucide-react";
 
 // Keys, not text: render with `t(labelKey)` so the label follows the UI language.
 export const runtimeModeConfig: Record<
@@ -24,7 +30,7 @@ export const runtimeModeConfig: Record<
   auto: {
     labelKey: "chat.runtimeModeAutoLabel",
     descriptionKey: "chat.runtimeModeAutoDescription",
-    icon: SparklesIcon,
+    icon: ShieldCheckIcon,
   },
   "full-access": {
     labelKey: "chat.runtimeModeFullAccessLabel",

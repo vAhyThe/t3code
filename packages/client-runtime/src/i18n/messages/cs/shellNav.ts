@@ -775,4 +775,11 @@ export const shellNav = {
     other: "Archivovat {count} vláken?",
   },
   unsettlingNow: "Ruším vyřízení...",
+  autoSettleFollowSettings: "Podle nastavení",
+  autoSettleNever: "Nikdy",
+  gitChangesUncommitted: "Necommitnuté",
+  gitChangesVsBase: "oproti {baseRef}",
+  paletteUseInAnotherApp: "Použít T3 Code v jiné aplikaci (MCP)",
+  rowSettingUp: "Nastavování",
+  updateCheckingForMore: "Hledání dalších…",
 } satisfies CzechNamespace<"shellNav">;

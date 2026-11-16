@@ -695,4 +695,5 @@ export const settingsB = {
   cookieImportFailed: "Import cookies ze zdroje {source} selhal: {reason}.",
   failureTitleOnEnvironment: "{title} na {environment}",
   theCurrentEnvironment: "aktuálním prostředí",
+  integrationsUpdate: "Aktualizovat",
 } satisfies CzechNamespace<"settingsB">;

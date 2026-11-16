@@ -3,30 +3,31 @@ import { Link } from "@tanstack/react-router";
 import { managedCapabilityDenial } from "@t3tools/contracts";
 
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
+import { currentTranslator } from "~/i18n/I18nProvider";
+import { Trans } from "~/i18n/Trans";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
-import { LegacyFeaturesSection } from "./SettingsPanels";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
-import { useOptionalSettingsScope } from "./SettingsScopeContext";
+import { useOptionalSettingsScope, useSettingsScope } from "./SettingsScopeContext";
 import { firstManagedDenial, usePrimaryManagedPolicy } from "~/state/managedPolicy";
 
-/** Features still settling in, and legacy behavior kept for people who rely on it. */
+/** Features still settling in. */
 export function LabsSettingsPanel() {
   return (
     <SettingsPageContainer>
       <SettingsSection id="beta" title="Beta">
         <BoringSidebarRow />
-        <BoringSidebarMultilineRow />
         {/* Clerk is only mounted when this build has T3 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
         <LinkedEnvironmentsRow />
+        <PromptSuggestionsRow />
         <SimlockHostsRow />
+        <FastWorktreeCheckoutRow />
       </SettingsSection>
-      <LegacyFeaturesSection />
     </SettingsPageContainer>
   );
 }
@@ -40,15 +41,18 @@ function BoringSidebarRow() {
       description="Group sidebar threads into project folders. Pinned threads stay on top, and Snoozed and Settled stay below the folders."
       control={
         <Switch
-          checked={settings.boringSidebarEnabled || settings.legacySidebarEnabled}
-          // Turning it off also clears the opt-in of the removed legacy sidebar.
-          onCheckedChange={(checked) =>
-            updateSettings({ boringSidebarEnabled: Boolean(checked), legacySidebarEnabled: false })
-          }
+          checked={settings.boringSidebarEnabled}
+          onCheckedChange={(checked) => updateSettings({ boringSidebarEnabled: Boolean(checked) })}
           aria-label="Boring sidebar (group by project)"
         />
       }
-    />
+    >
+      {settings.boringSidebarEnabled ? (
+        <div className="mt-2 mb-2 border-l-2 border-border/60 ps-3">
+          <BoringSidebarMultilineRow />
+        </div>
+      ) : null}
+    </SettingsRow>
   );
 }
 
@@ -58,14 +62,15 @@ function BoringSidebarMultilineRow() {
   return (
     <SettingsRow
       {...searchableSetting("boring-sidebar-multiline")}
-      description="In the boring sidebar, show folder threads on two lines: the title, then the branch, pull request, and agent."
+      className="px-0 py-2 sm:px-0"
+      description={currentTranslator()("settingsE.labsTwoLineFolderRowsDescription")}
       control={
         <Switch
           checked={settings.boringSidebarMultilineRows}
           onCheckedChange={(checked) =>
             updateSettings({ boringSidebarMultilineRows: Boolean(checked) })
           }
-          aria-label="Two-line folder rows"
+          aria-label={currentTranslator()("settingsE.labsTwoLineFolderRowsAria")}
         />
       }
     />
@@ -81,7 +86,7 @@ function GuestLinksRowWithSignIn() {
   return (
     <SettingsRow
       {...searchableSetting("guest-links")}
-      description="Share a thread with a guest who watches it live in their browser and sends messages you approve. Sign in to T3 Connect to use guest links."
+      description={currentTranslator()("settingsE.labsGuestLinksSignInDescription")}
       control={
         <Button size="sm" variant="outline" onClick={openAuthPrompt}>
           Sign in
@@ -111,21 +116,24 @@ function GuestLinksRow() {
       // Turning guest links off still works without T3 Connect.
       managed={settings.guestSharingEnabled ? undefined : connectDenial}
       description={
-        <>
-          Share a thread with a guest who watches it live in their browser and sends messages you
-          approve. Needs T3 Connect: sign in and link this machine in{" "}
-          <Link to="/settings/access" className="underline underline-offset-2">
-            Sharing & access
-          </Link>
-          . While it is off, every guest link stops working.
-        </>
+        <Trans
+          k="settingsE.labsGuestLinksDescription"
+          components={{
+            // oxlint-disable-next-line react/no-unstable-nested-components -- Trans invokes this render callback directly.
+            link: (children) => (
+              <Link to="/settings/access" className="underline underline-offset-2">
+                {children}
+              </Link>
+            ),
+          }}
+        />
       }
       control={
         <ScopedSwitch
           settingKeys={["guestSharingEnabled"]}
           checked={settings.guestSharingEnabled}
           onCheckedChange={(checked) => updateSettings({ guestSharingEnabled: Boolean(checked) })}
-          aria-label="Guest links"
+          aria-label={currentTranslator()("updates.guestLinks")}
         />
       }
     />
@@ -147,7 +155,7 @@ function LinkedEnvironmentsRow() {
           <Link to="/settings/connections" className="underline underline-offset-2">
             Connections
           </Link>
-          . While it is off, nothing new starts over a link; tasks already running finish.
+          . While off, nothing new starts over a link; running tasks finish.
         </>
       }
       control={
@@ -158,6 +166,29 @@ function LinkedEnvironmentsRow() {
             updateSettings({ linkedEnvironmentsEnabled: Boolean(checked) })
           }
           aria-label="Linked environments"
+        />
+      }
+    />
+  );
+}
+
+function PromptSuggestionsRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("prompt-suggestions-beta")}
+      settingKeys={["promptSuggestionsEnabled"]}
+      description={currentTranslator()("settingsE.labsPromptSuggestionsDescription")}
+      control={
+        <ScopedSwitch
+          settingKeys={["promptSuggestionsEnabled"]}
+          checked={settings.promptSuggestionsEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings({ promptSuggestionsEnabled: Boolean(checked) })
+          }
+          aria-label={currentTranslator()("settingsE.suggestNextPrompt")}
         />
       }
     />
@@ -198,6 +229,39 @@ function SimlockHostsRow() {
             updateSettings({ simlockDeviceHostsEnabled: Boolean(checked) })
           }
           aria-label="Simlock device hosts"
+        />
+      }
+    />
+  );
+}
+
+/** Shows only when every machine in scope is a Mac, since only macOS servers honor it. */
+function FastWorktreeCheckoutRow() {
+  const { scope, connectedEnvironments } = useSettingsScope();
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  if (
+    scope.kind === "project" ||
+    scope.kind === "checkout" ||
+    connectedEnvironments.length === 0 ||
+    connectedEnvironments.some(
+      (environment) =>
+        environment.serverConfig?.environment.capabilities.fastWorktreeCheckout !== true,
+    )
+  )
+    return null;
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("worktree-fast-checkout")}
+      settingKeys={["fastWorktreeCheckout"]}
+      description={currentTranslator()("settingsE.labsFastWorktreeCheckoutDescription")}
+      control={
+        <ScopedSwitch
+          settingKeys={["fastWorktreeCheckout"]}
+          checked={settings.fastWorktreeCheckout}
+          onCheckedChange={(checked) => updateSettings({ fastWorktreeCheckout: Boolean(checked) })}
+          aria-label={currentTranslator()("settingsE.fastWorktreeCheckout")}
         />
       }
     />

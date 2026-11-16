@@ -665,4 +665,10 @@ export const settingsA = {
   displayCurrencyRateUnavailable:
     "The ČNB rate is not available right now, so costs are shown in USD.",
   displayCurrencyResetLabel: "currency",
+  chatGptRemoveConnection: "Remove connection",
+  cliCommandAddToPath: "Add to PATH",
+  cliCommandAddToPathFailed: "Could not add t3 to PATH",
+  cliCommandAddedToPath:
+    "Installed at {path} and added to PATH in {file}. Open a new terminal to use it.",
+  cliCommandNotOnPathYet: "Installed at {path}, which is not on your PATH yet.",
 } as const satisfies CatalogNamespace;

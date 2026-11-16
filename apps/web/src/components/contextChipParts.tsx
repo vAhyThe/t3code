@@ -1,7 +1,14 @@
 import { currentTranslator } from "~/i18n/I18nProvider";
 import type { EnvironmentId, PullRequestContextMetadata } from "@t3tools/contracts";
 import { CircleDashedIcon, FilmIcon, ImageIcon } from "lucide-react";
-import { useEffect, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type ComponentProps,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useAssetUrlState } from "~/assets/assetUrls";
 import { documentChipKindForFileName } from "~/pierre-icons";
 
@@ -62,6 +69,8 @@ export function ContextChipPopover(props: {
   label: string;
   copyMarkdown?: string | undefined;
   accessibleLabel: string;
+  /** Overrides the kind's accent color. */
+  accent?: string | undefined;
   children: ReactNode;
 }) {
   const t = useT();
@@ -71,6 +80,11 @@ export function ContextChipPopover(props: {
         render={
           <ContextChip
             kind={props.kind}
+            style={
+              props.accent
+                ? ({ "--context-chip-accent": props.accent } as CSSProperties)
+                : undefined
+            }
             render={<button type="button" />}
             aria-label={t("shellRest.showDetailsLabel", { label: props.accessibleLabel })}
             data-markdown-copy={props.copyMarkdown}

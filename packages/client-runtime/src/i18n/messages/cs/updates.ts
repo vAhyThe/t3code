@@ -394,4 +394,17 @@ export const updates = {
   savingRestartsThisHostWhichStopsItsRunning2:
     " Uložení restartuje hostitele a zastaví jeho běžící relace.",
   onHost: "na {host}",
+  couldNotReclaimSpaceOnEnvironment: "Místo v prostředí {environment} nelze uvolnit",
+  databasesStillHoldFreedSpace: "Tyto databáze stále drží místo uvolněné vyčištěním historie.",
+  runReclaimCommandOnEachMachine:
+    "Spusťte příkaz na každém počítači, abyste místo uvolnili. Restartuje službu na pozadí. Pokud prostředí hostuje desktopová aplikace, nejprve ji ukončete.",
+  reclaimAction: "Uvolnit",
+  reclaimConfirmDescription:
+    "T3 Code v prostředí {environment} se zastaví, znovu sestaví databázi a spustí se. Bude offline zhruba {minutes} min. Běžící agenti se při restartu zastaví.",
+  reclaimConfirmTitle: "Uvolnit {amount} v prostředí {environment}?",
+  reclaimLastAttemptFailed: "Poslední pokus selhal: {error}",
+  reclaimRestartAndReclaim: "Restartovat a uvolnit",
+  reclaimRestartsAndReturns: "T3 Code tam se restartuje a bude zpět zhruba za {minutes} min.",
+  reclaimRestartsOffline: "Restartuje tam T3 Code. Bude offline zhruba {minutes} min.",
+  reclaimingAmountOnEnvironment: "Uvolňování {amount} v prostředí {environment}",
 } as const satisfies CatalogNamespace;

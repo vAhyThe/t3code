@@ -626,7 +626,7 @@ export const settingsC = {
   quitShortcutBehavior: "Chování zkratky pro ukončení",
   textGeneration: "Generování textu",
   textGenerationNote:
-    "Používá se pro názvy vláken a další generovaný text na připojených zařízeních s tímto poskytovatelem. Správa verzí ji může přepsat.",
+    "Pro názvy vláken a další generovaný text. Správa verzí má vlastní nastavení. Nabízejí se tu i generátory textu z nastavení poskytovatelů.",
   connectForTextGen: "Připojte prostředí a vyberte jeho model pro generování textu.",
   noTextGenProviders: "Žádní poskytovatelé generování textu nejsou dostupní.",
   textGenModelNotSaved: "Model pro generování textu se neuložil",
@@ -756,6 +756,8 @@ export const settingsC = {
   restoreContrast: "Kontrast",
   restoreContinueAfterRestarts: "Pokračování vláken po restartu",
   restoreContextWindowIndicator: "Indikátor okna kontextu",
+  restoreToolCallsInChat: "Volání nástrojů v chatu",
+  restoreScreenReaderAnnouncements: "Oznámení pro čtečku obrazovky",
   restoreComposerContext: "Kontext pole zprávy",
   restoreCollapseComposer: "Sbalení pole zprávy při posouvání",
   restoreChatWidth: "Šířka chatu",
@@ -892,4 +894,5 @@ export const settingsC = {
     "Odebrat stažené runtime Antigravity z prostředí {environment}? Přihlášení přes Google a historie vláken zůstanou zachovány.",
   modelCustomBadge: "vlastní",
   restoreDisplayCurrency: "Měna",
+  archivedThreadCreated: "Vytvořeno",
 } satisfies CzechNamespace<"settingsC">;

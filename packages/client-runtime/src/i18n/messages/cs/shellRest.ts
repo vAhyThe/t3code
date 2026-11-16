@@ -90,9 +90,18 @@ export const shellRest = {
     many: "Vypršelých kontextů terminálu vynecháno ze zprávy",
     other: "Vypršelých kontextů terminálu vynecháno ze zprávy",
   },
-  expiredTerminalRemoveOrReadd:
-    "Odeberte jej nebo jej znovu přidejte, aby se zahrnul výstup terminálu.",
-  expiredTerminalReaddIfWanted: "Pokud chcete výstup terminálu zahrnout, přidejte jej znovu.",
+  expiredTerminalRemoveOrReadd: {
+    one: "Odeberte jej nebo jej znovu přidejte, aby se zahrnul výstup terminálu.",
+    few: "Odeberte je nebo je znovu přidejte, aby se zahrnul výstup terminálu.",
+    many: "Odeberte je nebo je znovu přidejte, aby se zahrnul výstup terminálu.",
+    other: "Odeberte je nebo je znovu přidejte, aby se zahrnul výstup terminálu.",
+  },
+  expiredTerminalReaddIfWanted: {
+    one: "Pokud chcete výstup terminálu zahrnout, přidejte jej znovu.",
+    few: "Pokud chcete výstup terminálu zahrnout, přidejte je znovu.",
+    many: "Pokud chcete výstup terminálu zahrnout, přidejte je znovu.",
+    other: "Pokud chcete výstup terminálu zahrnout, přidejte je znovu.",
+  },
   switchProvidersNewChat: "Pro přepnutí poskytovatele začněte nový chat",
   providerSwitchNotSupported: "Toto vlákno po spuštění nepodporuje přepínání poskytovatelů.",
   changeModelsNewChat: "Pro změnu modelu začněte nový chat",
@@ -684,4 +693,22 @@ export const shellRest = {
     "Zabezpečené úložiště počítače není v tomto systémovém kontextu dostupné.",
   onlyThreadLinkedToWorktree: "Toto vlákno je jediné propojené s tímto worktree:",
   deleteWorktreeToo: "Smazat i worktree?",
+  chatGptWorkspaceLimitReached:
+    "Dosáhli jste limitu svého pracovního prostoru pro používání tarifu ChatGPT v jiných aplikacích.",
+  composerSlashClearDescription: "Zahájit novou relaci; dřívější zprávy zůstanou viditelné",
+  secretRequestOpenHost: "Otevřít {host}",
+  steerWaitingToBeRead: "Steer · čeká na přečtení",
+  steerWaitingToBeReadTooltip:
+    "Čeká se, až to agent přečte. Steery čte mezi kroky, po dokončení běžícího příkazu.",
+  tokenCountMillions: "{count} mil.",
+  usageLimitRecoveryResumes: "Pokračuje {time}",
+  zoomableImagePinchHelp:
+    "Kliknutím přiblížíte nebo se vrátíte na velikost okna. Přibližte gestem štípnutí nebo Ctrl+kolečkem, posouvejte rolováním nebo tažením. Klávesou Enter přepnete přiblížení, plus a minus mění zvětšení, 0 přizpůsobí velikost.",
+  officeEngineStopped: "Modul Office se zastavil",
+  officeEngineUnreadable: "Modul Office poslal nečitelnou odpověď",
+  officeCallAborted: "Volání bylo přerušeno",
+  officeTooSlow: "Náhled dokumentu trval příliš dlouho. Otevřete ho v jiné aplikaci.",
+  officeEngineClosed: "Modul Office byl zavřen",
+  stopActionOnSettle: "Zastavit tuto akci, když se vlákno vyřídí",
+  providerUpdatesCheckFailed: "Aktualizace poskytovatelů se nepodařilo zkontrolovat",
 } satisfies CzechNamespace<"shellRest">;

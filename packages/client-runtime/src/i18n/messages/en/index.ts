@@ -10,6 +10,11 @@ import { settingsD } from "./settingsD.ts";
 import { shellDevice } from "./shellDevice.ts";
 import { shellNav } from "./shellNav.ts";
 import { shellRest } from "./shellRest.ts";
+import { settingsE } from "./settingsE.ts";
+import { voiceSettings } from "./voiceSettings.ts";
+import { voice } from "./voice.ts";
+import { onboarding } from "./onboarding.ts";
+import { mcp } from "./mcp.ts";
 
 /**
  * The English source catalog. Values are the original upstream text verbatim,
@@ -28,6 +33,11 @@ export const enMessages = {
   shellDevice,
   shellRest,
   desktop,
+  settingsE,
+  voiceSettings,
+  voice,
+  onboarding,
+  mcp,
 } as const;
 
 export type EnMessages = typeof enMessages;

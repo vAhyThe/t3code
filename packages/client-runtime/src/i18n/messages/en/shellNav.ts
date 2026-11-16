@@ -712,4 +712,11 @@ export const shellNav = {
     other: "Archive {count} threads?",
   },
   unsettlingNow: "Un-settling...",
+  autoSettleFollowSettings: "Follow settings",
+  autoSettleNever: "Never",
+  gitChangesUncommitted: "Uncommitted",
+  gitChangesVsBase: "vs {baseRef}",
+  paletteUseInAnotherApp: "Use T3 Code in another app (MCP)",
+  rowSettingUp: "Setting up",
+  updateCheckingForMore: "Checking for more…",
 } as const satisfies CatalogNamespace;

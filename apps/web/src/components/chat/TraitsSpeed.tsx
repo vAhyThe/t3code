@@ -7,7 +7,6 @@ import { currentTranslator, useT } from "~/i18n/I18nProvider";
 import { ComposerControlIcon, type ComposerControlSize } from "./ComposerControl";
 
 export function getTraitsSpeedDisplay(
-  provider: ProviderDriverKind,
   descriptor: ProviderOptionDescriptor,
 ): { label: string; speedIcon: "fast" | "ultrafast" | null } | null {
   const t = currentTranslator();
@@ -18,7 +17,7 @@ export function getTraitsSpeedDisplay(
       speedIcon: descriptor.currentValue === true ? "fast" : null,
     };
   }
-  if (provider !== "codex" || descriptor.id !== "serviceTier" || descriptor.type !== "select") {
+  if (descriptor.id !== "serviceTier" || descriptor.type !== "select") {
     return null;
   }
   const currentValue = getProviderOptionCurrentValue(descriptor);

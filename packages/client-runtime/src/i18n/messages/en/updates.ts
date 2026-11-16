@@ -387,4 +387,17 @@ export const updates = {
   savingRestartsThisHostWhichStopsItsRunning2:
     " Saving restarts this host, which stops its running sessions.",
   onHost: "on {host}",
+  couldNotReclaimSpaceOnEnvironment: "Could not reclaim space on {environment}",
+  databasesStillHoldFreedSpace: "These databases still hold space freed by history cleanup.",
+  runReclaimCommandOnEachMachine:
+    "Run the command on each machine to reclaim it. It restarts the background service. Quit the desktop app first if it hosts the environment.",
+  reclaimAction: "Reclaim",
+  reclaimConfirmDescription:
+    "T3 Code on {environment} stops, rebuilds its database, and starts again. It will be offline for about {minutes} min. Running agents stop when it restarts.",
+  reclaimConfirmTitle: "Reclaim {amount} on {environment}?",
+  reclaimLastAttemptFailed: "The last attempt failed: {error}",
+  reclaimRestartAndReclaim: "Restart and reclaim",
+  reclaimRestartsAndReturns: "T3 Code there restarts and is back in about {minutes} min.",
+  reclaimRestartsOffline: "Restarts T3 Code there. It will be offline for about {minutes} min.",
+  reclaimingAmountOnEnvironment: "Reclaiming {amount} on {environment}",
 } as const satisfies CatalogNamespace;

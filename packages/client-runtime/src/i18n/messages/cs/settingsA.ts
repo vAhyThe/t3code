@@ -703,4 +703,10 @@ export const settingsA = {
   displayCurrencyRateUnavailable:
     "Kurz ČNB teď není k dispozici, náklady se proto zobrazují v USD.",
   displayCurrencyResetLabel: "měnu",
+  chatGptRemoveConnection: "Odebrat připojení",
+  cliCommandAddToPath: "Přidat do PATH",
+  cliCommandAddToPathFailed: "Příkaz t3 nelze přidat do PATH",
+  cliCommandAddedToPath:
+    "Nainstalováno v {path} a přidáno do PATH v souboru {file}. Pro použití otevřete nový terminál.",
+  cliCommandNotOnPathYet: "Nainstalováno v {path}, což zatím není ve vaší PATH.",
 } satisfies CzechNamespace<"settingsA">;

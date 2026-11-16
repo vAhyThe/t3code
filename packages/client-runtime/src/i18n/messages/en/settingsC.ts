@@ -594,7 +594,7 @@ export const settingsC = {
   quitShortcutBehavior: "Quit shortcut behavior",
   textGeneration: "Text generation",
   textGenerationNote:
-    "Used for thread titles and other generated text on connected devices with this provider. Source control can override it.",
+    "For thread titles and other generated text. Source control has its own setting. Text generators from Providers also appear here.",
   connectForTextGen: "Connect an environment to choose its text generation model.",
   noTextGenProviders: "No text generation providers available.",
   textGenModelNotSaved: "Text generation model not saved",
@@ -720,6 +720,8 @@ export const settingsC = {
   restoreContrast: "Contrast",
   restoreContinueAfterRestarts: "Continue threads after restarts",
   restoreContextWindowIndicator: "Context window indicator",
+  restoreToolCallsInChat: "Tool calls in chat",
+  restoreScreenReaderAnnouncements: "Screen reader announcements",
   restoreComposerContext: "Composer context",
   restoreCollapseComposer: "Collapse composer on scroll",
   restoreChatWidth: "Chat width",
@@ -854,4 +856,5 @@ export const settingsC = {
     "Remove the downloaded Antigravity runtime from {environment}? Google sign-in and thread history are kept.",
   modelCustomBadge: "custom",
   restoreDisplayCurrency: "Currency",
+  archivedThreadCreated: "Created",
 } as const satisfies CatalogNamespace;

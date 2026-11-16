@@ -118,4 +118,7 @@ export const desktop = {
   livePreviewAlt: "Live browser preview",
   passkeyUnnamed: "Unnamed passkey",
   fileFilterImages: "Images",
+  mediaReadFailed: "Could not read media.",
+  menuCloseDeveloperTools: "Close Developer Tools",
+  contextMenuCopyEmail: "Copy Email Address",
 } as const satisfies CatalogNamespace;

@@ -23,6 +23,7 @@ export type SettingsPath =
   | "/settings/projects"
   | "/settings/general"
   | "/settings/diagnostics"
+  | "/settings/voice"
   | "/settings/appearance"
   | "/settings/chat"
   | "/settings/diffs"
@@ -68,12 +69,14 @@ export interface SettingsSearchItem {
   readonly cloudOnly?: boolean;
   readonly environmentOnly?: boolean;
   readonly providerSettingsOnly?: boolean;
-  readonly macProviderSettingsOnly?: boolean;
   readonly localBackendManagementOnly?: boolean;
   readonly localEnvironmentOnly?: boolean;
+  readonly primaryEnvironmentOnly?: boolean;
   readonly wslAvailableOnly?: boolean;
   readonly managedTunnelOnly?: boolean;
   readonly peerLinksOnly?: boolean;
+  readonly fastWorktreeCheckoutOnly?: boolean;
+  readonly textGeneratorsOnly?: boolean;
   readonly secondary?: boolean;
   readonly requiresThreadAutoSettlement?: boolean;
 }
@@ -83,12 +86,15 @@ export interface SettingsSearchAvailability {
   readonly hasCloudPublicConfig: boolean;
   readonly hasEnvironment: boolean;
   readonly hasProviderSettingsEnvironment: boolean;
-  readonly hasMacProviderSettingsEnvironment: boolean;
   readonly canManageLocalBackend: boolean;
   readonly isWslSettingsRowVisible: boolean;
   readonly hasThreadAutoSettlement: boolean;
   readonly managedTunnelActive?: boolean;
   readonly hasPeerLinkHost?: boolean;
+  readonly hasFastWorktreeCheckoutEnvironment?: boolean;
+  /** An environment without a provider allow-list, which hides text generators. */
+  readonly hasTextGeneratorsEnvironment?: boolean;
+  readonly hasPrimaryEnvironment?: boolean;
 }
 
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
@@ -113,6 +119,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/maintenance": "Maintenance",
   "/settings/labs": "Labs",
   "/settings/about": "About",
+  "/settings/voice": "Voice",
   "/settings/archived": "Archive",
 };
 
@@ -129,6 +136,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
       "/settings/chat",
       "/settings/diffs",
       "/settings/keybindings",
+      "/settings/voice",
       "/settings/snap-shot",
     ],
   },
@@ -508,13 +516,35 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "boring-sidebar",
     title: "Boring sidebar (group by project)",
     to: "/settings/labs",
-    searchTerms: ["beta folders project tree legacy old classic sidebar"],
+    searchTerms: ["beta folders project tree classic sidebar"],
   },
   {
     id: "boring-sidebar-multiline",
     title: "Two-line folder rows",
     to: "/settings/labs",
+    // Shown inside the boring sidebar row only while it is on, so search lands on the parent.
+    targetId: "boring-sidebar",
     searchTerms: ["beta boring sidebar folder rows multiline branch pull request details"],
+  },
+  {
+    id: "tool-call-visibility",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Tool calls in chat",
+    titleKey: "settingsC.restoreToolCallsInChat",
+    to: "/settings/chat",
+    searchTerms: [
+      "hide tool calls commands edits searches work log activity quiet chat zen final answers only",
+    ],
+  },
+  {
+    id: "screen-reader-announcements",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Screen reader announcements",
+    titleKey: "settingsC.restoreScreenReaderAnnouncements",
+    to: "/settings/chat",
+    searchTerms: [
+      "accessibility a11y screen reader nvda jaws voiceover orca narrator speech announce read aloud messages activity steps",
+    ],
   },
   {
     id: "guest-links",
@@ -531,11 +561,158 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta link another machine vps peer agents work there delegate"],
   },
   {
+    id: "prompt-suggestions-beta",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Suggest next prompt",
+    titleKey: "settingsE.suggestNextPrompt",
+    to: "/settings/labs",
+    scope: "environment",
+    searchTerms: ["beta tab autocomplete predict next message claude codex ghost text"],
+  },
+  {
     id: "simlock-hosts",
     title: "Simlock device hosts (alpha)",
     to: "/settings/labs",
     scope: "environment",
     searchTerms: ["beta alpha simlock callstack simulator emulator ios android pool lease gateway"],
+  },
+  {
+    id: "worktree-fast-checkout",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Fast worktree checkout",
+    titleKey: "settingsE.fastWorktreeCheckout",
+    to: "/settings/labs",
+    scope: "environment",
+    fastWorktreeCheckoutOnly: true,
+    searchTerms: ["beta fast worktree checkout clone apfs copy-on-write cache macos speed"],
+  },
+  {
+    id: "voice-transcription-destination",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Transcribe with",
+    titleKey: "settingsE.searchTranscribeWith",
+    to: "/settings/voice",
+    searchTerms: [
+      "send microphone audio dictation destination speech voice stt transcription environment machine consent privacy cloud OpenAI Grok OpenRouter",
+    ],
+  },
+  {
+    id: "voice-microphone",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Microphone",
+    titleKey: "settingsE.searchMicrophone",
+    to: "/settings/voice",
+    searchTerms: ["mic input audio device"],
+  },
+  {
+    id: "dictation-shortcut-mode",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Dictation shortcut",
+    titleKey: "settingsE.searchDictationShortcut",
+    to: "/settings/voice",
+    searchTerms: ["speech voice keyboard hotkey hold toggle auto"],
+  },
+  {
+    id: "speech-language",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Transcription language",
+    titleKey: "settingsE.searchTranscriptionLanguage",
+    to: "/settings/voice",
+    searchTerms: ["speech voice translate english auto detect"],
+  },
+  {
+    id: "speech-dictionary",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Dictionary",
+    titleKey: "settingsE.searchDictionary",
+    to: "/settings/voice",
+    searchTerms: ["speech voice transcription vocabulary names glossary alias"],
+  },
+  {
+    id: "speech-project-dictionary",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Project dictionary",
+    titleKey: "settingsE.searchProjectDictionary",
+    to: "/settings/voice",
+    scope: "project-defaults",
+    searchTerms: [
+      "speech voice transcription vocabulary shared dictionary team environment glossary",
+    ],
+  },
+  {
+    id: "speech-post-processing-model",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Cleanup model",
+    titleKey: "settingsE.searchCleanupModel",
+    to: "/settings/voice",
+    scope: "environment",
+    searchTerms: ["speech voice transcript cleanup provider model post-processing"],
+  },
+  {
+    id: "speech-correction-word",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Correction cue",
+    titleKey: "settingsE.searchCorrectionCue",
+    to: "/settings/voice",
+    searchTerms: ["speech voice cleanup sorry scratch that fix mistake"],
+  },
+  {
+    id: "speech-silence-filtering",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Silence filtering",
+    titleKey: "settingsE.searchSilenceFiltering",
+    to: "/settings/voice",
+    searchTerms: ["voice speech vad silero pauses noise"],
+  },
+  {
+    id: "remove-filler-words",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Remove filler words",
+    titleKey: "settingsE.searchRemoveFillerWords",
+    to: "/settings/voice",
+    searchTerms: ["voice speech transcription hesitation um uh cleanup"],
+  },
+  {
+    id: "speech-post-processing",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Clean up transcripts",
+    titleKey: "settingsE.searchCleanUpTranscripts",
+    to: "/settings/voice",
+    searchTerms: ["speech transcription polish clean provider prompt post-processing"],
+  },
+  {
+    id: "speech-models",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Transcription models",
+    titleKey: "settingsE.searchTranscriptionModels",
+    to: "/settings/voice",
+    searchTerms: [
+      "speech voice stt download whisper parakeet canary moonshine accuracy speed benchmark languages",
+    ],
+  },
+  {
+    id: "speech-hardware",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Transcription hardware and model unloading",
+    titleKey: "settingsE.searchTranscriptionHardware",
+    to: "/settings/voice",
+    searchTerms: ["speech voice stt advanced gpu cpu acceleration memory unload idle"],
+  },
+  {
+    id: "microphone-test",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Test microphone",
+    titleKey: "settingsE.searchTestMicrophone",
+    to: "/settings/voice",
+    searchTerms: ["test mic audio playback loopback record input level"],
+  },
+  {
+    id: "transcription-test",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Test model",
+    titleKey: "settingsE.searchTestModel",
+    to: "/settings/voice",
+    searchTerms: ["test voice speech model transcription recognition"],
   },
   {
     id: "auto-settle-inactive-threads",
@@ -747,6 +924,15 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["base directory folder browser path home"],
   },
   {
+    id: "ghq-clone-layout",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Clone into host folders",
+    titleKey: "settingsE.cloneIntoHostFolders",
+    to: "/settings/threads",
+    scope: "environment-defaults",
+    searchTerms: ["ghq clone destination host owner repository root layout"],
+  },
+  {
     id: "unpin-confirmation",
     // i18n-ignore: English search source, shown through titleKey
     title: "Unpin confirmation",
@@ -825,6 +1011,15 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["phone tablet iPhone iPad iOS Android App Store Google Play QR"],
   },
   {
+    id: "welcome-page",
+    // i18n-ignore: English search source, shown through titleKey
+    title: "Welcome page",
+    titleKey: "settingsE.searchWelcomePage",
+    to: "/settings/about",
+    primaryEnvironmentOnly: true,
+    searchTerms: ["onboarding setup first run getting started agents import projects"],
+  },
+  {
     id: "privacy-policy",
     // i18n-ignore: English search source, shown through titleKey
     title: "Privacy policy",
@@ -853,20 +1048,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     // i18n-ignore: English search source, shown through titleKey
     title: "Open source licenses",
     to: "/settings/about",
-  },
-  {
-    id: "legacy-plan-mode",
-    // i18n-ignore: English search source, shown through titleKey
-    title: "Plan mode (legacy)",
-    to: "/settings/labs",
-    searchTerms: ["build plan composer old"],
-  },
-  {
-    id: "legacy-context-window-indicator",
-    // i18n-ignore: English search source, shown through titleKey
-    title: "Context window indicator (legacy)",
-    to: "/settings/labs",
-    searchTerms: ["composer meter usage tokens circle old"],
   },
   {
     id: "keybindings",
@@ -950,14 +1131,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     providerSettingsOnly: true,
   },
   {
-    id: "cursor-keychain-usage",
+    id: "text-generators",
     // i18n-ignore: English search source, shown through titleKey
-    title: "Cursor account usage",
-    titleKey: "settingsD.searchCursorKeychainUsage",
+    title: "Text generators",
+    titleKey: "settingsD.searchTextGenerators",
     to: "/settings/providers",
-    searchTerms: ["cursor macOS keychain usage tokens cost limits permission"],
+    searchTerms: [
+      "model api api key openai openrouter anthropic ollama lm studio custom endpoint base url thread titles commit messages",
+    ],
     providerSettingsOnly: true,
-    macProviderSettingsOnly: true,
+    textGeneratorsOnly: true,
   },
   {
     id: "provider-health-check-interval",
@@ -1155,21 +1338,21 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "source-control-writing-style",
     // i18n-ignore: English search source, shown through titleKey
-    title: "Source control writing style",
+    title: "Commit and pull request writing",
     titleKey: "settingsD.searchSourceControlWritingStyle",
     to: "/settings/source-control",
     searchTerms: [
-      "repository conventions conventional commits custom instructions change descriptions request titles",
+      "repository conventions conventional commits custom instructions commit messages change pr pull request merge request titles descriptions body style prompt write my own",
     ],
     environmentOnly: true,
   },
   {
     id: "follow-change-request-templates",
     // i18n-ignore: English search source, shown through titleKey
-    title: "Follow change request templates",
+    title: "Follow pull request templates",
     titleKey: "settingsD.searchFollowChangeRequestTemplates",
     to: "/settings/source-control",
-    searchTerms: ["repository pr pull request description structure"],
+    searchTerms: ["repository pr pull request merge request change request description structure"],
     environmentOnly: true,
   },
   {
@@ -1382,6 +1565,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/diagnostics": "environment",
   "/settings/projects": "project",
   "/settings/general": null,
+  "/settings/voice": null,
   "/settings/appearance": null,
   "/settings/chat": null,
   "/settings/diffs": null,
@@ -1418,7 +1602,6 @@ const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
 // Section anchors that moved but are not search results themselves.
 const MOVED_SECTION_ANCHORS: Readonly<Record<string, SettingsPath>> = {
   "authorized-clients": "/settings/access",
-  "legacy-features": "/settings/labs",
   "text-generation": "/settings/threads",
   about: "/settings/about",
 };
@@ -1519,13 +1702,16 @@ export function filterAvailableSettingsSearchItems(
       (!item.cloudOnly || availability.hasCloudPublicConfig) &&
       (!item.environmentOnly || availability.hasEnvironment) &&
       (!item.providerSettingsOnly || availability.hasProviderSettingsEnvironment) &&
-      (!item.macProviderSettingsOnly || availability.hasMacProviderSettingsEnvironment) &&
       (!item.localBackendManagementOnly || availability.canManageLocalBackend) &&
       (!item.localEnvironmentOnly || !availability.localEnvironmentDisabled) &&
+      (!item.primaryEnvironmentOnly || availability.hasPrimaryEnvironment === true) &&
       (!item.wslAvailableOnly || availability.isWslSettingsRowVisible) &&
       (!item.requiresThreadAutoSettlement || availability.hasThreadAutoSettlement) &&
       (!item.managedTunnelOnly || availability.managedTunnelActive === true) &&
-      (!item.peerLinksOnly || availability.hasPeerLinkHost === true),
+      (!item.peerLinksOnly || availability.hasPeerLinkHost === true) &&
+      (!item.fastWorktreeCheckoutOnly ||
+        availability.hasFastWorktreeCheckoutEnvironment === true) &&
+      (!item.textGeneratorsOnly || availability.hasTextGeneratorsEnvironment === true),
   );
 }
 

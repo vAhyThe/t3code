@@ -1,0 +1,137 @@
+import type { CzechNamespace } from "../en/index.ts";
+
+export const settingsE = {
+  mcpUseInAnotherApp: "Použít v jiné aplikaci (MCP)",
+  connectionsShowingAccessFor: "Zobrazený přístup pro",
+  deviceListIncompleteDevice: "Seznam zařízení může být neúplný",
+  deviceListIncompleteIos: "Seznam zařízení iOS může být neúplný",
+  deviceListIncompleteAndroid: "Seznam zařízení Android může být neúplný",
+  deviceStatusDetails: "Podrobnosti",
+  labsTwoLineFolderRowsDescription:
+    "Zobrazit vlákna ve složkách na dvou řádcích: nejdřív název, potom větev, pull request a agent.",
+  labsTwoLineFolderRowsAria: "Dvouřádkové řádky složek",
+  labsGuestLinksSignInDescription:
+    "Sdílejte vlákno s hostem, který ho sleduje živě v prohlížeči a posílá zprávy, které schvalujete. Pro použití odkazů pro hosty se přihlaste k T3 Connect.",
+  labsGuestLinksDescription:
+    "Sdílejte vlákno s hostem, který ho sleduje živě v prohlížeči a posílá zprávy, které schvalujete. Vyžaduje T3 Connect: přihlaste se a propojte tento počítač v <link>Sharing & access</link>. Vypnutím se zastaví všechny odkazy pro hosty.",
+  labsPromptSuggestionsDescription:
+    "Po kole Clauda nebo Codexu zobrazí v prázdném poli zprávy předpokládanou další zprávu. Klávesa Tab ji použije. Každý návrh je navíc jeden požadavek z cache ve vašem tarifu. Vyžaduje Codex 0.165+. Vlákna Claude se aktualizují po restartu.",
+  suggestNextPrompt: "Navrhnout další prompt",
+  labsFastWorktreeCheckoutDescription:
+    "Na Macu klonuje nová worktree z checkoutu uloženého v cache v domovské složce T3 místo zapisování každého souboru. Když to nejde, použije běžný checkout Gitu. Vypnutím se cache smaže.",
+  fastWorktreeCheckout: "Rychlý checkout worktree",
+  linkAddressCheckTitle: "Zkontrolujte tuto adresu",
+  linkAddressCheckDescription:
+    "Aplikace nemůže potvrdit, že jde o jeden z vašich počítačů. Vložený párovací kód se odešle tam.",
+  connectLinkOnHost: "Na hostiteli spusťte `t3 connect link` a poté tam restartujte T3 Code.",
+  scheduledDestinationThread: "Cílové vlákno",
+  scheduledSearchAllThreads: "Hledat ve všech vláknech…",
+  scheduledNoThreadsFound: "Nenalezena žádná vlákna.",
+  scheduledNewThreadEachRun: "Nové vlákno při každém spuštění",
+  scheduledDeletingThreadDeletesTask: "Smazáním vlákna se smaže i tato úloha.",
+  scheduledModeContinue: "Jedno vlákno, konverzace pokračuje",
+  scheduledModeFreshSession: "Jedno vlákno, nová relace při každém spuštění",
+  scheduledThreadFallback: "Vlákno {id}",
+  scheduledStartedByFirstRun: "Vytvoří první spuštění",
+  scheduledDetailNewThread:
+    "Každé spuštění zahájí nové vlákno s pracovním prostorem a modelem uvedenými níže.",
+  scheduledDetailFirstContinue:
+    "První spuštění zahájí vlákno s pracovním prostorem a modelem uvedenými níže. Další spuštění v té konverzaci pokračují.",
+  scheduledDetailFirstFresh:
+    "První spuštění zahájí vlákno s pracovním prostorem a modelem uvedenými níže. Další spuštění přispívají do něj, každé v nové relaci bez kontextu dřívějších spuštění.",
+  scheduledDetailContinue:
+    "Každé spuštění pokračuje v této konverzaci, v jejím pracovním prostoru a s jejím aktuálním modelem.",
+  scheduledDetailFresh:
+    "Každé spuštění zahájí v tomto vlákně novou relaci bez kontextu dřívějších spuštění.",
+  secretSourceAria: "Zdroj: {label}",
+  secretsVoiceUse: "Hlas · {provider}",
+  secretsNothingReadsFrom: "Nic nečte z {label}. Samotné tajné hodnoty zůstávají nedotčené.",
+  secretsTheseReadFrom:
+    "Tyto položky čtou z {label} a budou odnastaveny. Samotné tajné hodnoty zůstávají nedotčené.",
+  settingsActivity: "Aktivita",
+  toolCallsShowAll: "Zobrazit vše",
+  toolCallsHideSuccessful: "Skrýt úspěšné",
+  toolCallsHideAll: "Skrýt vše",
+  toolCallsZen: "Zen",
+  toolCallVisibilityDescription:
+    "Skryjte příkazy, úpravy a vyhledávání, které agenti spouštějí. Skrýt úspěšné ponechá neúspěšné. Zen zobrazí jen konečné odpovědi. Schválení, otázky a chyby se zobrazují vždy.",
+  toolCallsInChatResetLabel: "volání nástrojů v chatu",
+  screenReaderStatusOnly: "Jen stav",
+  screenReaderStatusAndMessages: "Stav a zprávy",
+  screenReaderEverything: "Vše",
+  screenReaderAnnouncementsDescription:
+    "Co čtečka obrazovky ohlásí z otevřeného vlákna: zahájení kola, potřebu vaší reakce a jeho konec. Stav a zprávy přidá to, co agent napíše před poslední zprávou. Vše přidá každý krok.",
+  screenReaderAnnouncementsResetLabel: "oznámení čtečky obrazovky",
+  ghqCloneLayoutDescription:
+    "Klony se ukládají do github.com/owner/repo pod výše uvedenou složkou, stejně jako u ghq.",
+  cloneIntoHostFoldersResetLabel: "klonování do složek hostitele",
+  cloneIntoHostFolders: "Klonovat do složek hostitele",
+  welcomePageDescription: "Podívejte se na své agenty, importujte projekty a nastavte si telefon.",
+  welcomePageOpen: "Otevřít",
+  sourceControlCommitsAndPullRequests: "Commity a pull requesty",
+  sourceControlWriterModelDescription:
+    "Model pro zprávy commitů, text pull requestů a názvy větví nebo záložek. Když je vypnuto, použije se model pro generování textu nastavený pro toto prostředí.",
+  searchTranscribeWith: "Přepisovat pomocí",
+  searchMicrophone: "Mikrofon",
+  searchDictationShortcut: "Zkratka diktování",
+  searchTranscriptionLanguage: "Jazyk přepisu",
+  searchDictionary: "Slovník",
+  searchProjectDictionary: "Projektový slovník",
+  searchCleanupModel: "Model čištění",
+  searchCorrectionCue: "Signál opravy",
+  searchSilenceFiltering: "Filtrování ticha",
+  searchRemoveFillerWords: "Odstraňovat výplňová slova",
+  searchCleanUpTranscripts: "Čistit přepisy",
+  searchTranscriptionModels: "Modely přepisu",
+  searchTranscriptionHardware: "Hardware přepisu a uvolňování modelu",
+  searchTestMicrophone: "Otestovat mikrofon",
+  searchTestModel: "Otestovat model",
+  searchWelcomePage: "Uvítací stránka",
+  tgAddGenerator: "Přidat generátor",
+  tgNoneYet: "Zatím žádné generátory textu",
+  tgNoneYetDescription:
+    "Přidejte API modelu, které bude psát názvy vláken, zprávy commitů a další krátké texty bez spuštění programovacího agenta.",
+  tgOffWithUrl: "Vypnuto · {url}",
+  tgMoreActions: "Další akce pro {name}",
+  tgShowModels: "Zobrazit modely",
+  tgRemoveTitle: "Odebrat {name}?",
+  tgRemoveDescription:
+    "Tím se smaže klíč API uložený v prostředí {environment}. Vše, co je nastaveno na tento generátor, se vrátí k modelu pro generování textu.",
+  tgStepUseIt: "Použít",
+  tgTaskThreadTitles: "Názvy vláken a další generovaný text",
+  tgTaskSourceControl: "Zprávy commitů, pull requesty a názvy větví",
+  tgTaskVoiceCleanup: "Čištění přepisu hlasu",
+  tgWizardEditTitle: "Upravit {name}",
+  tgWizardAddTitle: "Přidat generátor textu",
+  tgWizardDescription:
+    "Píše názvy vláken, zprávy commitů a další krátké texty bez spuštění programovacího agenta. Váš klíč API se ukládá v tomto prostředí.",
+  tgService: "Služba",
+  tgBaseUrl: "Základní URL",
+  tgApiKey: "Klíč API",
+  tgApiKeyOptional: "Klíč API (volitelné)",
+  tgNameOptional: "Název (volitelné)",
+  tgNamePlaceholder: "např. Můj lokální model",
+  tgSaveAndContinue: "Uložit a pokračovat",
+  tgFollowsTextGenerationModel: "Řídí se modelem pro generování textu",
+  tgModelAnswered: "{model} odpověděl. Funguje to.",
+  tgTest: "Otestovat",
+  tgSearchModels: "Hledat modely",
+  tgNoModelsMatch: "Žádný model neodpovídá.",
+  tgCouldNotLoadModels: "Modely {name} se nepodařilo načíst",
+  tgModelsTitle: "Modely {name}",
+  tgModelListFailed: "Seznam modelů se nepodařilo načíst.",
+  tgModelListLoading: "Načítání seznamu modelů.",
+  tgConnectedLists: {
+    one: "{name} je připojen a nabízí {count} model. Přepněte na něj kterýkoli z těchto úkolů, nebo ponechte, co používají teď.",
+    few: "{name} je připojen a nabízí {count} modely. Přepněte na něj kterýkoli z těchto úkolů, nebo ponechte, co používají teď.",
+    many: "{name} je připojen a nabízí {count} modelu. Přepněte na něj kterýkoli z těchto úkolů, nebo ponechte, co používají teď.",
+    other:
+      "{name} je připojen a nabízí {count} modelů. Přepněte na něj kterýkoli z těchto úkolů, nebo ponechte, co používají teď.",
+  },
+  tgModelsAvailable: {
+    one: "K dispozici je {count} model. Vyberte ho ve výběru modelu pro generování textu.",
+    few: "K dispozici jsou {count} modely. Vyberte některý ve výběru modelu pro generování textu.",
+    many: "K dispozici je {count} modelu. Vyberte některý ve výběru modelu pro generování textu.",
+    other: "K dispozici je {count} modelů. Vyberte některý ve výběru modelu pro generování textu.",
+  },
+} satisfies CzechNamespace<"settingsE">;

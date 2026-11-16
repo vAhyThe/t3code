@@ -13,6 +13,7 @@ import { KeyRoundIcon, TypeIcon } from "lucide-react";
 import { useState, type ComponentProps, type ComponentType, type ReactNode } from "react";
 
 import { isSecretsFeatureEnabled } from "../../env";
+import { currentTranslator } from "~/i18n/I18nProvider";
 import { useEnvironmentSettings } from "../../hooks/useSettings";
 import { OnePasswordIcon } from "../Icons";
 import { serverEnvironment } from "../../state/server";
@@ -60,6 +61,57 @@ function SourceLabel(props: {
   );
 }
 
+/** Picks Value (`null`) or one of `sources`; a `value` no longer among them stays listed. */
+export function SecretSourceSelect(props: {
+  readonly value: SecretProviderId | null;
+  readonly sources: ReadonlyArray<Pick<SecretSource, "id" | "label">>;
+  readonly label: string;
+  readonly disabled?: boolean;
+  readonly onValueChange: (provider: SecretProviderId | null) => void;
+}) {
+  const { value, sources } = props;
+  const known = value === null || sources.some((source) => source.id === value);
+  const title =
+    value === null ? "Value" : (sources.find((source) => source.id === value)?.label ?? value);
+  return (
+    <Select
+      value={value ?? STORED_VALUE}
+      onValueChange={(next) =>
+        props.onValueChange(
+          next === STORED_VALUE || next === null ? null : (next as SecretProviderId),
+        )
+      }
+      {...(props.disabled === undefined ? {} : { disabled: props.disabled })}
+    >
+      <SelectTrigger
+        size="sm"
+        className="w-auto min-w-0 shrink-0"
+        aria-label={currentTranslator()("settingsE.secretSourceAria", { label: props.label })}
+        title={title}
+      >
+        <SelectValue>
+          <SourceIcon icon={value === null ? TypeIcon : known ? OnePasswordIcon : KeyRoundIcon} />
+        </SelectValue>
+      </SelectTrigger>
+      <SelectPopup align="start" alignItemWithTrigger={false}>
+        <SelectItem value={STORED_VALUE}>
+          <SourceLabel icon={TypeIcon} label="Value" />
+        </SelectItem>
+        {sources.map((source) => (
+          <SelectItem key={source.id} value={source.id}>
+            <SourceLabel icon={OnePasswordIcon} label={source.label} />
+          </SelectItem>
+        ))}
+        {known ? null : (
+          <SelectItem value={value}>
+            <SourceLabel icon={KeyRoundIcon} label={value} />
+          </SelectItem>
+        )}
+      </SelectPopup>
+    </Select>
+  );
+}
+
 type SecretSourceInputProps = Omit<ComponentProps<typeof SecretInput>, "value" | "children"> & {
   readonly value: string | SecretReference;
   readonly sources: ReadonlyArray<SecretSource>;
@@ -92,54 +144,24 @@ export function SecretSourceInput({
   const providerSource = sources.find((source) => source.id === provider);
   const definition = providerSource && builtInSecretProviderDefinitions.find(providerSource.kind);
   const label = input["aria-label"] ?? "Secret";
-  const providerLabel = (id: SecretProviderId) =>
-    sources.find((source) => source.id === id)?.label ?? id;
-  const providerIcon = (id: SecretProviderId) =>
-    sources.some((source) => source.id === id) ? OnePasswordIcon : KeyRoundIcon;
-
   const source =
     sources.length === 0 && provider === null ? null : (
-      <Select
-        value={provider ?? STORED_VALUE}
-        onValueChange={(value) => {
+      <SecretSourceSelect
+        value={provider}
+        sources={sources}
+        label={label}
+        onValueChange={(next) => {
           setRejectedReference(null);
-          if (value === STORED_VALUE || value === null) {
+          if (next === null) {
             setPendingProvider(null);
             onValidityChange?.(true);
             if (secret !== undefined) onSecretChange(undefined);
             return;
           }
-          const next = value as SecretProviderId;
           onValidityChange?.(next === secret?.provider);
           setPendingProvider(next === secret?.provider ? null : next);
         }}
-      >
-        <SelectTrigger
-          size="sm"
-          className="w-auto min-w-0 shrink-0"
-          aria-label={`${label} source`}
-          title={provider === null ? "Value" : providerLabel(provider)}
-        >
-          <SelectValue>
-            <SourceIcon icon={provider === null ? TypeIcon : providerIcon(provider)} />
-          </SelectValue>
-        </SelectTrigger>
-        <SelectPopup align="start" alignItemWithTrigger={false}>
-          <SelectItem value={STORED_VALUE}>
-            <SourceLabel icon={TypeIcon} label="Value" />
-          </SelectItem>
-          {sources.map((source) => (
-            <SelectItem key={source.id} value={source.id}>
-              <SourceLabel icon={OnePasswordIcon} label={source.label} />
-            </SelectItem>
-          ))}
-          {provider !== null && !sources.some((source) => source.id === provider) ? (
-            <SelectItem value={provider}>
-              <SourceLabel icon={KeyRoundIcon} label={provider} />
-            </SelectItem>
-          ) : null}
-        </SelectPopup>
-      </Select>
+      />
     );
 
   const valueField =

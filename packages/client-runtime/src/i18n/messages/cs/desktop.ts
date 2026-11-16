@@ -125,4 +125,7 @@ export const desktop = {
   livePreviewAlt: "Živý náhled prohlížeče",
   passkeyUnnamed: "Přístupový klíč bez názvu",
   fileFilterImages: "Obrázky",
+  mediaReadFailed: "Média se nepodařilo přečíst.",
+  menuCloseDeveloperTools: "Zavřít nástroje pro vývojáře",
+  contextMenuCopyEmail: "Kopírovat e-mailovou adresu",
 } satisfies CzechNamespace<"desktop">;

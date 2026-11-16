@@ -47,7 +47,7 @@ import {
   type AtomCommandResult,
 } from "@t3tools/client-runtime/state/runtime";
 import { useUiStateStore } from "../../uiStateStore";
-import { type ChatMessage } from "../../types";
+import { type ChatMessage, DEFAULT_INTERACTION_MODE } from "../../types";
 import { AlarmClockIcon, CheckCircle2Icon } from "lucide-react";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { newMessageId } from "~/lib/utils";
@@ -99,6 +99,8 @@ interface ThreadLifecycleInput {
   readonly threadDetailRef: ScopedThreadRef | null;
   readonly activeThreadKey: string | null;
   readonly activeThreadShell: EnvironmentThreadShell | null;
+  /** The usage-limit recovery banner shows this snooze and its Wake now. */
+  readonly limitRecoveryHoldsSnooze: boolean;
   readonly activeLatestRun: EnvironmentThreadShell["latestRun"];
   readonly activeProjectCwd: string | null;
   readonly serverConfig: EnvironmentServerConfig | null;
@@ -151,6 +153,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
     activeThreadKey,
     activeThreadShell,
     activeLatestRun,
+    limitRecoveryHoldsSnooze,
     activeProjectCwd,
     serverConfig,
     runtimeMode,
@@ -539,7 +542,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
       createdAt,
       ...(localCheckoutBranchMismatch ? { branch: localCheckoutBranchMismatch.currentBranch } : {}),
       runtimeMode,
-      interactionMode: context.interactionMode,
+      interactionMode: DEFAULT_INTERACTION_MODE,
     });
     const result =
       settingsResult._tag === "Failure"
@@ -551,7 +554,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
               message: { messageId, role: "user", text, attachments: [] },
               modelSelection: context.selectedModelSelection,
               runtimeMode,
-              interactionMode: context.interactionMode,
+              interactionMode: DEFAULT_INTERACTION_MODE,
               createdAt,
             },
           });
@@ -599,6 +602,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
       : null;
   const backgroundWorkNow = activeThread
     ? backgroundWorkNowItem({
+        environmentId,
         threadId: activeThread.id,
         tasks: activeBackgroundTasks,
         turnItems,
@@ -616,18 +620,24 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
     ? snoozeWakeLabel(snoozedUntil, { now: `${nowMinute}:00.000Z` })
     : null;
   const threadStatusLine = activeThreadSnoozed ? (
-    <ThreadStatusLine
-      icon={<AlarmClockIcon />}
-      label={
-        snoozeWake && snoozeWake !== "now"
-          ? currentTranslator()("updates.snoozedDurationLeft", { duration: snoozeWake })
-          : currentTranslator()("shellNav.sectionSnoozed")
-      }
-      clockMinute={nowMinute}
-      actionLabel={isUnsnoozing ? "Waking..." : "Wake now"}
-      actionDisabled={!canOperateThread || isUnsnoozing}
-      onAction={() => void handleUnsnoozeActiveThreadStable()}
-    />
+    limitRecoveryHoldsSnooze ? null : (
+      <ThreadStatusLine
+        icon={<AlarmClockIcon />}
+        label={
+          snoozeWake && snoozeWake !== "now"
+            ? currentTranslator()("updates.snoozedDurationLeft", { duration: snoozeWake })
+            : currentTranslator()("shellNav.sectionSnoozed")
+        }
+        clockMinute={nowMinute}
+        actionLabel={
+          isUnsnoozing
+            ? currentTranslator()("shellNav.wakingNow")
+            : currentTranslator()("shellNav.wakeNow")
+        }
+        actionDisabled={!canOperateThread || isUnsnoozing}
+        onAction={() => void handleUnsnoozeActiveThreadStable()}
+      />
+    )
   ) : activeThreadSettled ? (
     <ThreadStatusLine
       icon={<CheckCircle2Icon />}
@@ -690,6 +700,15 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
           activeThreadPinned ? "Failed to unpin thread" : "Failed to pin thread",
         ),
       );
+    },
+    "thread.regenerateTitle": () => {
+      if (!readEnvironmentScope(environmentId, AuthOrchestrationOperateScope)) return false;
+      if (!activeThreadShell || !activeThreadRef || !serverConfigLoaded) return;
+      if (activeThreadShell.titleRegeneration != null) return;
+      void updateThreadMetadata({
+        environmentId: activeThreadRef.environmentId,
+        input: { threadId: activeThreadRef.threadId, regenerateTitle: true },
+      }).then(toastThreadActionFailure(currentTranslator()("shellRest.failedToRegenerateTitle")));
     },
   } satisfies ChatShortcutCommands;
   return {

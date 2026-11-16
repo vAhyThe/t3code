@@ -2,6 +2,7 @@ import { currentTranslator } from "~/i18n/I18nProvider";
 import { useAtomValue } from "@effect/atom-react";
 import {
   isTerminalSubagentStatus,
+  workflowMemberModelSelection,
   workflowOpeningHeadline,
   type RuntimeSubagent,
   type WorkflowOpening,
@@ -189,6 +190,7 @@ function WorkflowMemberRow(props: {
             model={member.model}
             providerInstanceId={props.providerInstanceId}
             origin="provider_native"
+            modelSelection={workflowMemberModelSelection(member, props.providerInstanceId)}
             provider={props.providers.find(
               (provider) => provider.instanceId === props.providerInstanceId,
             )}

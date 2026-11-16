@@ -1,11 +1,8 @@
 import type { EnvironmentId, UnifiedSettings } from "@t3tools/contracts";
-import { useAtomValue } from "@effect/atom-react";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { useUpdateEnvironmentSettings } from "../../hooks/useSettings";
-import { serverEnvironment } from "../../state/server";
-import { useAtomCommand } from "../../state/use-atom-command";
 import { useT } from "~/i18n/I18nProvider";
 import {
   AlertDialog,
@@ -17,7 +14,6 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
 import { AddUsageLimitSourceDialog } from "./AddUsageLimitSourceDialog";
 import { searchableSetting } from "./settingsSearch";
 import { SettingsRow, SettingsSection } from "./settingsLayout";
@@ -26,41 +22,17 @@ export function UsageProviderSettings({
   environmentId,
   environmentLabel,
   sources,
-  cursorKeychainUsageEnabled,
   readOnly,
 }: {
   readonly environmentId: EnvironmentId;
   readonly environmentLabel: string;
   readonly sources: UnifiedSettings["usageLimitSources"];
-  readonly cursorKeychainUsageEnabled: boolean;
   readonly readOnly: boolean;
 }) {
   const t = useT();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
-  const updateCursorSettings = useAtomCommand(serverEnvironment.updateSettings, {
-    // i18n-ignore: internal command label, not shown on screen
-    label: "update Cursor account usage",
-  });
-  const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
-    reportFailure: false,
-  });
-  const platform = useAtomValue(serverEnvironment.configValueAtom(environmentId))?.environment
-    .platform;
   const [adding, setAdding] = useState(false);
-  const [updatingCursor, setUpdatingCursor] = useState(false);
   const entries = Object.entries(sources);
-
-  const setCursorUsageEnabled = async (enabled: boolean) => {
-    setUpdatingCursor(true);
-    const result = await updateCursorSettings({
-      environmentId,
-      input: { patch: { cursorKeychainUsageEnabled: enabled } },
-    });
-    if (result._tag === "Success") {
-      await refreshProviders({ environmentId, input: {} });
-    }
-    setUpdatingCursor(false);
-  };
 
   return (
     <>
@@ -75,21 +47,6 @@ export function UsageProviderSettings({
           ) : null
         }
       >
-        {platform?.os === "darwin" ? (
-          <SettingsRow
-            id="cursor-keychain-usage"
-            title={t("settingsD.cursorAccountUsage")}
-            description={t("settingsD.cursorAccountUsageDescription")}
-            control={
-              <Switch
-                aria-label={t("settingsD.cursorAccountUsage")}
-                checked={cursorKeychainUsageEnabled}
-                disabled={readOnly || updatingCursor}
-                onCheckedChange={(enabled) => void setCursorUsageEnabled(enabled)}
-              />
-            }
-          />
-        ) : null}
         {entries.length === 0 ? (
           <SettingsRow title={t("settingsD.noHubsConfigured")} />
         ) : (
